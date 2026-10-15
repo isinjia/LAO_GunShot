@@ -724,7 +724,10 @@
         else if (rt === 'challenge') { ctx.moveTo(cx, cy - rr); ctx.lineTo(cx + rr, cy); ctx.lineTo(cx, cy + rr); ctx.lineTo(cx - rr, cy); }
         else ctx.arc(cx, cy, rr * 0.8, 0, Math.PI * 2);
         ctx.fill();
-        if (big) { ctx.font = 'bold 12px Godo, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText({ boss: '보스', treasure: '보급', shop: '상점', start: '출격', challenge: '도전' }[rt], cx, cy - rr * 1.7); }
+        if (big) { /* the room name sits along the room's top edge, clear of the icon and the hero dot */
+          const lbl = { boss: '보스', treasure: '보급', shop: '상점', start: '출격', challenge: '도전' }[rt], ly = Math.min(cy - rr * 1.7, Y(r.y1) + 15);
+          ctx.font = 'bold 13px Godo, sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.strokeText(lbl, cx, ly); ctx.fillStyle = '#fff'; ctx.fillText(lbl, cx, ly);
+        }
       }
     });
     // the boss room is always marked once its neighbour is seen (Gungeon shows the boss door)
@@ -784,6 +787,9 @@
     document.getElementById('mapZin').onclick = (ev) => { ev.stopPropagation(); zoomAt(1.3, cv.width / 2, cv.height / 2); };
     document.getElementById('mapZout').onclick = (ev) => { ev.stopPropagation(); zoomAt(1 / 1.3, cv.width / 2, cv.height / 2); };
     document.getElementById('mapZreset').onclick = (ev) => { ev.stopPropagation(); mapView.z = 1; mapView.px = mapView.py = 0; redraw(); };
+    /* closing: the ✕ button, or a tap on the dimmed area outside the panel (touch players can't reach the map button under it) */
+    const mc = document.getElementById('mapClose'); if (mc) mc.onclick = (ev) => { ev.stopPropagation(); if (!el.bigMap.hidden) toggleMap(); };
+    el.bigMap.addEventListener('pointerdown', (ev) => { if (ev.target === el.bigMap && !el.bigMap.hidden) { ev.preventDefault(); toggleMap(); } });
     cv.addEventListener('pointermove', (ev) => {
       if (drag) {
         const rc = cv.getBoundingClientRect(), k = cv.width / rc.width;
