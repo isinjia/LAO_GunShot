@@ -1459,7 +1459,7 @@
       // firing
       e.fireT -= dt;
       if (e.fireT <= 0 && seeP && dist < 13 && e.state !== 'charge' && e.state !== 'wind' && def.ai !== 'kamikaze') {
-        e.fireT = def.rate * rnd(0.85, 1.2) * [0.9, 0.85, 0.8, 0.72, 0.63, 0.57][G.fi] * (1 - (G.heat || 0) * 0.05); // later floors fire faster again (the curve keeps rising to B6)
+        e.fireT = def.rate * rnd(0.85, 1.2) * [0.9, 0.84, 0.84, 0.72, 0.63, 0.57][G.fi] * (1 - (G.heat || 0) * 0.05); // later floors fire faster again (the curve keeps rising to B6)
         if (def.ai !== 'charger' || Math.random() < 0.5) {
           G.shooter = def.name; PATTERNS[def.fire](e);
           if (e.body && e.body.c.has('atk')) e.body.c.play('atk');
@@ -2774,6 +2774,7 @@
   }
 
   function buildFloor(fi) {
+    UI.hideBoss(); UI.chTimer(null); // room-bound HUD (boss bar, challenge timer) never carries over to a new floor
     (G.thrown || []).forEach((t) => { t.h.c.dispose(); scene.remove(t.h.outer); });
     G.thrown = [];
     UI.chTimer(null);
@@ -3307,7 +3308,7 @@
       b.c.update(dt);
       const blink = P.iframe > 0 && !P.roll && Math.floor(G.t * 20) % 2 === 0;
       b.c.setOpacity(blink ? 0.6 : 1); // a gentle blink: she stays readable in boss rooms
-      if (P.hurtFlash > 0) b.c.setTint(2.4, 2.4, 2.4); else if (P.overdrive > 0) b.c.setTint(1.1, 1.35, 1.0); else b.c.setTint(1, 1, 1);
+      if (P.hurtFlash > 0) { const on = Math.sin(G.t * 50) > 0; b.c.setTint(on ? 1.7 : 1, on ? 0.55 : 1, on ? 0.55 : 1); } /* a red blink, never a white-out that hides her under explosion FX */ else if (P.overdrive > 0) b.c.setTint(1.1, 1.35, 1.0); else b.c.setTint(1, 1, 1);
       // standing "behind" a tall boss / elite would hide her under its sprite: draw her in front instead
       let oy = P.y;
       for (const e of G.enemies) if (e.alive && (e.boss || e.elite) && Math.abs(P.x - e.x) < e.r + 0.9 && P.y > e.y && P.y - e.y < e.h * 0.85) oy = Math.min(oy, e.y - 0.05);
@@ -3390,6 +3391,7 @@
       if (!focus) ty = clamp(ty, P.y + HERO_H + 0.3 - vz * 0.36, P.y + vz * 0.2);
       const k = 1 - Math.exp(-rdt * (focus ? 4 : 6));
       G.cam.x += (tx - G.cam.x) * k; G.cam.y += (ty - G.cam.y) * k;
+      if (!Number.isFinite(G.cam.x) || !Number.isFinite(G.cam.y)) { G.cam.x = P.x; G.cam.y = P.y; } // one bad aim value never strands the camera at NaN
       if (!focus) G.cam.y = clamp(G.cam.y, P.y + HERO_H + 0.3 - vz * 0.36, P.y + vz * 0.22); // she never sinks into the bottom HUD band
       // boss fights: keep the boss's head below the boss-bar band (as far as the hero's own margin allows)
       if (!focus && bz) {

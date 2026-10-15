@@ -1328,3 +1328,11 @@ body.touchui .tb.act:not(.avail) { background: rgba(60, 64, 70, 0.6) !important;
   body.touchui #gunBox { transform: scale(0.62) !important; }
   body.touchui .tb.swap { min-height: 46px !important; }
 }
+/* pause / settings dialog keeps one height across tabs (the tab bar never jumps); content scrolls inside */
+@media (min-aspect-ratio: 1/1) and (min-height: 521px) { #pauseOv .dlg { height: min(620px, calc(100vh - 24px)) !important; } }
+/* portrait phones: the two action buttons fit inside the screen */
+@media (max-aspect-ratio: 1/1) {
+  #pauseOv .dlg { width: calc(100vw - 16px) !important; max-width: calc(100vw - 16px) !important; box-sizing: border-box; padding-left: 10px !important; padding-right: 10px !important; }
+  #pauseOv .dlg > .row { padding-left: 6px !important; padding-right: 6px !important; gap: 8px !important; }
+  #pauseOv .dlg > .row .btn { min-width: 0 !important; max-width: 50% !important; font-size: 15px !important; padding-left: 8px !important; padding-right: 8px !important; }
+}

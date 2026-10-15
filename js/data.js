@@ -147,7 +147,7 @@
     },
     {
       key: 'B3', name: '지하 정비창', en: 'UNDER DOCK', rooms: 5, enemies: ['legion', 'centurion', 'predator', 'intruder', 'gigantes', 'harvester', 'phalangites', 'bomber'], elites: ['fortress', 'destroyer', 'bigchick'], boss: ['nidhogg', 'goltarion', 'nightqueen'],
-      floor: 'floor_grate', alt: 'floor_dot', face: 'wall_face_d', cap: 'wall_cap_b', tint: [0.88, 1.02, 0.96], light: 0x40ffb0, music: ['battle4', 'tension1'], hpMul: 1.55,
+      floor: 'floor_grate', alt: 'floor_dot', face: 'wall_face_d', cap: 'wall_cap_b', tint: [0.88, 1.02, 0.96], light: 0x40ffb0, music: ['battle4', 'tension1'], hpMul: 1.42,
     },
     {
       key: 'B4', name: '폐쇄 연구동', en: 'SEALED LAB', rooms: 6, enemies: ['legion', 'centurion', 'predator', 'intruder', 'gigantes', 'phalangites', 'harvester'], elites: ['fortress', 'destroyer', 'doomeater'], boss: ['nightqueen', 'nidhogg', 'doomprime'],
