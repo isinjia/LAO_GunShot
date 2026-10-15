@@ -138,7 +138,7 @@
 
   const FLOORS = [
     {
-      key: 'B1', name: '오르카 격납고', en: 'HANGAR SECTOR', rooms: 4, enemies: ['chick', 'drone', 'pupp', 'fallen'], elites: [], boss: ['emperor', 'executioner'],
+      key: 'B1', name: '오르카 격납고', en: 'HANGAR SECTOR', rooms: 5, enemies: ['chick', 'drone', 'pupp', 'fallen'], elites: [], boss: ['emperor', 'executioner'],
       floor: 'floor_x', alt: 'floor_dot', face: 'wall_face_a', tint: [0.86, 0.95, 1.08], light: 0x3aa0ff, music: ['battle', 'battle5'], hpMul: 1,
     },
     {

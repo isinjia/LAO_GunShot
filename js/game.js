@@ -943,6 +943,9 @@
     if (p.kind === 'crate') buildPropRim();
     const cx = p.x + 0.5, cy = p.y + 0.5;
     if (p.kind === 'barrel') {
+      /* a short fuse: a red warning ring first, the blast 0.45 s later (time to step away) */
+      FX.ring(cx, cy, 0.3, 1.7, 0xff3a2a, 0.45, 0.8); FX.particle({ x: cx, y: cy + 0.3, life: 0.45, size: 1.4, size1: 2.2, color: 0xff4a2a, tex: FX.tex.glow, alpha: 0.6 }); SFX.play('warning', 0.5);
+      FX.later(0.45, () => { if (G.phase !== 'play') return;
       FX.explosion(cx, cy, 1.3, 0xff6a2a, true);
       spawnStatic('simple_explosion', cx, cy, 0.22);
       SFX.play('expM');
@@ -950,6 +953,7 @@
       for (const e of G.enemies) { if (e.alive && e.spawnT <= 0 && Math.hypot(e.x - cx, e.y - cy) < 2.4 + e.r) hurtEnemy(e, 40, false, 0, 0); }
       if (!G.P.dead && Math.hypot(G.P.x - cx, G.P.y - cy) < 1.7) hurtPlayer('폭발', 2);
       FX.later(0.12, () => { if (G.phase === 'play') damageProps(cx, cy, 2.2, 30); });
+      });
     } else {
       for (let i = 0; i < 8; i++) FX.particle({ x: cx + rnd(-0.4, 0.4), y: cy + rnd(-0.2, 0.5), vx: rnd(-3, 3), vy: rnd(1, 4), grav: 10, life: rnd(0.4, 0.7), size: rnd(0.12, 0.24), size1: 0.1, color: 0x7d8794, tex: FX.tex.white, normal: true, spin: rnd(-8, 8), order: ORD(cy) });
       FX.particle({ x: cx, y: cy, life: 0.5, size: 0.8, size1: 1.6, color: 0x55606c, frames: null, tex: FX.tex.dot, alpha: 0.5, normal: true, order: ORD(cy) });
@@ -2922,6 +2926,13 @@
     next();
   }
   async function startRun(heroIdx) {
+    /* a failure while setting up a run never leaves the game stuck in 'loading' */
+    try { await startRunInner(heroIdx); } catch (e) {
+      console.error('[LAO] run start failed', e); G.errors = (G.errors || 0) + 1;
+      try { toTitle(); UI.toast('출격 준비 중 오류가 발생했습니다 — 다시 시도해 주세요', 'warn'); } catch (e2) { G.phase = 'title'; }
+    }
+  }
+  async function startRunInner(heroIdx) {
     if (!scene || G.phase === 'loading' || G.phase === 'boot') return; // not booted yet / already starting
     heroIdx = Math.floor(Number(heroIdx));
     if (!(heroIdx >= 0 && heroIdx < HEROES.length)) heroIdx = Math.floor(Math.random() * HEROES.length); /* out of range (or the random slot): a random hero */
@@ -3144,8 +3155,8 @@
       { id: 'move', txt: T ? '<b>이동</b> — 왼쪽 화면을 드래그해 움직이세요' : '<b>이동</b> — <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 로 움직이세요', done: (P, s) => Math.hypot(P.x - s.x0, P.y - s.y0) > 2.5 },
       { id: 'shoot', txt: T ? '<b>조준 · 사격</b> — 조준 패드를 누른 채 드래그해 훈련 표적 2개를 부수세요' : '<b>조준 · 사격</b> — 마우스로 조준, <kbd>왼쪽 버튼</kbd>으로 훈련 표적 2개를 부수세요', done: (P, s) => s.targets && s.targets.every((e) => !e.alive) },
       { id: 'dodge', txt: T ? '<b>회피</b> — 연습탄이 가까이 왔을 때 회피 버튼! 구르는 동안은 맞지 않습니다 (2회)' : `<b>회피</b> — 연습탄이 가까이 왔을 때 <kbd>${UI.K('dodge')}</kbd> / <kbd>오른쪽 버튼</kbd>으로 구르며 피하세요 (2회)`, done: (P, s) => (P.rolledNear || 0) - (s.roll0 || 0) >= 2 },
-      { id: 'sk2', txt: `<b>보조 스킬 · ${h.sk2.name}</b> — ${T ? '보조 버튼' : `<kbd>${UI.K('skill2')}</kbd>`}: ${h.sk2.desc}`, done: () => (G.stats.skills2 || 0) >= 1 },
-      { id: 'ult', txt: `<b>궁극기 · ${h.skillName}</b> — 게이지를 채워 두었습니다. ${T ? '스킬 버튼' : `<kbd>${UI.K('skill')}</kbd>`}: ${h.skillDesc}`, done: () => G.stats.skills >= 1 },
+      { id: 'sk2', txt: `<b>보조 스킬 · ${h.sk2.name}</b> — ${T ? '보조 버튼' : `<kbd>${UI.K('skill2')}</kbd>`}: ${h.sk2.desc}`, done: (P, s) => (G.stats.skills2 || 0) - (s.sk0 || 0) >= 1 },
+      { id: 'ult', txt: `<b>궁극기 · ${h.skillName}</b> — 게이지를 채워 두었습니다. ${T ? '스킬 버튼' : `<kbd>${UI.K('skill')}</kbd>`}: ${h.skillDesc}`, done: (P, s) => (G.stats.skills || 0) - (s.ult0 || 0) >= 1 },
       { id: 'map', txt: T ? '<b>전술 지도</b> — 오른쪽 위 미니맵을 눌러 탐색한 구역을 확인하세요. 클리어한 구역은 눌러서 순간이동, 보스 방은 찾으면 붉은 육각형으로 표시' : `<b>전술 지도</b> — <kbd>${UI.K('map')}</kbd>으로 탐색한 구역을 확인하세요. 클리어한 구역으로 순간이동, 보스 방은 찾으면 붉은 육각형으로 표시`, done: (P, s) => !!s.map },
     ];
   }
@@ -3188,6 +3199,8 @@
         s.targets = [[r.cx + 3, r.cy - 0.6], [r.cx - 3, r.cy - 0.6]].map(([x, y]) => { const e = spawnEnemy('pupp', x, y); e.dummy = true; e.hp = e.maxHp = 40; e.room = r; return e; });
       }
       if (st.id === 'dodge') s.roll0 = P.rolledNear || 0;
+      if (st.id === 'sk2') s.sk0 = G.stats.skills2 || 0; /* each skill step counts only uses made during it */
+      if (st.id === 'ult') s.ult0 = G.stats.skills || 0;
       if (st.id === 'sk2') P.sk2Cd = 0;
       if (st.id === 'ult') P.skill = 100;
     }
@@ -3453,8 +3466,17 @@
   }
 
   let last = 0, frozenDrawn = false;
+  // the main loop is guarded: one bad frame is logged and skipped; a run of failures returns to the title instead of looping on the error
+  let frameErrs = [];
   function frame(now) {
     requestAnimationFrame(frame);
+    try { frameBody(now); } catch (e) {
+      console.error('[LAO] frame error', e); G.errors = (G.errors || 0) + 1;
+      const t = performance.now(); frameErrs = frameErrs.filter((x) => t - x < 2000); frameErrs.push(t);
+      if (frameErrs.length > 20 && G.phase !== 'title') { frameErrs = []; try { UI.toast('오류가 반복되어 타이틀로 돌아갑니다', 'warn'); toTitle(); } catch (e2) { /* ignore */ } }
+    }
+  }
+  function frameBody(now) {
     const rdt = Math.min(0.05, (now - last) / 1000 || 0.016) * TSCALE;
     last = now;
     INPUT.poll();

@@ -172,7 +172,8 @@
       const ph = GAME.G.phase;
       if (e.repeat && (ph === 'title' || ph === 'dead' || ph === 'win')) return; // a key held through death never auto-retries / auto-deploys
       // modal focus trap: Tab cycles inside the pause / settings dialog
-      const modal = el.pauseOv && !el.pauseOv.hidden ? el.pauseOv : !document.getElementById('lvOv').hidden ? document.getElementById('lvOv') : null;
+      const labO = document.getElementById('labOv');
+      const modal = el.pauseOv && !el.pauseOv.hidden ? el.pauseOv : !document.getElementById('lvOv').hidden ? document.getElementById('lvOv') : labO && !labO.hidden ? labO : !el.result.hidden ? el.result : null; /* lab and result screens trap Tab too */
       if (e.code === 'Tab' && modal) {
         const f = [...modal.querySelectorAll('button, input[type=range], summary')].filter((x) => x.offsetParent && !x.disabled);
         if (f.length) { const i = f.indexOf(document.activeElement), n = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : (i < 0 || i >= f.length - 1 ? 0 : i + 1); f[n].focus(); e.preventDefault(); return; }
@@ -409,7 +410,12 @@
       };
     });
   }
-  function openLab(on) { $('#labOv').hidden = !on; if (on) { renderLab(); SFX.play('uiPick', 0.6); } }
+  let labReturn = null;
+  function openLab(on) {
+    $('#labOv').hidden = !on;
+    if (on) { labReturn = document.activeElement; renderLab(); SFX.play('uiPick', 0.6); setTimeout(() => { const f = $('#labOv').querySelector('button:not([disabled])'); if (f) f.focus({ preventScroll: true }); }, 30); } /* focus moves into the lab ... */
+    else if (labReturn && labReturn.focus) { labReturn.focus({ preventScroll: true }); labReturn = null; } /* ... and back to where it came from */
+  }
   function titleTick() { /* the showcase rig is animated by the game loop */ }
   function start() {
     if (GAME.G.phase !== 'title') return;

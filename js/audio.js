@@ -53,7 +53,7 @@
   // browsers (iOS in particular) only start audio inside a user gesture
   function unlock() {
     const c = ensureCtx();
-    if (c && c.state !== 'running' && !document.hidden) c.resume(); // 'suspended' or iOS 'interrupted' (call, Siri)
+    if (c && c.state !== 'running' && !document.hidden) c.resume().catch(() => {}); // 'suspended' or iOS 'interrupted' (call, Siri)
     if (bgm && bgm.paused && !document.hidden) bgm.play().catch(() => {});
   }
   ['pointerdown', 'touchend', 'keydown'].forEach((ev) => window.addEventListener(ev, unlock, { passive: true }));
@@ -144,7 +144,7 @@
     // while the new one fades in (no dip to silence between room-clear / shop / boss tracks)
     if (old) { const og = old.fader.gain; og.cancelScheduledValues(t); og.setValueAtTime(og.value, t); og.linearRampToValueAtTime(0.0001, t + (key ? 1.1 : 0.45)); try { old.stop(t + (key ? 1.15 : 0.5)); } catch (e) { /* ended */ } }
     if (!key || muted) return; // a muted game never pays for decoding; unmuting starts the current track
-    { const bg = bgmGain.gain; bg.cancelScheduledValues(t); bg.setValueAtTime(bg.value, t); bg.linearRampToValueAtTime(bgmTarget(), t + 0.3); } // the bus itself sits at the music volume
+    { const bg = bgmGain.gain; bg.cancelScheduledValues(t); bg.setValueAtTime(bg.value, t); bg.linearRampToValueAtTime(bgmTarget() * (performance.now() < voiceUntil ? 0.5 : 1), t + 0.3); } // the bus sits at the music volume (still ducked if a voice line is playing)
     const start = (buf) => {
       if (req !== mReq) return;
       const s = c.createBufferSource();
@@ -170,7 +170,7 @@
     };
     if (mbuf.has(key)) { const b = mbuf.get(key); mbuf.delete(key); mbuf.set(key, b); return start(b); } // most-recently used last
     fetch(window.BGM[key]).then((r) => r.arrayBuffer()).then((ab) => new Promise((res, rej) => c.decodeAudioData(ab, res, rej)))
-      .then((buf) => { mbuf.delete(key); mbuf.set(key, buf); while (mbuf.size > 4) mbuf.delete(mbuf.keys().next().value); start(buf); }) // floor battle x2 + boss + shop stay decoded
+      .then((buf) => { mbuf.delete(key); mbuf.set(key, buf); while (mbuf.size > 2) mbuf.delete(mbuf.keys().next().value); start(buf); }) // the current and previous track stay decoded (decoded PCM is large on phones)
       .catch(() => { if (req === mReq && bgmKey === key) bgmKey = null; }); // a failed track stays silent, but the next request for it retries
   }
   function music(key) {
@@ -235,9 +235,9 @@
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       if (bgm) bgm.pause();
-      if (ctx && ctx.state === 'running') ctx.suspend();
+      if (ctx && ctx.state === 'running') ctx.suspend().catch(() => {});
     } else {
-      if (ctx && ctx.state !== 'running') ctx.resume();
+      if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {});
       if (bgm) bgm.play().catch(() => {});
     }
   });

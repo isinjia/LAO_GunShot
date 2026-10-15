@@ -458,9 +458,10 @@
   }
 
   function pillar(x, y, dur, color) {
-    const col = particle({ x, y: y + 3, life: dur, size: 1.4, size1: 1.0, color, tex: tex.beam, aspect: 6, alpha: 0.9, fadeIn: 0.15 });
-    particle({ x, y, life: dur, size: 2.6, size1: 3.2, color, tex: tex.ring, alpha: 0.8, spin: 1.5 });
-    particle({ x, y, life: dur, size: 3, size1: 3, color, tex: tex.glow, alpha: 0.5, fadeIn: 0.1 });
+    /* a light column that stays see-through: the hero is never hidden by her own level-up (or pickup) beam */
+    const col = particle({ x, y: y + 3, life: dur, size: 1.1, size1: 0.8, color, tex: tex.beam, aspect: 6, alpha: 0.42, fadeIn: 0.15 });
+    particle({ x, y, life: dur, size: 2.6, size1: 3.2, color, tex: tex.ring, alpha: 0.7, spin: 1.5 });
+    particle({ x, y, life: dur, size: 3, size1: 3, color, tex: tex.glow, alpha: 0.25, fadeIn: 0.1 });
     let t = 0;
     tickers.push((dt) => {
       t += dt;

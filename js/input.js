@@ -88,7 +88,9 @@
     // focus went elsewhere (another window / monitor): pause instead of standing still under fire
     const G = window.GAME && GAME.G;
     if (G && G.phase === 'play' && !G.paused && !G.transit && !/[?&](bot|sim)=1/.test(location.search) && window.UI) UI.togglePause(true);
-    down.clear(); mouse.down = false; latch = false; touch.fire = false; touch.aiming = false; touch.active = false; touch.mx = touch.my = 0; });
+    down.clear(); mouse.down = false; latch = false; touch.fire = false; touch.aiming = false; touch.active = false; touch.mx = touch.my = 0;
+    if (touchReset) touchReset(); /* an app switch can swallow touchend: free the stick / aim pad so new touches register */ });
+  let touchReset = null;
 
   function moveVec() {
     let x = 0, y = 0;
@@ -142,6 +144,8 @@
         knob.style.transform = ''; stick.classList.remove('on');
       }
     };
+    const resetStick = () => { sid = null; knob.style.transform = ''; stick.classList.remove('on'); };
+    touchReset = resetStick;
     zone.addEventListener('touchmove', mv, { passive: false });
     zone.addEventListener('touchend', end); zone.addEventListener('touchcancel', end);
     const pad = root.querySelector('[data-act="fire"]'), pknob = pad && pad.querySelector('i');
@@ -169,6 +173,7 @@
       pad.addEventListener('touchmove', (e) => { for (const t of e.changedTouches) if (t.identifier === pid) { aimFrom(t.clientX, t.clientY); e.preventDefault(); } }, { passive: false });
       const end = (e) => { for (const t of e.changedTouches) if (t.identifier === pid) { pid = null; touch.fire = false; touch.aiming = false; touch.ax = touch.ay = 0; pad.classList.remove('down'); if (pknob) pknob.style.transform = ''; } };
       pad.addEventListener('touchend', end); pad.addEventListener('touchcancel', end);
+      touchReset = () => { resetStick(); pid = null; pad.classList.remove('down'); if (pknob) pknob.style.transform = ''; };
     }
     root.querySelectorAll('[data-act]').forEach((b) => {
       const a = b.dataset.act;
@@ -214,7 +219,7 @@
       }
       // basic training: Back skips it (except on the map step, where Back opens the map as taught)
       if (playing && G.tut && i === 8 && G.tut.i !== 5) { pressed.add('tutSkip'); return; }
-      if (playing || (G && G.phase === 'play' && G.choosing)) { if (PAD_ACT[i]) pressed.add(PAD_ACT[i]); }
+      if (playing || (G && G.phase === 'play' && G.choosing && !G.pauseMenu)) { if (PAD_ACT[i]) pressed.add(PAD_ACT[i]); } /* the pause menu opened over the cards takes d-pad navigation below */
       else if (G && G.phase === 'play' && G.paused) {
         if (i === 9 || i === 1) { pressed.add('pause'); return; }
         // d-pad walks the pause menu's controls, A presses, ←/→ nudge a slider
