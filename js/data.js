@@ -11,7 +11,7 @@
   // hp in half hearts; speed in tiles / s
   const HEROES = [
     {
-      id: 'brownie', name: 'T-2 브라우니', title: '스틸라인 돌격병', img: 'c_BR_Brownie_N', gun: 'ar', hp: 10, armor: 1, speed: 6.2,
+      id: 'brownie', name: 'T-2 브라우니', title: '스틸라인 돌격병', img: 'c_BR_Brownie_N', gun: 'ar', hp: 10, armor: 2, speed: 6.3,
       skill: 'visor', skillName: '전술 조준 모드', skillDesc: '6초간 자동 조준 · 유도탄 · 치명타 +25%, 재장전 없음, 연사 +50% · 피해 +45%', color: '#ffd34d',
       sk2: { id: 'frag', name: '전술 수류탄', icon: 'i_warning', cd: 6, desc: '조준 지점에 수류탄 — 폭발 피해 + 넉백 + 0.8초 기절, 폭발 범위의 적탄 소거' },
       stats: { atk: 3, def: 3, mob: 4 }, desc: '균형 잡힌 돌격소총과 높은 기동력. 처음 출격하는 지휘관에게 추천.',
@@ -45,7 +45,7 @@
   // kind: bullet | grenade | rail | chain | fireball
   // rate: seconds between shots; spread: degrees; life: projectile seconds; donor: rig whose hand + gun is drawn
   const GUNS = {
-    ar: { hitSnd: 'hitS', name: 'GR-11 돌격소총', donor: 'brownie', rank: 0, kind: 'bullet', auto: true, rate: 0.115, dmg: 5.5, speed: 22, spread: 4, mag: 30, ammo: 360, reload: 1.15, life: 0.7, sfx: 'rifle', color: 0xd8ff8a, size: 0.32, hit: 'skill_hit_simple', recoil: 0.06, desc: '빠르고 안정적인 연사' },
+    ar: { hitSnd: 'hitS', name: 'GR-11 돌격소총', donor: 'brownie', rank: 0, kind: 'bullet', auto: true, rate: 0.115, dmg: 6.1, speed: 22, spread: 4, mag: 30, ammo: 360, reload: 1.15, life: 0.7, sfx: 'rifle', color: 0xd8ff8a, size: 0.32, hit: 'skill_hit_simple', recoil: 0.06, desc: '빠르고 안정적인 연사' },
     mg: { hitSnd: 'hitS', name: 'M-60 경기관총', donor: 'leprechaun', rank: 0, kind: 'bullet', auto: true, rate: 0.07, dmg: 3.4, speed: 21, spread: 8, mag: 90, ammo: 720, reload: 2.1, life: 0.65, sfx: 'mg', color: 0x9dff7a, size: 0.28, hit: 'skill_hit_simple', recoil: 0.05, desc: '대용량 탄창, 흩뿌리는 탄막' },
     gl: { hitSnd: 'hitB', name: 'G-40 유탄발사기', donor: 'gnome', rank: 1, kind: 'grenade', auto: false, rate: 0.5, dmg: 20, splash: 1.8, speed: 13, spread: 2, mag: 6, ammo: 72, reload: 1.5, life: 0.9, sfx: 'cannon', color: 0xa8ff6a, size: 0.5, hit: 'simple_explosion', recoil: 0.14, desc: '착탄 시 광역 폭발' },
     dmr: { hitSnd: 'hitM', name: 'CS-2 정밀소총', donor: 'constantia', rank: 1, kind: 'bullet', auto: false, rate: 0.3, dmg: 16, pierce: 2, speed: 34, spread: 0.8, mag: 10, ammo: 140, reload: 1.3, life: 0.8, sfx: 'handgun', color: 0x8fe8ff, size: 0.45, hit: 'Constantia_hit', recoil: 0.12, desc: '적 2명을 관통하는 고위력탄' },
@@ -133,7 +133,7 @@
     nidhogg: { rig: 'e_Nidhogg_N', name: '니드호그', title: '심연의 포식자', hp: 1450, h: 3.3, r: 1.2, speed: 1.3, img: 'e_Nidhogg_N', patterns: ['bHoming', 'bFlower', 'bVortex', 'bSpiral'], tip: '유도탄은 강철 엄폐물 뒤로 끌어 떼어내세요' },
     nightqueen: { rig: 'e_NightChick_N', name: '나이트 칙 퀸', title: '야간 강습 여왕체', hp: 1500, h: 3.5, tint: [0.72, 0.8, 1.5], aura: 0x6a5cff, r: 1.1, speed: 1.9, img: 'e_NightChick_N', patterns: ['bSpiral', 'bMines', 'bSummon', 'bAimFan'], tip: '발밑에 깔리는 보랏빛 지뢰는 터지기 전에 벗어나세요' },
     doomprime: { rig: 'e_DoomEater_N', name: '둠 이터 프라임', title: '탐식하는 파괴자', hp: 1650, h: 3.8, tint: [1.45, 0.62, 1.15], aura: 0xff30c0, r: 1.2, speed: 1.7, img: 'e_DoomEater_N', patterns: ['bCharge', 'bCross', 'bShotgun', 'bFlower'], tip: '회전하는 십자 탄줄과 같은 방향으로 도세요' },
-    ironprince: { pale: true, tint: [0.76, 0.76, 0.84], rig: 'e_IronPrince_N', name: '철혈의 왕자', title: '철혈 사령부 총사령관', hp: 1850, h: 3.2, r: 1.1, speed: 1.6, img: 'e_IronPrince_N', patterns: ['bSpiral2', 'bHoming', 'bLaser', 'bSummon', 'bFlower', 'bWall'], tip: '최종 결전 — 보조 스킬과 회피로 탄막을 끊어내세요' },
+    ironprince: { pale: true, tint: [0.64, 0.64, 0.74], rig: 'e_IronPrince_N', name: '철혈의 왕자', title: '철혈 사령부 총사령관', hp: 1850, h: 3.2, r: 1.1, speed: 1.6, img: 'e_IronPrince_N', patterns: ['bSpiral2', 'bHoming', 'bLaser', 'bSummon', 'bFlower', 'bWall'], tip: '최종 결전 — 보조 스킬과 회피로 탄막을 끊어내세요' },
   };
 
   const FLOORS = [

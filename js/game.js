@@ -512,6 +512,7 @@
 
     // weapon actions
     if (INPUT.take('swap') && P.guns.length > 1 && !P.roll) { equip(P, P.gi + 1); SFX.play('uiPick', 0.7); P.emptyWarned = false; }
+    if (INPUT.take('swapPrev') && P.guns.length > 1 && !P.roll) { equip(P, (P.gi - 1 + P.guns.length) % P.guns.length); SFX.play('uiPick', 0.7); P.emptyWarned = false; } /* wheel up: the previous weapon */
     for (let n = 1; n <= 9; n++) if (INPUT.take('gun' + n) && n - 1 < P.guns.length && n - 1 !== P.gi && !P.roll) { equip(P, n - 1); SFX.play('uiPick', 0.7); P.emptyWarned = false; }
     // the gun in hand *after* any swap this frame (a stale reference used to start / finish a reload on the wrong gun)
     const g = curGun();
@@ -987,7 +988,7 @@
   function spawnEnemy(defKey, x, y, opts = {}) {
     const def = ENEMIES[defKey] || ELITES[defKey] || BOSSES[defKey];
     const F = FLOORS[G.fi];
-    const hpMul = (opts.boss ? FLOOR_BOSS_HP[G.fi] * clamp(def.hp / 1300, 0.8, 1.25) / def.hp : F.hpMul * (1 + G.stats.roomsCleared * 0.005)) * (1 + (G.heat || 0) * 0.15);
+    const hpMul = (opts.boss ? FLOOR_BOSS_HP[G.fi] * clamp(def.hp / 1300, 0.8, G.fi <= 2 ? 1.0 : 1.25) / def.hp : F.hpMul * (1 + G.stats.roomsCleared * 0.005)) * (1 + (G.heat || 0) * 0.15);
     const e = {
       key: defKey, def, x, y, r: def.r, h: def.h, hp: def.hp * hpMul, maxHp: def.hp * hpMul, alive: true, spawnT: opts.boss ? 0 : 0.9,
       fireT: rnd(0.8, 1.6) * (def.rate || 2), t: 0, vx: 0, vy: 0, kx: 0, ky: 0, flash: 0, face: -1, seq: [], state: 'idle', stun: 0,
@@ -1527,7 +1528,8 @@
     // patterns
     e.patT = (e.patT || 1.5) - dt;
     if (e.patT <= 0 && !e.dash && !e.seq.length) {
-      const pats = phase >= 2 ? [...def.patterns, ...['bLaser', 'bFlower', 'bHoming'].filter((x) => !def.patterns.includes(x)).slice(0, 2)] : def.patterns;
+      const base = G.fi <= 2 && phase < 2 ? def.patterns.slice(0, 3) : def.patterns; /* a late-pool boss drawn early opens with its first three patterns only */
+      const pats = phase >= 2 ? [...base, ...['bLaser', 'bFlower', 'bHoming'].filter((x) => !base.includes(x)).slice(0, 2)] : base;
       let p = pats[Math.floor(Math.random() * Math.min(pats.length, 2 + phase * 2))];
       if (p === e.lastPat && Math.random() < 0.7) p = pats[(pats.indexOf(p) + 1) % Math.min(pats.length, 2 + phase * 2)];
       e.lastPat = p;
@@ -2792,7 +2794,9 @@
         if (h) FX.later(3.2, () => { UI.announce('대원 해금', h.name, `${h.title} — 다음 출격부터 선택 가능`, 3); SFX.play('pickSS'); }, 3200);
       }
     } catch (e) { /* no storage */ }
-    { const Fw = FLOORS[fi]; SFX.warm([...Fw.enemies.map((k) => ENEMIES[k].sfx), ...Fw.elites.map((k) => ELITES[k].sfx), 'quake', 'eGolt', 'eRoar', 'ice', 'heart', 'rankUpSS', 'pickSS', 'aftermath', 'expM', 'missile', 'energy', 'charge', 'laserBig']); }
+    { const Fw = FLOORS[fi]; SFX.warm([...Fw.enemies.map((k) => ENEMIES[k].sfx), ...Fw.elites.map((k) => ELITES[k].sfx), 'quake', 'eGolt', 'eRoar', 'ice', 'heart', 'rankUpSS', 'pickSS', 'aftermath', 'expM', 'missile', 'energy', 'charge', 'laserBig',
+      /* the everyday combat set, decoded before the first room so no first shot / hit plays silent */
+      'rifle', 'gun', 'mg', 'spray', 'hitS', 'hitM', 'hitB', 'hitE', 'hitF', 'expS', 'dieS', 'dieM', 'dieL', 'hurt', 'shield', 'reloadIn', 'reloadOut', 'empty', 'land', 'coin', 'uiCoin', 'clear', 'doorOpen', 'warning', 'reinforce']); }
     const lv = LEVEL.generate(fi, (G.seed + fi * 7919) >>> 0);
     LEVEL.set(lv);
     LEVEL.buildMeshes(lv, scene);
@@ -3157,7 +3161,7 @@
       { id: 'dodge', txt: T ? '<b>회피</b> — 연습탄이 가까이 왔을 때 회피 버튼! 구르는 동안은 맞지 않습니다 (2회)' : `<b>회피</b> — 연습탄이 가까이 왔을 때 <kbd>${UI.K('dodge')}</kbd> / <kbd>오른쪽 버튼</kbd>으로 구르며 피하세요 (2회)`, done: (P, s) => (P.rolledNear || 0) - (s.roll0 || 0) >= 2 },
       { id: 'sk2', txt: `<b>보조 스킬 · ${h.sk2.name}</b> — ${T ? '보조 버튼' : `<kbd>${UI.K('skill2')}</kbd>`}: ${h.sk2.desc}`, done: (P, s) => (G.stats.skills2 || 0) - (s.sk0 || 0) >= 1 },
       { id: 'ult', txt: `<b>궁극기 · ${h.skillName}</b> — 게이지를 채워 두었습니다. ${T ? '스킬 버튼' : `<kbd>${UI.K('skill')}</kbd>`}: ${h.skillDesc}`, done: (P, s) => (G.stats.skills || 0) - (s.ult0 || 0) >= 1 },
-      { id: 'map', txt: T ? '<b>전술 지도</b> — 오른쪽 위 미니맵을 눌러 탐색한 구역을 확인하세요. 클리어한 구역은 눌러서 순간이동, 보스 방은 찾으면 붉은 육각형으로 표시' : `<b>전술 지도</b> — <kbd>${UI.K('map')}</kbd>으로 탐색한 구역을 확인하세요. 클리어한 구역으로 순간이동, 보스 방은 찾으면 붉은 육각형으로 표시`, done: (P, s) => !!s.map },
+      { id: 'map', txt: T ? '<b>전술 지도</b> — 오른쪽 위 미니맵을 눌러 탐색한 구역을 확인하세요. 클리어한 구역은 눌러서 순간이동, 보스 방은 찾으면 붉은 육각형으로 표시' : `<b>전술 지도</b> — <kbd>${UI.K('map')}</kbd> 또는 <kbd>Tab</kbd>으로 탐색한 구역을 확인하세요. 클리어한 구역으로 순간이동, 보스 방은 찾으면 붉은 육각형으로 표시`, done: (P, s) => !!s.map },
     ];
   }
   function tutorialStart() {
@@ -3317,7 +3321,7 @@
         else if (e.state === 'arm') { const on = Math.sin(G.t * 40) > 0; e.body.c.setTint(1.8, on ? 0.35 : 1, on ? 0.3 : 0.9); } // kamikaze about to burst: hard red blink
         else if (e.stun > 0 || e.slowT > 0) e.body.c.setTint(0.7, 0.85, 1.4);
         else if (e.elite) e.body.c.setTint(1.15, 0.85, 0.85);
-        else if (!e.boss) { const t = e.def.tint; if (t) e.body.c.setTint(t[0], t[1], t[2]); else e.body.c.setTint(1, 1, 1); } // keeps a variant's own tint (red kamikaze drones)
+        else if (!e.boss) { const t = e.def.tint; const lift = G.fi === 1 ? 1.18 : 1.08; /* a touch brighter than the floor (B2's dark brick most of all) so dark rigs never sink into it */ if (t) e.body.c.setTint(t[0] * lift, t[1] * lift, t[2] * lift); else e.body.c.setTint(lift, lift, lift); } // keeps a variant's own tint (red kamikaze drones)
         else { const t = e.def.tint || [1, 1, 1], ph = e.phase || 0; e.body.c.setTint(t[0], t[1] * (1 - ph * 0.15), t[2] * (1 - ph * 0.2)); }
         e.body.c.setOrder(ORD(e.y));
       }

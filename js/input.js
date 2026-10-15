@@ -59,7 +59,7 @@
   });
   window.addEventListener('mouseup', (e) => { if (e.button === 0) mouse.down = false; });
   let wheelT = 0;
-  window.addEventListener('wheel', (e) => { if (e.target.closest && e.target.closest('#bigMap')) return; const now = performance.now(); if (now - wheelT > 180 && Math.abs(e.deltaY) > 4) { wheelT = now; pressed.add('swap'); } }, { passive: true });
+  window.addEventListener('wheel', (e) => { if (e.target.closest && e.target.closest('#bigMap')) return; const now = performance.now(); if (now - wheelT > 180 && Math.abs(e.deltaY) > 4) { wheelT = now; pressed.add(e.deltaY > 0 ? 'swap' : 'swapPrev'); } }, { passive: true }); /* wheel down = next weapon, wheel up = previous */
   window.addEventListener('contextmenu', (e) => { if (e.target.closest && e.target.closest('#stage')) e.preventDefault(); });
   let enabled = true;
   // accessibility: "toggle fire" — one click / J press starts firing, the next stops (no holding)

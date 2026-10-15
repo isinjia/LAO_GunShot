@@ -1284,3 +1284,12 @@ button:focus-visible, .card:focus-visible, .hcard:focus-visible { outline: 2px s
 }
 /* the lab grid scrolls inside its panel on shorter windows */
 #labOv .dlg, #labOv .lab { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; }
+/* landscape phones: reload docks beside the swap button in the right-hand cluster (not floating in the playfield) */
+@media (orientation: landscape) and (max-height: 520px) {
+  body.touchui .tb.reload, body.touchui.lefty .tb.reload { top: auto !important; bottom: 206px !important; right: 66px !important; left: auto !important; width: 56px !important; height: 42px !important; }
+  body.touchui.lefty .tb.reload { right: auto !important; left: 66px !important; }
+}
+/* very short desktop windows: a smaller HUD still */
+@media (max-height: 440px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #heroBox, body:not(.touchui) #gunBox, body:not(.touchui) #abil .ab, body:not(.touchui) #mapBox, body:not(.touchui) #items { zoom: calc(var(--hudz, 1) * 0.76); } }
+/* card / panel copy reads at 12px+ */
+.lv-card em, .lv-card small, .pinfo small, .pi-run small, .card.lab small, #result small { font-size: 12px !important; }
