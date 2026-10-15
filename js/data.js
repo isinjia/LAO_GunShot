@@ -74,7 +74,7 @@
     { id: 'heart', name: '생체 강화 수액', icon: 'i_nutrient', rank: 1, desc: '최대 체력 +50, 체력 전부 회복' },
     { id: 'armor', name: '역장 발생기', icon: 'i_research', rank: 0, desc: '방어막 +2' },
     { id: 'pierce', name: '철갑탄', icon: 'i_target', rank: 2, desc: '모든 탄환 관통 +1' },
-    { id: 'vamp', name: '나노 수복기', icon: 'i_promote', rank: 2, desc: '적 처치 시 10% 확률로 체력 25 회복' },
+    { id: 'vamp', name: '나노 수복기', icon: 'i_promote', rank: 2, desc: '적 처치 시 6% 확률로 체력 25 회복' },
     { id: 'homing', name: '유도 칩셋', icon: 'i_acc', rank: 2, desc: '탄환이 가까운 적을 추적' },
     { id: 'velo', name: '가속 탄두', icon: 'i_making', rank: 0, desc: '탄속 +35%, 사거리 증가' },
     { id: 'link', name: '전술 데이터 링크', icon: 'i_squad', rank: 1, desc: '스킬 충전 속도 +50%' },
@@ -200,7 +200,7 @@
 
   const BAL = {
     rollTime: 0.42, rollSpeed: 12.5, rollIframe: 0.32, rollCd: 0.5, // i-frames over the first ~3/4 of the roll; the landing is vulnerable
-    hurtIframe: 1.1,
+    hurtIframe: 0.85,
     heartDrop: 0.02, ammoDrop: 0.1,
     shop: { heart: 40, armor: 28, key: 35, ammo: 22, item: [55, 85, 130], gun: [70, 105, 160, 230] },
   };
@@ -218,7 +218,7 @@
     { id: 'p_cool', name: '냉각 시스템', icon: 'i_mechanic', max: 3, desc: '보조 스킬 쿨타임 -15%' },
     { id: 'p_armor', name: '보호막 생성기', icon: 'i_check', max: 2, desc: '방어막 +1 (피격 1회 무효)' },
     { id: 'p_chain', name: '연쇄 기폭', icon: 'i_battle', max: 1, desc: '처치한 적이 40% 확률로 폭발해 주변에 피해' },
-    { id: 'p_leech', name: '흡혈 탄두', icon: 'i_nutrient', max: 1, desc: '처치 시 8% 확률로 체력 25 회복' },
+    { id: 'p_leech', name: '흡혈 탄두', icon: 'i_nutrient', max: 1, desc: '처치 시 5% 확률로 체력 25 회복' },
     { id: 'p_rollReload', name: '전술 재장전', icon: 'i_time', max: 1, desc: '회피하면 들고 있는 무기가 즉시 재장전' },
     { id: 'p_rollBlast', name: '회피 충격파', icon: 'i_power', max: 1, desc: '회피가 끝날 때 충격파 — 주변 적 피해, 적탄 소거' },
     { id: 'p_last', name: '최후의 저항', icon: 'i_skull', max: 1, desc: '체력 50 이하일 때 주는 피해 +40%' },

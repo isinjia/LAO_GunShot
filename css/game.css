@@ -1048,6 +1048,8 @@ body.noflash.lowhp #vignette, body.noflash .lowhp #vignette { animation: none !i
 }
 /* boss bar on narrow desktop windows: one line, a usable minimum width */
 @media (max-width: 1100px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #bossBar { min-width: 340px !important; width: calc(100% - 430px) !important; } }
+/* small desktop windows: the centred bar keeps clear of the minimap on both sides (no forced minimum that runs under it) */
+@media (max-width: 860px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #bossBar { min-width: 0 !important; width: max(220px, calc(100vw - 420px)) !important; } }
 #bossBar #bossName { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 #bossBar #bossHpTx { white-space: nowrap; flex: none; }
 #bossBar .row { display: flex; gap: 8px; min-width: 0; }
@@ -1318,3 +1320,11 @@ kbd { color: rgba(255, 255, 255, 0.85); }
 /* touch: every button is at least 44px in both directions, the small size preset included */
 body.touchui .tb { min-width: 44px !important; min-height: 44px !important; }
 body.touchui .tb.swap { min-height: 46px !important; min-width: 52px !important; }
+/* touch pick-up button: grey and still until something is in reach */
+body.touchui .tb.act:not(.avail) { background: rgba(60, 64, 70, 0.6) !important; color: #c9d1d8 !important; animation: none !important; }
+/* landscape phones: HP / weapon panels read at a larger scale */
+@media (orientation: landscape) and (max-height: 520px) {
+  body.touchui #heroBox { transform: scale(0.74) !important; }
+  body.touchui #gunBox { transform: scale(0.62) !important; }
+  body.touchui .tb.swap { min-height: 46px !important; }
+}

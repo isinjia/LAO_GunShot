@@ -467,7 +467,7 @@
       P.rolled = (P.rolled || 0) + 1;
       if (G.room && G.room.active && G.ebul.length) P.rolledCombat = (P.rolledCombat || 0) + 1;
       // training: only a roll with a practice round close by counts as a dodge
-      if (G.tut && G.ebul.some((b) => Math.hypot(b.x - P.x, b.y - P.y - 0.4) < 3)) P.rolledNear = (P.rolledNear || 0) + 1;
+      if (G.tut && G.ebul.some((b) => Math.hypot(b.x - P.x, b.y - P.y - 0.4) < 1.6)) P.rolledNear = (P.rolledNear || 0) + 1; // a practice round really has to be close
       SFX.play('roll', 0.9);
       if (Math.abs(d[0]) > 0.1) P.face = Math.sign(d[0]);
     } else {
@@ -1135,9 +1135,9 @@
     if (Math.random() < BAL.ammoDrop * 0.5) dropPickup(e.x, e.y, 'ammo');
     if (e.elite && Math.random() < 0.6) dropPickup(e.x, e.y, 'key');
     if (P.mods.overclock) P.ocT = 3;
-    if (P.mods.vamp && Math.random() < 0.1 * (P.mods.vampX || 1) && P.hp < P.maxHp) { P.hp++; FX.ring(P.x, P.y + 0.6, 0.2, 1, 0xff4060, 0.4); SFX.play('reinforce', 0.5); }
+    if (P.mods.vamp && Math.random() < 0.06 * (P.mods.vampX || 1) && P.hp < P.maxHp) { P.hp++; FX.ring(P.x, P.y + 0.6, 0.2, 1, 0xff4060, 0.4); SFX.play('reinforce', 0.5); }
     if (P.hero.id === 'nymph' && mastery(P, curGun()) && Math.random() < 0.2) P.rollCd = 0;
-    if (P.up.p_leech && Math.random() < 0.08 && P.hp < P.maxHp) { P.hp++; FX.ring(P.x, P.y + 0.6, 0.2, 1.1, 0xff4060, 0.45); SFX.play('reinforce', 0.45); }
+    if (P.up.p_leech && Math.random() < 0.05 && P.hp < P.maxHp) { P.hp++; FX.ring(P.x, P.y + 0.6, 0.2, 1.1, 0xff4060, 0.45); SFX.play('reinforce', 0.45); }
     if (P.up.p_chain && !e.boss && Math.random() < 0.4) {
       const ex = e.x, ey = e.y + e.h * 0.4;
       FX.later(0.12, () => {
@@ -1159,7 +1159,7 @@
   }
 
   // enemy bullets ─────────────────────────────────────────
-  const BSPD = [0.92, 0.92, 0.93, 0.95, 1.0, 1.04]; // enemy bullet speed per floor
+  const BSPD = [0.95, 0.98, 1.0, 1.03, 1.07, 1.1]; // enemy bullet speed per floor
   const DENS = [0.44, 0.6, 0.7, 0.96, 1.2, 1.4]; // boss bullet density per floor
   // enemy bullets keep to warm / violet hues so they never read as the player's yellow-cyan tracers
   const EB_COL = { n: 0xff2d6a, o: 0xff3fb8, b: 0xb06bff, y: 0xff5fe0, p: 0xc35bff }; /* every enemy shot sits in the pink-violet family: warm amber belongs to the player */
@@ -1459,7 +1459,7 @@
       // firing
       e.fireT -= dt;
       if (e.fireT <= 0 && seeP && dist < 13 && e.state !== 'charge' && e.state !== 'wind' && def.ai !== 'kamikaze') {
-        e.fireT = def.rate * rnd(0.85, 1.2) * [0.92, 0.9, 0.86, 0.76, 0.66, 0.6][G.fi] * (1 - (G.heat || 0) * 0.05); // later floors fire faster again (the curve keeps rising to B6)
+        e.fireT = def.rate * rnd(0.85, 1.2) * [0.9, 0.85, 0.8, 0.72, 0.63, 0.57][G.fi] * (1 - (G.heat || 0) * 0.05); // later floors fire faster again (the curve keeps rising to B6)
         if (def.ai !== 'charger' || Math.random() < 0.5) {
           G.shooter = def.name; PATTERNS[def.fire](e);
           if (e.body && e.body.c.has('atk')) e.body.c.play('atk');
@@ -2244,8 +2244,9 @@
     for (let guard = 0; pick.length < Math.min(P.cards || 3, pool.length) && guard < 30; guard++) { if (!take(Math.random() < 0.2 ? own : com)) take(pool); }
     G.choosing = pick; G.paused = true; G.chooseAt = performance.now(); refreshHints(); INPUT.stopFire();
     SFX.play('rankUp', 0.9); if ((P.lv - 2) % 3 === 0) SFX.voice(P.hero.id, P.lv % 2 ? 'CoreLink' : 'Reinforce', 1, true);
-    FX.summonBurst(P.x, P.y + 0.6, 2, heroHex(P));
-    FX.pillar(P.x, P.y, 0.5, heroHex(P));
+    // a light ring at her feet: the level-up never hides the hero mid-fight
+    FX.ring(P.x, P.y + 0.3, 0.4, 2.2, heroHex(P), 0.5, 0.55);
+    if (!(G.room && G.room.active)) FX.pillar(P.x, P.y, 0.5, heroHex(P));
     UI.levelUp(P, pick);
   }
   function choosePerk(i) {
@@ -2749,7 +2750,7 @@
     const roll = Math.random();
     if (roll < 0.14) dropPickup(r.cx, r.cy, 'key');
     // healing gets scarcer with depth (10 % on B1 → 4 % from B6), never zero; low HP still gets a mercy roll
-    else if (roll < 0.14 + Math.max(0.04, 0.1 - G.fi * 0.012) || (P.hp <= 2 && roll < 0.4)) dropPickup(r.cx, r.cy, P.hp < P.maxHp ? 'heart' : 'armor');
+    else if (roll < 0.14 + Math.max(0.03, 0.09 - G.fi * 0.014) || (P.hp <= 2 && roll < 0.4)) dropPickup(r.cx, r.cy, P.hp < P.maxHp ? 'heart' : 'armor');
     else if (roll < 0.42) dropPickup(r.cx, r.cy, 'ammo');
     else if (roll < 0.47 - G.fi * 0.015) dropPickup(r.cx, r.cy, 'armor');
     else if (roll < 0.58) spawnChest(r.cx, r.cy, 0, true);

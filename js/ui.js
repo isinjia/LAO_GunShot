@@ -1088,7 +1088,7 @@
       hb.style.setProperty('--c', hero.color);
       hb.innerHTML = `<i style="background-image:${portrait(hero)}"></i><div><small>${win ? 'MISSION CLEAR' : 'RETREAT'}</small><b>${hero.name}</b><em>Lv.${P.lv} · ${FLOORS[fi].key} ${FLOORS[fi].name} · 강화 ${Object.values(P.up || {}).reduce((a, b) => a + b, 0)}개</em></div>`; }
     const where = `${FLOORS[fi].key} ${FLOORS[fi].name}`;
-    r.querySelector('.reason').textContent = win ? '철혈 사령부를 제압하고 무사히 귀환했습니다!' : `${where}에서 작전 불능 — ${s.cause || '피격'}`;
+    r.querySelector('.reason').textContent = win ? '철혈 사령부를 제압하고 무사히 귀환했습니다!' : s.cause === '작전 포기' ? `${where}에서 작전을 포기하고 귀환했습니다` : `${where}에서 작전 불능 — ${s.cause || '피격'}`; // an abort reads as a retreat, not a defeat
     const stars = win ? 1 + (s.hits <= GOAL.hits) + (s.time < GOAL.time) : 0;
     r.querySelectorAll('.stars i').forEach((st, i) => { st.className = i < stars ? 'on' : ''; st.style.animationDelay = (0.5 + i * 0.25) + 's'; });
     const mm = Math.floor(s.time / 60), ss = Math.floor(s.time % 60);
