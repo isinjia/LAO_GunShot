@@ -49,7 +49,7 @@
     mg: { hitSnd: 'hitS', name: 'M-60 경기관총', donor: 'leprechaun', rank: 0, kind: 'bullet', auto: true, rate: 0.07, dmg: 3.4, speed: 21, spread: 8, mag: 90, ammo: 720, reload: 2.1, life: 0.65, sfx: 'mg', color: 0x9dff7a, size: 0.28, hit: 'skill_hit_simple', recoil: 0.05, desc: '대용량 탄창, 흩뿌리는 탄막' },
     gl: { hitSnd: 'hitB', name: 'G-40 유탄발사기', donor: 'gnome', rank: 1, kind: 'grenade', auto: false, rate: 0.5, dmg: 20, splash: 1.8, speed: 13, spread: 2, mag: 6, ammo: 72, reload: 1.5, life: 0.9, sfx: 'cannon', color: 0xa8ff6a, size: 0.5, hit: 'simple_explosion', recoil: 0.14, desc: '착탄 시 광역 폭발' },
     dmr: { hitSnd: 'hitM', name: 'CS-2 정밀소총', donor: 'constantia', rank: 1, kind: 'bullet', auto: false, rate: 0.3, dmg: 16, pierce: 2, speed: 34, spread: 0.8, mag: 10, ammo: 140, reload: 1.3, life: 0.8, sfx: 'handgun', color: 0x8fe8ff, size: 0.45, hit: 'Constantia_hit', recoil: 0.12, desc: '적 2명을 관통하는 고위력탄' },
-    sg: { hitSnd: 'hitM', name: 'N-12 산탄총', donor: 'nymph', scale: 1.18, rank: 1, kind: 'bullet', auto: false, rate: 0.66, dmg: 4.2, pellets: 7, speed: 19, spread: 30, mag: 6, ammo: 84, reload: 1.4, life: 0.36, sfx: 'gun', color: 0x7affd4, size: 0.26, hit: 'skill_hit_simple', recoil: 0.16, desc: '근거리에서 압도적인 산탄' },
+    sg: { hitSnd: 'hitM', name: 'N-12 산탄총', donor: 'nymph', scale: 1.18, rank: 1, kind: 'bullet', auto: false, rate: 0.66, dmg: 4.2, pellets: 7, speed: 19, spread: 30, mag: 6, ammo: 84, reload: 1.4, life: 0.36, sfx: 'gun', color: 0x7affd4, size: 0.34, hit: 'skill_hit_simple', recoil: 0.16, desc: '근거리에서 압도적인 산탄' },
     pistol: { hitSnd: 'hitE', name: 'RV-7 손목 블래스터', donor: 'raven', scale: 1.5, hold: { l: [0.02, -0.13] }, rank: 0, kind: 'bullet', auto: true, rate: 0.11, dmg: 4.6, speed: 26, spread: 4, mag: 20, ammo: 300, reload: 0.85, life: 0.6, sfx: 'laser', color: 0x7fe3ff, size: 0.3, hit: 'skill_hit_simple', recoil: 0.04, desc: '손목에 차는 에너지 블래스터, 빠른 재장전' },
     sylph: { hitSnd: 'hitS', name: 'SY-4 고속 소총', donor: 'sylphid', scale: 1.22, rank: 2, kind: 'bullet', auto: true, rate: 0.12, dmg: 8.5, pierce: 1, speed: 32, spread: 2.2, mag: 32, ammo: 320, reload: 1.2, life: 0.75, sfx: 'rifle', color: 0x9ff0ff, size: 0.34, hit: 'skill_hit_simple', recoil: 0.06, desc: '고속 관통탄 연사' },
     shock: { hitSnd: 'hitE', name: 'T-9 전격총', donor: 'thetis', rank: 2, kind: 'chain', auto: true, rate: 0.24, dmg: 14, chain: 3, range: 8, mag: 24, ammo: 260, reload: 1.4, sfx: 'elec', color: 0x66ccff, hit: 'Thetis_skill2_Hit', recoil: 0.04, desc: '조준 방향의 적에게 연쇄 번개' },
@@ -155,11 +155,11 @@
     },
     {
       key: 'B5', name: '외곽 방어선', en: 'OUTER BULWARK', rooms: 6, enemies: ['centurion', 'predator', 'intruder', 'gigantes', 'phalangites', 'rampart', 'juggernaut', 'harvester', 'bomber'], elites: ['destroyer', 'blackknight', 'bigchick'], boss: ['doomprime', 'goltarion', 'nidhogg'],
-      floor: 'floor_deck', alt: 'floor_grate', face: 'wall_face_d', tint: [1.08, 1.0, 0.8], light: 0xffd040, music: ['northern', 'outctrl'], hpMul: 2.1,
+      floor: 'floor_deck', alt: 'floor_grate', face: 'wall_face_d', tint: [1.08, 1.0, 0.8], light: 0xffd040, music: ['northern', 'outctrl'], hpMul: 2.3,
     },
     {
       key: 'B6', name: '철혈 사령부', en: 'IRON COMMAND', rooms: 7, enemies: ['centurion', 'predator', 'intruder', 'gigantes', 'phalangites', 'rampart', 'harvester', 'juggernaut'], elites: ['destroyer', 'doomeater', 'blackknight'], boss: ['ironprince'],
-      floor: 'floor_plate', alt: 'floor_x', face: 'wall_face_c', tint: [1.0, 0.88, 0.92], light: 0xff4466, music: ['battle3', 'tension2'], hpMul: 2.4,
+      floor: 'floor_plate', alt: 'floor_x', face: 'wall_face_c', tint: [1.0, 0.88, 0.92], light: 0xff4466, music: ['battle3', 'tension2'], hpMul: 2.7,
     },
   ];
 

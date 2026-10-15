@@ -118,7 +118,7 @@
       const r = () => { b.classList.toggle('on', !!G.opt[k]); b.setAttribute('aria-pressed', String(!!G.opt[k])); if (fx) fx(G.opt[k]); };
       r(); b.onclick = () => { G.opt[k] = !G.opt[k]; r(); GAME.saveOpt(); SFX.play('uiPick', 0.6); };
     };
-    tog('#optShake', 'shake'); tog('#optDmg', 'dmg'); tog('#optAssist', 'aimAssist'); tog('#optLook', 'camLook');
+    tog('#optShake', 'shake'); tog('#optDmg', 'dmg'); tog('#optAssist', INPUT.isTouch ? 'aimAssistT' : 'aimAssist'); tog('#optLook', 'camLook');
     tog('#optFlash', 'flash', (v) => { FX.state.noFlash = !v; document.body.classList.toggle('noflash', !v); });
     tog('#optHints', 'hints', () => { if (GAME.refreshHints) GAME.refreshHints(); });
     tog('#optToggleFire', 'autoFire', (v) => { INPUT.toggleFire = v; });
@@ -456,7 +456,7 @@
   const xh = { el: null };
   function crosshair(G) {
     if (!xh.el) xh.el = document.getElementById('xhair');
-    const m = INPUT.mouse, assist = G.opt.aimAssist;
+    const m = INPUT.mouse, assist = INPUT.isTouch ? G.opt.aimAssistT : G.opt.aimAssist;
     // with the aim assist on, the reticle locks onto the assisted target instead of the (ignored) cursor
     const tg = assist && G.P.target && G.P.target.alive ? G.P.target : null;
     const show = (!INPUT.isTouch || m.used) && !G.paused && !G.P.dead && !overlayUp() && (assist ? !!tg : m.seen && !(INPUT.pad.active && !m.moved));

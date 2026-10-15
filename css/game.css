@@ -1240,7 +1240,8 @@ body:not(.touchui) #pauseOv .setrows .seg button.touchonly { display: none !impo
 #pauseOv .keys .kgrid .kv { overflow-wrap: anywhere; }
 @media (max-width: 620px) { #pauseOv .keys .kgrid { grid-template-columns: max-content minmax(0, 1fr); } }
 /* short desktop windows: the bottom HUD shrinks by itself */
-@media (max-height: 560px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #heroBox, body:not(.touchui) #gunBox, body:not(.touchui) #abil .ab, body:not(.touchui) #mapBox, body:not(.touchui) #items { zoom: calc(var(--hudz, 1) * 0.92); } }
+@media (max-height: 700px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #heroBox, body:not(.touchui) #gunBox, body:not(.touchui) #abil .ab, body:not(.touchui) #mapBox, body:not(.touchui) #items { zoom: calc(var(--hudz, 1) * 0.9); } }
+@media (max-height: 560px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #heroBox, body:not(.touchui) #gunBox, body:not(.touchui) #abil .ab, body:not(.touchui) #mapBox, body:not(.touchui) #items { zoom: calc(var(--hudz, 1) * 0.86); } }
 /* off-screen enemy arrows on the screen edge */
 #edgeArrows { position: fixed; inset: 0; pointer-events: none; z-index: 4; }
 #edgeArrows i { position: absolute; left: 0; top: 0; width: 18px; height: 16px; margin: -8px 0 0 -9px; background: #ff3f8f; clip-path: polygon(100% 50%, 0 0, 22% 50%, 0 100%); filter: drop-shadow(0 0 3px #000); opacity: 0.9; }

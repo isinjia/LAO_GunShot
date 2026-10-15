@@ -22,7 +22,7 @@
     phase: 'boot', paused: false, fi: 0, lv: null, room: null, P: null, enemies: [], pbul: [], ebul: [], pickups: [], props: [], objs: [], hazards: [],
     statics: [], thrown: [], vents: [], timeScale: 1, slowT: 0, t: 0, stats: null, heroIdx: 0, seed: 0, banner: null, bossE: null,
     // touch screens start with the aim assist on (twin-stick on glass is hard); tbSize / tbAlpha: touch button size (0 / 0.5 / 1) and opacity
-    opt: { touchAssistSet: false, shake: !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches), dmg: true, sfx: 1, bgm: 1, voice: 1, master: 1, aimAssist: !!(window.INPUT && INPUT.isTouch), camLook: true, flash: !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches), muted: false, hints: true, autoFire: false, cbBullets: false, hudScale: 1, tbSize: 0.5, tbAlpha: 1, lefty: false },
+    opt: { touchAssistSet: false, shake: !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches), dmg: true, sfx: 1, bgm: 1, voice: 1, master: 1, aimAssist: false, aimAssistT: true, camLook: true, flash: !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches), muted: false, hints: true, autoFire: false, cbBullets: false, hudScale: 1, tbSize: 0.5, tbAlpha: 1, lefty: false },
   };
   try {
     // only known keys of the right type survive (a hand-edited or old save can't feed NaN into the mixer)
@@ -36,7 +36,8 @@
     }
   } catch (e) { /* ignore */ }
   // the first time this profile runs on a touch screen, the aim assist turns on (a desktop save had it off); the player can still switch it off
-  if (window.INPUT && INPUT.isTouch && !G.opt.touchAssistSet) { G.opt.aimAssist = true; G.opt.touchAssistSet = true; try { localStorage.setItem('lao_rogue_opt', JSON.stringify(G.opt)); } catch (e) { /* ignore */ } }
+  /* aim assist is stored per input kind: aimAssistT (touch, on by default) and aimAssist (mouse / pad), so a hybrid device never carries one into the other */
+  const assistOn = () => (window.INPUT && INPUT.isTouch ? G.opt.aimAssistT : G.opt.aimAssist);
   const saveOpt = () => { try { localStorage.setItem('lao_rogue_opt', JSON.stringify(G.opt)); } catch (e) { /* ignore */ } };
 
   // ── textures ─────────────────────────────────────────────
@@ -484,7 +485,7 @@
     // aim: mouse cursor (desktop) or the touch aim pad; auto-aim only as an optional assist (and for the test bot)
     let want = P.aim, snap = 30;
     const src = INPUT.aim();
-    const assist = G.opt.aimAssist || (window.BOT && BOT.tick) || P.visorT > 0; // 전술 조준 모드 locks on by itself
+    const assist = assistOn() || (window.BOT && BOT.tick) || P.visorT > 0; // 전술 조준 모드 locks on by itself
     if (src && src.kind === 'mouse' && !assist) {
       const [wx, wy] = screenToWorld(src.x, src.y);
       want = Math.atan2(wy - (P.y + 0.7), wx - P.x);
@@ -978,7 +979,7 @@
   }
 
   // ── enemies ──────────────────────────────────────────────
-  const FLOOR_BOSS_HP = [740, 1200, 1750, 2800, 3900, 5600]; // a smoother step at B2 (the first "any boss" floor)
+  const FLOOR_BOSS_HP = [740, 1200, 1750, 2800, 4200, 6400]; // a smoother step at B2 (the first "any boss" floor)
   function spawnEnemy(defKey, x, y, opts = {}) {
     const def = ENEMIES[defKey] || ELITES[defKey] || BOSSES[defKey];
     const F = FLOORS[G.fi];
@@ -1048,6 +1049,7 @@
     }
     e.hp -= dmg;
     e.flash = 0.07;
+    if (!(e.sparkT > G.t)) { e.sparkT = G.t + 0.07; FX.sparks(e.x + rnd(-0.2, 0.2), e.y + e.h * rnd(0.35, 0.65), crit ? 0xffe066 : 0xfff2d0, crit ? 6 : 3, crit ? 4.5 : 3.2, 0.08, 0.18); } /* every connecting hit throws a small spark (throttled per enemy) */
     e.kx += kx * (e.boss ? 0.05 : e.elite ? 0.25 : 1); e.ky += ky * (e.boss ? 0.05 : e.elite ? 0.25 : 1);
     G.stats.dmg += dmg;
     const P = G.P;
@@ -1111,6 +1113,7 @@
     }
     const cy = e.y + e.h * 0.4;
     if (e.boss) return bossDeath(e);
+    if (e.elite && !silent) G.slowT = Math.max(G.slowT || 0, 0.12); /* a short hit-stop on elite kills */
     FX.deathFx(e.x, cy, false);
     FX.explosion(e.x, cy, e.elite ? 1.0 : 0.55, 0xff7a3a, e.elite);
     spawnStatic('simple_explosion', e.x, cy, e.elite ? 0.2 : 0.13);
@@ -1122,7 +1125,7 @@
     if (!silent) {
     const gold = e.noReward ? 0 : Math.round(e.def.gold * 0.5 * (P.mods.lucky ? 1.5 : 1) * rnd(0.6, 1.2));
     if (gold) dropPickup(e.x, e.y, 'gold', gold);
-    if (Math.random() < BAL.heartDrop * (e.elite ? 4 : 1) * Math.max(0.3, 1 - G.fi * 0.14)) dropPickup(e.x, e.y, 'half'); // healing thins out with depth
+    if (Math.random() < BAL.heartDrop * (e.elite ? 4 : 1) * Math.max(0.2, 1 - G.fi * 0.17)) dropPickup(e.x, e.y, 'half'); // healing thins out with depth
     if (Math.random() < BAL.ammoDrop * 0.5) dropPickup(e.x, e.y, 'ammo');
     if (e.elite && Math.random() < 0.6) dropPickup(e.x, e.y, 'key');
     if (P.mods.overclock) P.ocT = 3;
@@ -1151,7 +1154,7 @@
 
   // enemy bullets ─────────────────────────────────────────
   const BSPD = [0.92, 0.92, 0.93, 0.95, 1.0, 1.04]; // enemy bullet speed per floor
-  const DENS = [0.44, 0.6, 0.7, 0.96, 1.14, 1.28]; // boss bullet density per floor
+  const DENS = [0.44, 0.6, 0.7, 0.96, 1.2, 1.4]; // boss bullet density per floor
   // enemy bullets keep to warm / violet hues so they never read as the player's yellow-cyan tracers
   const EB_COL = { n: 0xff2d6a, o: 0xff3fb8, b: 0xb06bff, y: 0xff5fe0, p: 0xc35bff }; /* every enemy shot sits in the pink-violet family: warm amber belongs to the player */
   // high-contrast option: one saturated magenta family, larger dark rim (red-green / blue-yellow safe)
@@ -1446,7 +1449,7 @@
       // firing
       e.fireT -= dt;
       if (e.fireT <= 0 && seeP && dist < 13 && e.state !== 'charge' && e.state !== 'wind' && def.ai !== 'kamikaze') {
-        e.fireT = def.rate * rnd(0.85, 1.2) * [0.95, 0.96, 0.92, 0.8, 0.72, 0.66][G.fi] * (1 - (G.heat || 0) * 0.05); // later floors fire faster again (the curve keeps rising to B6)
+        e.fireT = def.rate * rnd(0.85, 1.2) * [0.95, 0.96, 0.92, 0.8, 0.68, 0.6][G.fi] * (1 - (G.heat || 0) * 0.05); // later floors fire faster again (the curve keeps rising to B6)
         if (def.ai !== 'charger' || Math.random() < 0.5) {
           G.shooter = def.name; PATTERNS[def.fire](e);
           if (e.body && e.body.c.has('atk')) e.body.c.play('atk');
@@ -1525,7 +1528,7 @@
       if (p === e.lastPat && Math.random() < 0.7) p = pats[(pats.indexOf(p) + 1) % Math.min(pats.length, 2 + phase * 2)];
       e.lastPat = p;
       BOSS_PAT[p](e, phase);
-      e.patT = [1.7, 1.72, 1.58, 1.4, 1.32, 1.28][G.fi] - phase * 0.14; /* B2/B3 bosses breathe more: any of them can be drawn this early */
+      e.patT = [1.7, 1.72, 1.58, 1.4, 1.26, 1.18][G.fi] - phase * 0.16; /* B2/B3 bosses breathe more: any of them can be drawn this early */
       if (e.body && e.body.c.has('atk')) e.body.c.play('atk'); // (some original skill clips hide the body for a cut-in)
     }
     if (e.body && (e.body.c.clipName === 'idle' || e.body.c.clipName === 'move')) { if (e.body.c.clipName !== 'move' && e.body.c.has('move')) e.body.c.play('move', null, true); }
@@ -3353,12 +3356,13 @@
       if (!focus) G.cam.y = clamp(G.cam.y, P.y + HERO_H + 0.3 - vz * 0.36, P.y + vz * 0.22); // she never sinks into the bottom HUD band
       // boss fights: keep the boss's head below the boss-bar band (as far as the hero's own margin allows)
       if (!focus && bz) {
-        const band = (100 / Math.max(1, view.h)) * vz, need = bz.y + bz.h + 0.3 + band - vz / 2 + (view.hudShift || 0) * (G.zoomApplied || 1);
-        if (G.cam.y < need) G.cam.y = Math.min(need, P.y + vz * 0.24);
+        const bbEl = document.getElementById('bossBar'), barPx = bbEl && bbEl.bot > 1 ? bbEl.bot + 14 : 110; /* the bar's measured bottom edge (small windows scale it) */
+        const band = (barPx / Math.max(1, view.h)) * vz, need = bz.y + bz.h + 0.3 + band - vz / 2 + (view.hudShift || 0) * (G.zoomApplied || 1);
+        if (G.cam.y < need) G.cam.y = Math.min(need, P.y + vz * 0.3);
       }
     }
     // wider view in boss arenas
-    let zt = G.room && G.room.type === 'boss' && G.room.active ? 1.32 : 1;
+    let zt = G.room && G.room.type === 'boss' && G.room.active ? (view.h < 700 ? 1.45 : 1.32) : 1; /* short windows zoom out further so the boss clears its bar */
     if (zt > 1 && G.bossE && G.bossE.alive && P) {
       // zoom out until both the hero and the boss (with margin) fit
       // vertical margin includes the boss's height and the boss-bar band at the top of the screen
