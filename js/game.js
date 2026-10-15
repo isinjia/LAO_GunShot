@@ -699,6 +699,7 @@
       visor: P.visorT > 0,
       pierce: (d.pierce || 0) + P.mods.pierce, hit: new Set(), s, core, kind: d.kind, t: 0,
     };
+    if (G.pbul.length > 700) { const o = G.pbul.shift(); FX.kill(o.s); FX.kill(o.core); } /* a hard ceiling for runaway fire (minigun + split + echo): the oldest shot retires */
     G.pbul.push(nb);
     return nb;
   }
@@ -1169,7 +1170,7 @@
     const cb = G.opt.cbBullets, size = b.size0;
     b.col = cb ? 0xffffff : EB_COL[b.ck];
     b.s.color = b.col;
-    b.ol.size = b.ol.sz = size * (cb ? 2.7 : 1.9); b.ol.color = cb ? 0x000000 : 0x14030a; b.ol.alpha = cb ? 1 : 0.8;
+    b.ol.size = b.ol.sz = size * (cb ? 2.7 : 2.15); b.ol.color = cb ? 0x000000 : 0x0c0208; b.ol.alpha = cb ? 1 : 0.92; /* a dark rim on every enemy shot, so pink reads even over a magenta boss */
     b.core.color = cb ? 0xff1030 : 0xffffff;
     /* high contrast: a black shell with a bright red pip and only a faint white halo, so bloom never merges a crowd of shots into a white blob over the boss or the hero */
     b.s.size = b.s.sz = size * (cb ? 1.7 : 2.3); if (!b.delay) b.s.alpha = cb ? 0.32 : 0.95;
@@ -1182,7 +1183,7 @@
     const b = {
       x, y, vx: Math.cos(ang) * speed * BSPD[G.fi] * (1 + (G.heat || 0) * 0.04), vy: Math.sin(ang) * speed * BSPD[G.fi] * (1 + (G.heat || 0) * 0.04), r: size * 0.55, life: o.life || 6, t: 0,
       src: G.shooter, acc: o.acc || 0, homing: o.homing || 0, curve: o.curve || 0, delay: o.delay || 0,
-      ol: FX.sprite({ x, y, size: size * (cb ? 2.4 : 1.9), color: cb ? 0x000000 : 0x14030a, alpha: cb ? 1 : 0.8, tex: FX.tex.dot, normal: true, order: L.PROJ + 0.9 }),
+      ol: FX.sprite({ x, y, size: size * (cb ? 2.4 : 2.15), color: cb ? 0x000000 : 0x0c0208, alpha: cb ? 1 : 0.92, tex: FX.tex.dot, normal: true, order: L.PROJ + 0.9 }),
       s: FX.sprite({ x, y, size: size * 2.3, color: col, alpha: 0.95, tex: FX.tex.glow, order: L.PROJ + 1 }),
       core: FX.sprite({ x, y, size: size * 0.95, color: 0xffffff, alpha: 1, tex: FX.tex.glow, order: L.PROJ + 1.1 }),
       col,
@@ -1215,7 +1216,7 @@
       if (b.pass === pass) continue; // a splice mid-pass shifted an already-moved bullet down: never step it twice
       b.pass = pass;
       b.t += dt;
-      if (b.delay > 0) { b.delay -= dt; if (b.delay <= 0) { const cbm = G.opt.cbBullets; b.s.alpha = cbm ? 0.32 : 0.95; b.core.alpha = 1; b.ol.alpha = cbm ? 1 : 0.8; } else continue; }
+      if (b.delay > 0) { b.delay -= dt; if (b.delay <= 0) { const cbm = G.opt.cbBullets; b.s.alpha = cbm ? 0.32 : 0.95; b.core.alpha = 1; b.ol.alpha = cbm ? 1 : 0.92; } else continue; }
       b.life -= dt;
       if (b.homing && !P.dead) {
         const sp = Math.hypot(b.vx, b.vy), a = Math.atan2(b.vy, b.vx), w = Math.atan2(hy - b.y, hx - b.x);
@@ -1245,7 +1246,7 @@
       b.s.x = b.core.x = b.ol.x = b.x; b.s.y = b.core.y = b.ol.y = b.y;
       if (b.streak && (b.homing || b.curve)) b.s.rot = b.core.rot = b.ol.rot = Math.atan2(b.vy, b.vx) - Math.PI / 2;
       if (b.spin) b.core.rot += b.spin * dt;
-      if (b.homing && Math.random() < 0.5) FX.particle({ x: b.x, y: b.y, life: 0.3, size: 0.25, size1: 0, color: 0xff8a2a, tex: FX.tex.dot, alpha: 0.6 });
+      if (b.homing && Math.random() < 0.5) FX.particle({ x: b.x, y: b.y, life: 0.3, size: 0.25, size1: 0, color: 0xff4fd0, /* enemy family, not the player's amber */ tex: FX.tex.dot, alpha: 0.6 });
       // a gentle pulse so bullets read against busy floors
       b.s.sz = b.s.size * (1 + 0.12 * Math.sin(b.t * 18));
     }
@@ -1458,7 +1459,7 @@
       // firing
       e.fireT -= dt;
       if (e.fireT <= 0 && seeP && dist < 13 && e.state !== 'charge' && e.state !== 'wind' && def.ai !== 'kamikaze') {
-        e.fireT = def.rate * rnd(0.85, 1.2) * [0.95, 0.96, 0.92, 0.8, 0.68, 0.6][G.fi] * (1 - (G.heat || 0) * 0.05); // later floors fire faster again (the curve keeps rising to B6)
+        e.fireT = def.rate * rnd(0.85, 1.2) * [0.92, 0.9, 0.86, 0.76, 0.66, 0.6][G.fi] * (1 - (G.heat || 0) * 0.05); // later floors fire faster again (the curve keeps rising to B6)
         if (def.ai !== 'charger' || Math.random() < 0.5) {
           G.shooter = def.name; PATTERNS[def.fire](e);
           if (e.body && e.body.c.has('atk')) e.body.c.play('atk');
@@ -1679,7 +1680,7 @@
     dmg = Math.max(1, Math.min(4, Math.round(Number(dmg)) || 1)); src = String(src || '알 수 없는 공격');
     if (G.P) G.P.beats = 0; // a new hit re-arms the low-health heartbeat
     const P = G.P;
-    if (P.dead || P.iframe > 0 || G.phase !== 'play') return;
+    if (!P || P.dead || P.iframe > 0 || G.phase !== 'play') return;
     G.stats.src[src] = (G.stats.src[src] || 0) + 1;
     if (GOD) { G.stats.hits++; P.iframe = 0.5; return; }
     if (G.tut) { P.iframe = 0.6; P.hurtFlash = 0.2; UI.toast('연습탄 명중 — 훈련 중에는 피해가 없습니다', ''); return; } // basic training never hurts
@@ -2019,6 +2020,10 @@
     const a = Math.random() * TAU, v = rnd(1.5, 3.5);
     const p = { x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, kind, val, m, t: 0, r: 0.3 };
     p.glow = FX.sprite({ x, y, size: 0.9, color: { gold: 0xffcc00, heart: 0xff3355, half: 0xff3355, key: 0xffdd55, armor: 0x2bc4ff, ammo: 0xaaff66 }[kind] || 0xffffff, alpha: 0.25, tex: FX.tex.glow, order: 5 });
+    if (G.pickups.length > 150) { /* a ceiling on loose pickups: the oldest loose parts are banked straight away */
+      const i = G.pickups.findIndex((q) => q.kind === 'gold');
+      if (i >= 0) { const q = G.pickups[i]; G.pickups.splice(i, 1); if (G.P) { G.P.gold += q.val; G.stats.gold += q.val; } killObj(q.m); FX.kill(q.glow); }
+    }
     G.pickups.push(p);
     return p;
   }
@@ -2197,7 +2202,7 @@
   function spawnStarterSupply(r) {
     const pool = shuffle(ITEMS.filter((it) => it.rank <= 1 && it.id !== 'heart' && it.id !== 'armor')).slice(0, 3);
     pool.forEach((it, i) => {
-      const o = spawnPedestal(r.cx + (i - 1) * (MOBILE || INPUT.isTouch ? 3.3 : 2.4), r.y0 + 2.2, { kind: 'item', id: it.id });
+      const o = spawnPedestal(r.cx + (i - 1) * (MOBILE || INPUT.isTouch ? 3.3 : 2.4), Math.max(r.y0 + 2.2, r.cy - 2.5), { kind: 'item', id: it.id }); /* close under the hero, clear of the bottom HUD band */
       if (!o) return;
       o.starter = true;
       // the item's name under its icon, readable before walking up (rides on the icon mesh, so it goes away with it)
@@ -2206,7 +2211,7 @@
     });
     // a floor label over the three: "출격 보급 · 하나 선택" (removed with the pedestals)
     const tex = canvasTex('starterLbl', 512, 80, (g, w, h) => { g.fillStyle = 'rgba(8,10,14,0.75)'; g.fillRect(0, 10, w, h - 20); g.fillStyle = '#7fe3ff'; g.font = 'bold 40px Godo, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('출격 보급 · 하나를 고르세요', w / 2, h / 2 + 2); });
-    const lbl = spriteMesh(tex, 5.2, 0.8, { alpha: 0.9 }); lbl.position.set(r.cx, r.y0 + 3.9, 0); lbl.renderOrder = 3.3; scene.add(lbl);
+    const lbl = spriteMesh(tex, 5.2, 0.8, { alpha: 0.9 }); lbl.position.set(r.cx, Math.max(r.y0 + 2.2, r.cy - 2.5) - 2.3, 0); /* (kept off-scene: with the pedestals right under the hero, the toast and the name tags say it; a floor banner would sit under the HUD) */ lbl.renderOrder = 3.3;
     G.objs.push({ type: 'deco', x: -999, y: -999, m: lbl, starterLbl: true });
   }
   // ── levels: kills give data, each level offers 3 perks (common ones + the hero's own) ──

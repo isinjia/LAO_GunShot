@@ -1308,3 +1308,5 @@ button:focus-visible, .card:focus-visible, .hcard:focus-visible { outline: 2px s
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+/* settings (title): the close button sits at the foot of the panel, not between the tabs and the options */
+#pauseOv.settings .dlg > .setclose { order: 8 !important; margin-top: 10px; display: flex; justify-content: center; }
