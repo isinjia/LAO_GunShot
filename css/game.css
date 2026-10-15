@@ -1268,3 +1268,8 @@ body.topghost #mapBox, body.topghost .elitebar, body.touchui.topghost #heroBox, 
 #mapClose { position: absolute; right: 0; top: 50%; transform: translateY(-50%); min-height: 40px; padding: 6px 14px; font: 700 15px Godo, sans-serif; color: #111; background: var(--y, #ffcc00); border: 0; cursor: pointer; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
 #mapClose:hover, #mapClose:focus-visible { background: #fff; }
 body:not(.touchui) #mapClose { min-height: 32px; font-size: 13px; }
+/* phones: tap the minimap to open the tactical map; the separate map button is gone */
+body.touchui .tb.map { display: none !important; }
+body.touchui #mapBox { pointer-events: auto; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+body.touchui #mapBox:active { filter: brightness(1.25); }
+body.touchui #mapBox .mh::after { content: '탭: 지도'; float: right; font-size: 11px; font-weight: 700; color: var(--y, #ffcc00); opacity: 0.85; }

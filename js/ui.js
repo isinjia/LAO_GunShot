@@ -165,6 +165,7 @@
     if (!document.documentElement.requestFullscreen) fsB.hidden = true;
     fsB.onclick = () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); } catch (e) { /* not allowed */ } };
     document.addEventListener('fullscreenchange', () => fsB.classList.toggle('on', !!document.fullscreenElement));
+    if (INPUT.isTouch) { /* phones: the minimap itself opens the tactical map (no separate map button) */ const mb = $('#mapBox'); if (mb) { mb.setAttribute('role', 'button'); mb.setAttribute('aria-label', '전술 지도 열기'); mb.addEventListener('click', () => { const G = GAME.G; if (G.phase === 'play' && !G.paused && !G.choosing && !G.transit && el.bigMap.hidden) INPUT.push('map'); }); } }
     if (INPUT.isTouch) { el.touch.hidden = false; INPUT.bindTouch(el.touch); document.body.classList.add('touchui'); $('#titleKeys').innerHTML = '대원 카드를 두 번 누르면 출격 · 왼쪽 화면 드래그로 이동 · 오른쪽 조준 패드를 누른 채 드래그해 조준·사격'; }
     // keyboard on the title / result screens
     window.addEventListener('keydown', (e) => {
