@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0c0e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<title>오르카 던전 돌파 — LAST ORIGIN ROGUE OPERATION</title>
+<link rel="stylesheet" href="css/lo.css">
+<link rel="stylesheet" href="css/game.css">
+<script defer src="js/ui_assets.js"></script>
+</head>
+<body>
+<div id="app">
+  <main id="stage">
+    <div id="vignette"></div>
+    <div id="hurtFx"></div>
+    <div id="numLayer"></div>
+    <div id="xhair" hidden><i></i></div>
+
+    <!-- HUD: hero panel (Panel_StageBattle squad slot style) -->
+    <div id="hud" hidden>
+      <div id="heroBox">
+        <div class="hp-port"><i id="heroImg"></i><span id="heroRank"></span></div>
+        <div class="hp-main">
+          <div class="hp-name"><b id="heroName"></b><small id="heroTitle"></small></div>
+          <div class="hpnum num"><b id="hpNum">0</b><small id="hpMax">/ 0</small></div>
+          <div id="hearts"></div>
+          <div class="hp-res">
+            <span class="r key" title="열쇠"><i></i><b id="keyN">1</b></span>
+            <span class="r gold" title="부품"><i></i><b id="goldN">0</b></span>
+          </div>
+          <div id="xpRow"><b class="num" id="lvN">Lv.1</b><div class="xpb"><i id="xpFill"></i></div></div>
+        </div>
+      </div>
+      <div id="skillBox" title="스킬 (F)">
+        <div class="sk-hex"><i id="skillImg"></i><svg viewBox="0 0 100 100"><polygon id="skillRing" points="50,3 93,27 93,73 50,97 7,73 7,27" /></svg></div>
+        <div class="sk-txt"><b id="skillName"></b><small id="skillPct">0%</small></div>
+        <kbd>F</kbd>
+      </div>
+      <div id="items"></div>
+      <div id="abil">
+        <div class="ab sk2" id="abSk2"><div class="ac"><i class="ico"></i><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" class="bg"/><circle cx="50" cy="50" r="44" class="fg"/></svg><b class="cd num"></b></div><kbd>E</kbd><small></small></div>
+        <div class="ab ult" id="abUlt"><div class="ac"><i class="ico"></i><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="49" class="tick"/><circle cx="50" cy="50" r="45" class="bg"/><circle cx="50" cy="50" r="45" class="fg"/></svg><div class="pct num"><b>0</b><small>%</small></div></div><kbd>F</kbd><small></small><em class="ulact"></em></div>
+        <div class="ab dodge" id="abDodge"><div class="ac"><i class="ico"></i><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" class="bg"/><circle cx="50" cy="50" r="44" class="fg"/></svg><b class="cd num"></b></div><kbd>SHIFT</kbd><small>회피</small></div>
+      </div>
+
+      <div id="mapBox">
+        <div class="mh"><b id="floorKey">B1</b><span id="floorName"></span></div>
+        <canvas id="minimap" width="220" height="160"></canvas>
+        <div class="mf"><span id="roomInfo"></span><span id="timeInfo" class="num"></span></div>
+      </div>
+
+      <div id="gunBox">
+        <div class="g-top"><span id="gunRank" class="rk"></span><b id="gunName"></b></div>
+        <div class="g-mid">
+          <div id="gunAmmo" class="num"><b id="magN">30</b><small>/<span id="ammoN">∞</span></small></div>
+          <div id="magBar"></div>
+          <div id="reloadBar"><span class="lb"><em></em>재장전</span><div class="seg"></div><b class="num" id="reloadT"></b></div>
+        </div>
+        <div id="gunList"></div>
+      </div>
+    </div>
+
+    <div id="bossBar" hidden><div class="bimg" id="bossImg"></div><div class="bmain"><div class="row"><span id="bossName"></span><span id="bossHpTx" class="num"></span></div><div class="gauge r"><i id="bossHp"></i></div></div></div>
+    <div id="toasts" role="status" aria-live="polite"></div>
+    <div id="banner" class="banner"></div>
+    <div id="announce" role="status" aria-live="polite"></div>
+    <div id="chTimer" hidden></div>
+    <div id="coach" hidden role="status" aria-live="polite"></div>
+    <div id="prompt" hidden><div class="pk"><kbd>G</kbd><span></span></div><small></small></div>
+    <div id="skillCut" hidden></div>
+    <div id="bossIntro" hidden></div>
+    <div id="fade"></div>
+
+    <!-- touch controls -->
+    <div id="touch" hidden>
+      <div id="stickZone"></div>
+      <div id="stick"><i></i></div>
+      <button data-act="pause" class="tb pause" aria-label="일시 정지"><span>II</span></button>
+      <button data-act="map" class="tb map" aria-label="전술 지도"><span>지도</span></button>
+      <button data-act="reload" class="tb reload" aria-label="재장전"><span>장전</span></button>
+      <div class="tbtns">
+        <button data-act="fire" class="tb fire"><i></i><span>조준·사격</span></button>
+        <button data-act="dodge" class="tb dodge"><span>회피</span></button>
+        <button data-act="skill" class="tb skill"><span>스킬</span></button>
+        <button data-act="swap" class="tb swap"><span>교체</span></button>
+        <button data-act="skill2" class="tb sk2"><span>보조</span><i class="cdv"></i></button>
+        <button data-act="interact" class="tb act"><span>줍기</span></button>
+      </div>
+    </div>
+
+    <div id="lvOv" hidden role="dialog" aria-modal="true" aria-labelledby="lvTitle">
+      <div class="lv-head"><small>LEVEL UP</small><b id="lvTitle">Lv.2</b><em>강화 모듈을 하나 선택하십시오</em></div>
+      <div class="lv-cards" id="lvCards"></div>
+    </div>
+    <div id="pauseOv" hidden role="dialog" aria-modal="true" aria-label="작전 일시 정지">
+      <div class="dlg">
+        <h4>작전 일시 정지</h4>
+        <div class="pinfo" id="pauseInfo"></div>
+        <div class="pgoal" id="pauseGoal"></div>
+        <div class="ptabs" role="tablist"><button type="button" role="tab" data-tab="run">작전 상황</button><button type="button" role="tab" data-tab="opt">옵션</button><button type="button" role="tab" data-tab="keys">조작법</button></div>
+        <div class="setclose"><button class="btn" id="btnSetClose" type="button">설정 닫기 <kbd>Esc</kbd></button></div>
+        <div class="setrows">
+          <label>전체 음량 <input type="range" min="0" max="1" step="0.05" id="volMaster"></label>
+          <label>배경음 <input type="range" min="0" max="1" step="0.05" id="volBgm"></label>
+          <label>효과음 <input type="range" min="0" max="1" step="0.05" id="volSfx"></label>
+          <label>대원 음성 <input type="range" min="0" max="1" step="0.05" id="volVoice"></label>
+          <div class="seg"><button id="optMute" aria-pressed="false">음소거</button><button id="optShake" aria-pressed="false">화면 흔들림</button><button id="optFlash" aria-pressed="false">화면 번쩍임</button><button id="optDmg" aria-pressed="false">피해 숫자</button><button id="optAssist" aria-pressed="false">자동 조준 보조</button><button id="optLook" aria-pressed="false">마우스 시점 당기기</button><button id="optToggleFire" aria-pressed="false">사격 토글(누르고 있지 않기)</button><button id="optCb" aria-pressed="false">적탄 고대비 색</button><button id="optHints" aria-pressed="false">조작 안내</button><button id="optHud">HUD 크기 <b id="optHudV">보통</b></button><button id="optFull">전체 화면</button><button id="optKeys" aria-expanded="false">키 설정</button><button id="optTbSize" class="touchonly">버튼 크기 <b id="optTbSizeV">보통</b></button><button id="optTbAlpha" class="touchonly">버튼 투명도 <b id="optTbAlphaV">0%</b></button><button id="optLefty" class="touchonly" aria-pressed="false">왼손 모드</button></div>
+          <div id="keyPanel" hidden></div>
+        </div>
+        <div class="row"><button class="btn" id="btnResume">작전 계속</button><button class="btn o" id="btnAbort">작전 포기</button></div>
+        <div class="keys"><kbd>Esc</kbd> 계속 · 조준 <kbd>마우스</kbd> · 사격 <kbd>왼쪽 버튼</kbd>/<kbd>J</kbd> · 회피 <kbd>오른쪽 버튼</kbd>/<kbd>Space</kbd>/<kbd>Shift</kbd> · 이동 <kbd>WASD</kbd> · 보조 스킬 <kbd>E</kbd> · 궁극기 <kbd>F</kbd> · 무기 교체 <kbd>1</kbd>~<kbd>9</kbd>/<kbd>C</kbd>/휠 · 재장전 <kbd>R</kbd> · 상호작용·무기 버리기 <kbd>G</kbd> · 지도 <kbd>Tab</kbd>/<kbd>M</kbd><br>게임패드: 왼쪽 스틱 이동 · 오른쪽 스틱 조준 · <kbd>RT</kbd> 사격 · <kbd>LT</kbd>/<kbd>A</kbd> 회피 · <kbd>RB</kbd> 궁극기 · <kbd>LB</kbd> 보조 스킬 · <kbd>B</kbd> 상호작용 · <kbd>X</kbd> 재장전 · <kbd>Y</kbd> 교체 · <kbd>Back</kbd> 지도</div>
+      </div>
+    </div>
+    <div id="bigMap" hidden role="dialog" aria-modal="true" aria-label="전술 지도"><div class="bm"><div class="bmh"><b>전술 지도</b><small>TACTICAL MAP</small></div><div class="bmw"><canvas id="bigMapCv" width="720" height="560"></canvas><div class="bmz"><button id="mapZin">+</button><button id="mapZout">−</button><button id="mapZreset">⟲</button></div></div><div class="keys"><kbd>Tab</kbd>/<kbd>M</kbd> 닫기 · 휠 확대/축소 · 끌어서 이동 · 클리어한 구역을 클릭(또는 <kbd>방향키</kbd>로 고르고 <kbd>Enter</kbd> · 패드 십자키 + <kbd>A</kbd>)하면 그곳으로 이동</div></div></div>
+  </main>
+</div>
+
+<div id="loading" class="overlay">
+  <div class="lbg"></div>
+  <div class="lo" id="loadLogo"></div>
+  <div class="ltip" id="loadTip"></div>
+  <div class="lbar"><i id="loadBar"></i></div>
+  <div class="lpct num" id="loadPct">0%</div>
+</div>
+
+<div id="title" class="overlay" hidden>
+  <div id="titleBg"></div>
+  <div class="tl">
+    <div class="logo"><div class="lo" id="logoImg"></div><div class="sub">ROGUE OPERATION</div><h1>오르카 던전 돌파</h1></div>
+    <div class="brief">
+      <div class="bh"><b>출격 대원 선택</b><small>SELECT YOUR SQUAD LEADER</small></div>
+      <div id="heroSel"></div>
+      <div id="heroInfo"></div>
+    </div>
+    <div class="trow"><button class="btn lg" id="btnStart">출격 개시</button><button class="btn d lg" id="btnLab">연구소 <small id="chipN"></small></button><button class="btn d lg" id="btnSet" title="음량 · 키 설정 · 접근성 옵션">설정</button><button class="btn d lg" id="btnTut" title="첫 출격과 같은 기본 훈련을 다시 진행합니다">기본 훈련</button><button class="btn d lg" id="btnHeat" hidden title="작전 성공 시 다음 위험 등급 개방 · 등급마다 적 체력 +15%, 적탄 속도 +4%, 데이터 칩 +25%">위험 등급 <b id="heatN">0</b></button></div>
+    <div class="best" id="bestRec"></div>
+    <div class="keys" id="titleKeys"><kbd>←</kbd><kbd>→</kbd> 대원 선택 · <kbd>Enter</kbd> 출격 · 조준 <kbd>마우스</kbd> · 사격 <kbd>왼쪽 버튼</kbd> · 회피 <kbd>오른쪽 버튼</kbd>/<kbd>Shift</kbd> · 이동 <kbd>WASD</kbd> · 보조 스킬 <kbd>E</kbd> · 궁극기 <kbd>F</kbd></div>
+  </div>
+  <div id="showPlate"></div>
+  <div class="ver">LAST ORIGIN FAN ROGUE-LIKE · build 1.0</div>
+  <div id="labOv" hidden role="dialog" aria-modal="true" aria-label="오르카 연구소"><div class="pwin"><div class="wh"><h3>오르카 연구소<small>데이터 칩으로 영구 강화</small></h3><button class="x" id="labClose" aria-label="닫기"></button></div>
+    <div class="wb"><div class="labchips">보유 데이터 칩 <b id="labChips">0</b><small>출격할 때마다 획득: 기본 8 · 도달 층 ×12 · 보스 격파 ×15 · 제압 구역 ×2 · 처치 6마리당 1 · 작전 성공 +30 (B1 퇴각 약 15개 · B2 퇴각 약 50개 · 완주 약 330개)</small></div><div class="labunlock" id="labUnlock"></div><div class="cards" id="labCards"></div></div><div class="wf"></div></div></div>
+</div>
+
+<div id="result" class="overlay" hidden role="dialog" aria-modal="true" aria-label="작전 결과">
+  <div class="rwrap">
+    <div class="mc">
+      <h2>임무 완료</h2>
+      <div class="lab"></div>
+      <div class="reason"></div>
+      <div class="stars"><i></i><i></i><i></i></div>
+      <div class="ml"></div>
+      <div class="rbtns"><button class="btn lg" id="btnRetry">재출격</button><button class="btn d lg" id="btnHome">대원 선택</button></div>
+    </div>
+    <div class="report"><div class="rh"><b>전투 보고</b><small>BATTLE REPORT</small></div><div class="rteam"></div></div>
+  </div>
+</div>
+
+<script defer src="js/vendor/three.min.js"></script>
+<script defer src="js/vendor/CopyShader.js"></script>
+<script defer src="js/vendor/LuminosityHighPassShader.js"></script>
+<script defer src="js/vendor/EffectComposer.js"></script>
+<script defer src="js/vendor/RenderPass.js"></script>
+<script defer src="js/vendor/ShaderPass.js"></script>
+<script defer src="js/vendor/UnrealBloomPass.js"></script>
+<script defer src="js/assets.js"></script>
+<script defer src="js/data.js"></script>
+<script defer src="js/sfx_extra.js"></script>
+<script defer src="js/audio.js"></script>
+<script defer src="js/fx.js"></script>
+<script defer src="js/sd.js"></script>
+<script defer src="js/rigs.js"></script>
+<script defer src="js/fxbake.js"></script>
+<script defer src="js/fx/_meta.js"></script>
+<script defer src="js/level.js"></script>
+<script defer src="js/input.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/game.js"></script>
+<script defer src="js/bot.js"></script>
+<script>
+// a core script that failed to arrive (dropped connection) reloads the page instead of hanging on the loading bar
+document.addEventListener('DOMContentLoaded', () => {
+  const need = ['THREE', 'SD', 'FX', 'LEVEL', 'INPUT', 'UI', 'GAME', 'DATA', 'SFX'];
+  const miss = need.filter((k) => !window[k]);
+  if (miss.length) {
+    let n = 0; try { n = +sessionStorage.getItem('lao_reload') || 0; sessionStorage.setItem('lao_reload', n + 1); } catch (e) { /* no storage */ }
+    if (n < 3) { setTimeout(() => location.reload(), 400 + n * 600); return; }
+    document.getElementById('loadTip').textContent = '리소스를 불러오지 못했습니다 (' + miss.join(', ') + '). 새로고침해 주세요.';
+    return;
+  }
+  try { sessionStorage.removeItem('lao_reload'); } catch (e) { /* no storage */ }
+  // a failed boot (no WebGL, blocked images…) says so instead of freezing the loading bar
+  Promise.resolve().then(() => GAME.boot()).catch((err) => {
+    console.error(err);
+    const tip = document.getElementById('loadTip');
+    const gl = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (e) { return false; } })();
+    if (tip) tip.innerHTML = '<b style="color:#ff5a4a">ERROR</b>' + (gl ? '게임을 시작하지 못했습니다 — 새로고침해 주세요.' : '이 브라우저 / 기기에서 WebGL을 사용할 수 없습니다. 하드웨어 가속을 켜거나 다른 브라우저로 실행해 주세요.');
+  });
+  // opened straight from disk: Web Audio (voices, synth cues) can't load — point to the launcher
+  if (location.protocol === 'file:') setTimeout(() => { if (window.UI && UI.toast) UI.toast('파일로 직접 열면 일부 사운드가 꺼집니다 — start_game.bat 으로 실행하세요', 'warn'); }, 2500);
+});
+</script>
+</body>
+</html>
