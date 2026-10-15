@@ -1293,3 +1293,7 @@ button:focus-visible, .card:focus-visible, .hcard:focus-visible { outline: 2px s
 @media (max-height: 440px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #heroBox, body:not(.touchui) #gunBox, body:not(.touchui) #abil .ab, body:not(.touchui) #mapBox, body:not(.touchui) #items { zoom: calc(var(--hudz, 1) * 0.76); } }
 /* card / panel copy reads at 12px+ */
 .lv-card em, .lv-card small, .pinfo small, .pi-run small, .card.lab small, #result small { font-size: 12px !important; }
+/* portrait phones: pause sits in the top HUD row between the hero panel and the minimap, not over the play area */
+@media (max-aspect-ratio: 1/1) {
+  body.touchui .tb.pause { top: calc(max(8px, env(safe-area-inset-top)) + 6px) !important; right: calc(max(12px, env(safe-area-inset-right)) + 116px) !important; left: auto !important; bottom: auto !important; opacity: 0.85; }
+}

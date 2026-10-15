@@ -128,6 +128,7 @@
   let bgmEl = null; // reused: a new element / MediaElementSource per track would leak decoders and graph nodes
   const BUFMUSIC = typeof matchMedia === 'function' && !matchMedia('(pointer: coarse)').matches; // phones keep the streaming element (memory)
   const mbuf = new Map();
+  const MBUF_MAX = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 2 : 4;
   let mSrc = null, mReq = 0, mKey = null, mAt = 0;
   const mPos = {};
   function musicBuf(key) {
@@ -170,7 +171,7 @@
     };
     if (mbuf.has(key)) { const b = mbuf.get(key); mbuf.delete(key); mbuf.set(key, b); return start(b); } // most-recently used last
     fetch(window.BGM[key]).then((r) => r.arrayBuffer()).then((ab) => new Promise((res, rej) => c.decodeAudioData(ab, res, rej)))
-      .then((buf) => { mbuf.delete(key); mbuf.set(key, buf); while (mbuf.size > 2) mbuf.delete(mbuf.keys().next().value); start(buf); }) // the current and previous track stay decoded (decoded PCM is large on phones)
+      .then((buf) => { mbuf.delete(key); mbuf.set(key, buf); while (mbuf.size > MBUF_MAX) mbuf.delete(mbuf.keys().next().value); start(buf); }) // decoded PCM is large: phones keep the current + previous track, desktops four (no re-decode between runs)
       .catch(() => { if (req === mReq && bgmKey === key) bgmKey = null; }); // a failed track stays silent, but the next request for it retries
   }
   function music(key) {

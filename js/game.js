@@ -1171,6 +1171,9 @@
     b.s.color = b.col;
     b.ol.size = b.ol.sz = size * (cb ? 2.7 : 1.9); b.ol.color = cb ? 0x000000 : 0x14030a; b.ol.alpha = cb ? 1 : 0.8;
     b.core.color = cb ? 0xff1030 : 0xffffff;
+    /* high contrast: a black shell with a bright red pip and only a faint white halo, so bloom never merges a crowd of shots into a white blob over the boss or the hero */
+    b.s.size = b.s.sz = size * (cb ? 1.7 : 2.3); if (!b.delay) b.s.alpha = cb ? 0.32 : 0.95;
+    b.core.size = b.core.sz = size * (cb ? 1.05 : 0.95);
   }
   function recolorBullets() { G.ebul.forEach(styleEB); }
   function ebullet(x, y, ang, speed, o = {}) {
@@ -1191,6 +1194,7 @@
     } else if (o.c === 'p') { b.core.tex = null; FX.setTex(b.core, FX.tex.white); b.core.rot = Math.PI / 4; b.core.sz = b.core.size = size * 0.6; b.spin = 4; }
     b.ck = o.c || 'n'; b.size0 = size;
     if (cb) styleEB(b);
+    b.delay = b.delay || 0;
     if (b.delay) { b.s.alpha = 0.4; b.core.alpha = 0.3; b.ol.alpha = 0.3; }
     G.ebul.push(b);
     return b;
@@ -1211,7 +1215,7 @@
       if (b.pass === pass) continue; // a splice mid-pass shifted an already-moved bullet down: never step it twice
       b.pass = pass;
       b.t += dt;
-      if (b.delay > 0) { b.delay -= dt; if (b.delay <= 0) { b.s.alpha = 0.95; b.core.alpha = 1; b.ol.alpha = 0.8; } else continue; }
+      if (b.delay > 0) { b.delay -= dt; if (b.delay <= 0) { const cbm = G.opt.cbBullets; b.s.alpha = cbm ? 0.32 : 0.95; b.core.alpha = 1; b.ol.alpha = cbm ? 1 : 0.8; } else continue; }
       b.life -= dt;
       if (b.homing && !P.dead) {
         const sp = Math.hypot(b.vx, b.vy), a = Math.atan2(b.vy, b.vx), w = Math.atan2(hy - b.y, hx - b.x);
@@ -3184,6 +3188,7 @@
     if (s.room && !G.objs.some((o) => o.starter)) { spawnStarterSupply(s.room); FX.later(1.2, () => { if (G.phase === 'play' && G.objs.some((o) => o.starter)) UI.toast('출격 보급 — 출격 지점의 장비 3개 중 하나를 고르세요 (하나를 집으면 나머지는 회수)', 'gem'); }); }
     try { localStorage.setItem(TUT_KEY, '1'); } catch (e) { /* ignore */ }
     SFX.play(skipped ? 'uiPick' : 'clear', 0.7); SFX.play('doorOpen', 0.6);
+    if (!skipped) UI.banner('room', '기본 훈련 완료', '문이 열렸습니다 — 출격 보급을 고르고 전진하세요'); /* a clear finish line for the training */
     UI.toast(skipped ? '기본 훈련을 건너뛰었습니다 — 타이틀의 「기본 훈련」으로 다시 할 수 있습니다' : '기본 훈련 완료 — 문이 열렸습니다. B6 철혈 사령부까지 돌파하세요!', 'gem');
   }
   function tutorialTick(dt) {
@@ -3322,7 +3327,7 @@
         else if (e.stun > 0 || e.slowT > 0) e.body.c.setTint(0.7, 0.85, 1.4);
         else if (e.elite) e.body.c.setTint(1.15, 0.85, 0.85);
         else if (!e.boss) { const t = e.def.tint; const lift = G.fi === 1 ? 1.18 : 1.08; /* a touch brighter than the floor (B2's dark brick most of all) so dark rigs never sink into it */ if (t) e.body.c.setTint(t[0] * lift, t[1] * lift, t[2] * lift); else e.body.c.setTint(lift, lift, lift); } // keeps a variant's own tint (red kamikaze drones)
-        else { const t = e.def.tint || [1, 1, 1], ph = e.phase || 0; e.body.c.setTint(t[0], t[1] * (1 - ph * 0.15), t[2] * (1 - ph * 0.2)); }
+        else { const t = e.def.tint || [1, 1, 1], ph = e.phase || 0, lb = e.def.pale ? 1 : 1.1; /* dark bosses lift off dark arena floors */ e.body.c.setTint(t[0] * lb, t[1] * lb * (1 - ph * 0.15), t[2] * lb * (1 - ph * 0.2)); }
         e.body.c.setOrder(ORD(e.y));
       }
       if (e.shadow) { e.shadow.x = e.x; e.shadow.y = e.y + 0.02; }

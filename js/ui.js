@@ -198,7 +198,7 @@
   function pauseKeysHtml() {
     /* a two-column legend that wraps inside the dialog at any width */
     const rows = [['계속', '<kbd>Esc</kbd>'], ['조준 · 사격', `<kbd>마우스</kbd> · <kbd>왼쪽 버튼</kbd>/<kbd>${K('fire')}</kbd>`], ['회피', `<kbd>오른쪽 버튼</kbd> / ${INPUT.KEY.dodge.slice(0, 3).map((c) => `<kbd>${INPUT.keyName(c)}</kbd>`).join(' ')}`], ['이동', '<kbd>WASD</kbd> / 방향키'],
-      ['보조 스킬 · 궁극기', `<kbd>${K('skill2')}</kbd> · <kbd>${K('skill')}</kbd>`], ['무기 교체', `<kbd>1</kbd>~<kbd>9</kbd> / <kbd>${K('swap')}</kbd> / 휠(위·아래)`], ['재장전', `<kbd>${K('reload')}</kbd>`], ['상호작용 · 버리기', `<kbd>${K('interact')}</kbd>`], ['지도', `<kbd>${K('map')}</kbd>`]];
+      ['보조 스킬 · 궁극기', `<kbd>${K('skill2')}</kbd> · <kbd>${K('skill')}</kbd>`], ['무기 교체', `<kbd>1</kbd>~<kbd>9</kbd> / <kbd>${K('swap')}</kbd> / 휠(위·아래)`], ['재장전', `<kbd>${K('reload')}</kbd>`], ['상호작용 · 버리기', `<kbd>${K('interact')}</kbd>`], ['지도', `<kbd>${K('map')}</kbd> / <kbd>Tab</kbd>`]];
     const pad = [['이동 · 조준', '왼쪽 / 오른쪽 스틱'], ['사격 · 회피', '<kbd>RT</kbd> · <kbd>LT</kbd>/<kbd>A</kbd>'], ['궁극기 · 보조', '<kbd>RB</kbd> · <kbd>LB</kbd>'], ['상호작용 · 재장전 · 교체', '<kbd>B</kbd> · <kbd>X</kbd> · <kbd>Y</kbd>'], ['지도 · 메뉴', '<kbd>Back</kbd> · 십자키 + <kbd>A</kbd>']];
     const g = (list) => list.map(([a, b]) => `<span class="kl">${a}</span><span class="kv">${b}</span>`).join('');
     return `<div class="kgrid"><b class="kh">키보드 · 마우스</b>${g(rows)}<b class="kh">게임패드</b>${g(pad)}</div>`;
@@ -861,6 +861,11 @@
     /* rapid hits on one spot (a boss under fire) merge into one growing number instead of a pile */
     const now = performance.now();
     for (let k = 0; k < el.nums.length; k++) { const c = el.nums[k]; if (c.busy && now - c.t0 < 180 && Math.abs(c.wx - x) < 1.2 && Math.abs(c.wy - y) < 1.6) { d = c; amount += c.amt; crit = crit || c._crit; break; } }
+    if (!d) { /* at most 3 numbers on screen around one spot (a boss): a 4th folds into the newest of them */
+      let near = 0, young = null;
+      for (const c of el.nums) if (c.busy && Math.abs(c.wx - x) < 2.6 && Math.abs(c.wy - y) < 3) { near++; if (!young || c.t0 > young.t0) young = c; }
+      if (near >= 3 && young) { d = young; amount += young.amt; crit = crit || young._crit; }
+    }
     if (!d) {
     for (let k = 0; k < el.nums.length; k++) { const c = el.nums[(numIdx + k) % el.nums.length]; if (!c.busy) { d = c; numIdx = (numIdx + k + 1) % el.nums.length; break; } }
     }

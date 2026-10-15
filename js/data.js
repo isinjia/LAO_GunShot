@@ -35,7 +35,7 @@
       stats: { atk: 5, def: 3, mob: 3 }, desc: '유탄의 범위 피해로 무리를 한 번에 정리. 직격 판정에 주의.',
     },
     {
-      id: 'constantia', name: '콘스탄챠 S2', title: '정밀 사격 전문가', img: 'c_3P_ConstantiaS2_N', gun: 'dmr', hp: 10, armor: 2, speed: 6.5,
+      id: 'constantia', name: '콘스탄챠 S2', title: '정밀 사격 전문가', img: 'c_3P_ConstantiaS2_N', gun: 'dmr', hp: 9, armor: 2, speed: 6.5,
       skill: 'orbital', skillName: '궤도 레이저', skillDesc: '모든 것을 관통하는 거대한 레이저 + 잔광 2회 — 맞은 적은 5초간 받는 피해 +50%', color: '#ff6af0',
       sk2: { id: 'sleep', name: '수면탄', icon: 'i_crit', cd: 9, desc: '조준선의 첫 적을 3.5초 재우고 받는 피해 +50% — 보스는 패턴이 끊긴다' },
       stats: { atk: 5, def: 2, mob: 4 }, desc: '관통하는 고위력 정밀 사격. 한 발 한 발이 치명적이다.',
@@ -151,7 +151,7 @@
     },
     {
       key: 'B4', name: '폐쇄 연구동', en: 'SEALED LAB', rooms: 6, enemies: ['legion', 'centurion', 'predator', 'intruder', 'gigantes', 'phalangites', 'harvester'], elites: ['fortress', 'destroyer', 'doomeater'], boss: ['nightqueen', 'nidhogg', 'doomprime'],
-      floor: 'floor_pipe', alt: 'floor_plate', face: 'wall_face_a', cap: 'wall_cap_b', tint: [0.92, 0.9, 1.1], light: 0xa070ff, music: ['stage10', 'horror2'], hpMul: 1.8,
+      floor: 'floor_pipe', alt: 'floor_plate', face: 'wall_face_a', cap: 'wall_cap_b', tint: [0.92, 0.9, 1.1], light: 0xa070ff, music: ['stage10', 'horror2'], hpMul: 1.9,
     },
     {
       key: 'B5', name: '외곽 방어선', en: 'OUTER BULWARK', rooms: 6, enemies: ['centurion', 'predator', 'intruder', 'gigantes', 'phalangites', 'rampart', 'juggernaut', 'harvester', 'bomber'], elites: ['destroyer', 'blackknight', 'bigchick'], boss: ['doomprime', 'goltarion', 'nidhogg'],
