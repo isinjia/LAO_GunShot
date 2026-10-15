@@ -1239,7 +1239,7 @@
         // swept test: the closest point of this frame's path, so fast shots can't tunnel through at low FPS
         const sx = b.x - ox, sy = b.y - oy, sl = sx * sx + sy * sy;
         const k = sl > 0 ? clamp(((hx - ox) * sx + (hy - oy) * sy) / sl, 0, 1) : 1;
-        const dx = ox + sx * k - hx, dy = oy + sy * k - hy, rr = b.r + 0.2;
+        const dx = ox + sx * k - hx, dy = oy + sy * k - hy, rr = b.r + 0.1; /* closer to the drawn core: grazes that look clear are clear */
         if (dx * dx + dy * dy < rr * rr) { dead = true; hurtPlayer(b.src ? (G.bossE && G.bossE.alive && b.src === G.bossE.def.name ? `${b.src}의 탄막` : `${b.src}의 공격`) : '적의 공격'); /* credited to the shooter, not always the boss */ if (G.ebul[i] !== b) continue; }
       }
       if (dead) { popEB(b, b.life <= 0); ebRemove(i); continue; }
@@ -1589,7 +1589,7 @@
     bLaser: (e, ph) => {
       // telegraphed sweeping bullet beams
       const a0 = aimAt(e) - 0.9;
-      e.tele = { t: 0.7, a: a0, keep: false };
+      e.tele = { t: 0.7, a: a0, keep: false, sweep: [a0, a0 + 1.74] }; /* the warning line sweeps the whole arc the beam will cover */
       SFX.play('charge', 0.7);
       for (let i = 0; i < 30; i++) later(e, 0.8 + i * 0.055, () => { const a = a0 + i * 0.06; for (let k = 0; k < 2; k++) ebullet(e.x, e.y + e.h * 0.45, a, 6 + k * 1.4, { c: 'n', size: 0.28 }); });
       later(e, 0.7, () => SFX.play('laserBig', 0.7));
@@ -2659,7 +2659,8 @@
       UI.chTimer(null);
       return roomCleared(r);
     }
-    const alive = G.enemies.filter((e) => e.alive).length, cap = 4 + G.fi;
+    let alive = 0; for (const e of G.enemies) if (e.alive) alive++; // counted in place (this runs every frame)
+    const cap = 4 + G.fi;
     if (r.chNext <= 0 && alive < cap && r.chT > 3) {
       const F = FLOORS[G.fi], pool = F.enemies, list = [];
       const n = Math.min(cap - alive, 2 + Math.floor(Math.random() * 2) + (r.chT < 12 ? 1 : 0));
@@ -2747,8 +2748,8 @@
     // reward
     const roll = Math.random();
     if (roll < 0.14) dropPickup(r.cx, r.cy, 'key');
-    // healing gets scarcer with depth (30 % on B1 → 20 % on B6) so the last floors keep their bite
-    else if (roll < 0.22 - G.fi * 0.02 || (P.hp <= 2 && roll < 0.4)) dropPickup(r.cx, r.cy, P.hp < P.maxHp ? 'heart' : 'armor');
+    // healing gets scarcer with depth (10 % on B1 → 4 % from B6), never zero; low HP still gets a mercy roll
+    else if (roll < 0.14 + Math.max(0.04, 0.1 - G.fi * 0.012) || (P.hp <= 2 && roll < 0.4)) dropPickup(r.cx, r.cy, P.hp < P.maxHp ? 'heart' : 'armor');
     else if (roll < 0.42) dropPickup(r.cx, r.cy, 'ammo');
     else if (roll < 0.47 - G.fi * 0.015) dropPickup(r.cx, r.cy, 'armor');
     else if (roll < 0.58) spawnChest(r.cx, r.cy, 0, true);
@@ -2845,7 +2846,15 @@
     floorMusicStart(F);
   }
   // the floor-painted control guide (rebuilt when keys are rebound, so it never shows stale keys)
-  function rebuildGuide() { const o = G.objs.find((x) => x.guide); if (o && o.m) { o.m.material.map = guideTex(); o.m.material.needsUpdate = true; } }
+  function rebuildGuide() {
+    const o = G.objs.find((x) => x.guide);
+    if (!o || !o.m) return;
+    const old = o.m.material.map, nt = guideTex();
+    if (old === nt) return;
+    o.m.material.map = nt; o.m.material.needsUpdate = true;
+    // the previous key layout's texture is released (a rebind no longer leaks a 1024x470 canvas)
+    if (old) { for (const k in texCache) if (texCache[k] === old) delete texCache[k]; old.dispose(); }
+  }
   function guideTex() {
     {
       const lines = INPUT.isTouch
@@ -2895,7 +2904,7 @@
     // the run may have ended (abort / title) while the lift was fading: then don't build the next floor
     UI.fade(() => ready.then(() => {
       try { if (G.phase !== 'play' || G.stats !== run) return; buildFloor(nf); try { renderer.compile(scene, camera); } catch (e) { /* older three */ } }
-      finally { G.transit = false; } // a failed build never leaves the lift (and pause) locked
+      finally { G.transit = false; if ((document.hidden || !document.hasFocus()) && G.phase === 'play' && !G.paused && !TEST) UI.togglePause(true); } // a failed build never leaves the lift (and pause) locked; a tab left during the lift pauses on arrival
     }));
   }
 
@@ -2941,7 +2950,7 @@
   async function startRun(heroIdx) {
     /* a failure while setting up a run never leaves the game stuck in 'loading' */
     try { await startRunInner(heroIdx); } catch (e) {
-      console.error('[LAO] run start failed', e); G.errors = (G.errors || 0) + 1;
+      console.error('[LAO] run start failed', e); G.errors = (G.errors || 0) + 1; bgAfter = 0; // background asset streaming resumes at once
       try { toTitle(); UI.toast('출격 준비 중 오류가 발생했습니다 — 다시 시도해 주세요', 'warn'); } catch (e2) { G.phase = 'title'; }
     }
   }
@@ -3348,7 +3357,7 @@
       if (e.tele && e.tele.t > 0) {
         const len = e.tele.charge ? 7 : 14;
         if (!e.teleS) e.teleS = FX.sprite({ x: 0, y: 0, size: 0.08, aspect: len / 0.08, color: e.tele.charge ? 0xff8a20 : 0xff2040, alpha: 0.7, tex: FX.tex.white, order: L.PROJ - 1 });
-        const a = e.tele.a, cy = e.y + e.h * 0.45;
+        const sw = e.tele.sweep, a = sw ? sw[0] + (sw[1] - sw[0]) * ((G.t * 1.6) % 1) : e.tele.a, cy = e.y + e.h * 0.45;
         e.teleS.x = e.x + Math.cos(a) * len / 2; e.teleS.y = cy + Math.sin(a) * len / 2; e.teleS.rot = a - Math.PI / 2;
         e.teleS.alpha = 0.35 + 0.35 * Math.sin(G.t * 30); e.teleS.hidden = false;
         e.teleS.size = e.teleS.sz = 0.06 + (e.tele.charge ? 0.5 : 0.06);

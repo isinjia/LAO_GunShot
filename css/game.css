@@ -1310,3 +1310,11 @@ button:focus-visible, .card:focus-visible, .hcard:focus-visible { outline: 2px s
 }
 /* settings (title): the close button sits at the foot of the panel, not between the tabs and the options */
 #pauseOv.settings .dlg > .setclose { order: 8 !important; margin-top: 10px; display: flex; justify-content: center; }
+.sr-only { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* remaining tiny labels: nothing under 11px (key caps) / 12px (text) */
+#ammoW .pips em, #reloadG small, #skillBox kbd, #gunList kbd, #gunList i u, #ammoW kbd, #coach .tskip kbd { font-size: 11px !important; }
+#result .rgun i b, #title .hcard b, #title .best, #title #titleKeys, .tb.fire span, #pauseOv .seg button[aria-pressed]::after { font-size: 12px !important; }
+kbd { color: rgba(255, 255, 255, 0.85); }
+/* touch: every button is at least 44px in both directions, the small size preset included */
+body.touchui .tb { min-width: 44px !important; min-height: 44px !important; }
+body.touchui .tb.swap { min-height: 46px !important; min-width: 52px !important; }

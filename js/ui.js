@@ -186,9 +186,9 @@
       if (ph === 'title' && !el.title.hidden) {
         if (e.code === 'ArrowLeft' || e.code === 'KeyA') { selectHero((selHero + 1 + HEROES.length) % (HEROES.length + 1) - 1); e.preventDefault(); }
         else if (e.code === 'ArrowRight' || e.code === 'KeyD') { selectHero((selHero + 2) % (HEROES.length + 1) - 1); e.preventDefault(); }
-        else if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyJ') { start(); e.preventDefault(); }
+        else if (e.code === 'Enter' || e.code === 'Space' || INPUT.KEY.fire.includes(e.code)) { start(); e.preventDefault(); } // the fire binding deploys too
       } else if ((ph === 'dead' || ph === 'win') && !el.result.hidden && el.result.classList.contains('ready')) {
-        if (e.code === 'Enter' || e.code === 'KeyJ' || e.code === 'Space') { $('#btnRetry').click(); e.preventDefault(); }
+        if (e.code === 'Enter' || e.code === 'Space' || INPUT.KEY.fire.includes(e.code)) { $('#btnRetry').click(); e.preventDefault(); }
         else if (e.code === 'Escape') { $('#btnHome').click(); }
       } // (no single-key abort: it fired invisibly under the level-up cards)
     });
@@ -544,7 +544,7 @@
       el.skillPct.textContent = v >= 100 ? 'READY' : v + '%';
       el.skillBox.classList.toggle('ready', v >= 100);
     });
-    set('items', P.items.join(','), () => {
+    set('items', P.items.length + ':' + (P.items[P.items.length - 1] || ''), () => { // items only append: count + last id is a cheap change key
       const MAXI = INPUT.isTouch ? 6 : 10, shown = P.items.slice(-MAXI);
       el.items.innerHTML = (P.items.length > MAXI ? `<em>+${P.items.length - MAXI}</em>` : '') + shown.map((id) => { const it = ITEMS.find((x) => x.id === id); return `<i title="${it.name} — ${it.desc}" style="background-image:var(--s-${it.icon});--c:${RANKS[it.rank].color}"></i>`; }).join('');
     });
@@ -573,7 +573,7 @@
       [...seg.children].forEach((c, i) => { c.className = i < Math.floor(k) ? 'on' : i < k ? 'cur' : ''; });
       el.reloadBar.querySelector('b').textContent = (P.reloadT).toFixed(1) + 's';
     });
-    set('guns', P.guns.map((x) => x.id).join(',') + ':' + P.gi, () => {
+    set('guns', P.guns.length + ':' + P.gi + ':' + (P.guns[0] ? P.guns[0].id : '') + ':' + (P.guns[P.guns.length - 1] ? P.guns[P.guns.length - 1].id : ''), () => { // no per-frame join
       el.gunList.innerHTML = P.guns.map((x, i) => `<i class="${i === P.gi ? 'on' : ''}" style="--c:${RANKS[x.d.rank].color}">${INPUT.isTouch ? '' : `<u>${i + 1}</u>`}${x.d.name.split(' ')[0]}</i>`).join('') + (P.guns.length > 1 && !INPUT.isTouch ? `<kbd>${K('swap')}</kbd>` : ''); // the swap-key hint is a keyboard hint
     });
     // map / floor
@@ -583,11 +583,13 @@
     set('time', tm, () => { el.timeInfo.textContent = `${Math.floor(tm / 60)}:${String(tm % 60).padStart(2, '0')}`; });
     const r = G.room;
     let alive = 0; for (const e of G.enemies) if (e.alive) alive++;
-    const ri = r ? (r.active && alive ? `교전 중 · 적 ${alive}` : r.active ? '제압 완료' : { start: '출격 지점', combat: '제압 완료', treasure: '보급 창고', shop: '라비아타 상점', boss: '보스 구역' }[r.type]) : '통로';
-    set('room', ri, (v) => { el.roomInfo.textContent = v; });
+    set('room', r ? (r.active ? 'a' + alive : r.type) : '-', () => { // the label string is built only when it changes
+      el.roomInfo.textContent = r ? (r.active && alive ? `교전 중 · 적 ${alive}` : r.active ? '제압 완료' : ROOM_LABEL[r.type]) : '통로';
+    });
     set('fighting', !!(r && r.active), (v) => document.body.classList.toggle('fighting', v));
     drawMinimap(G); // (the big map is redrawn on open / drag / zoom only: the game is frozen while it's up)
   }
+  const ROOM_LABEL = { start: '출격 지점', combat: '제압 완료', treasure: '보급 창고', shop: '라비아타 상점', boss: '보스 구역' };
   // reload gauge over the hero's head (original-style slanted frame, yellow fill, sweeping light)
   let rg = null, rgOn = false;
   function reloadGauge(f, x, y) {
@@ -645,6 +647,11 @@
     if (P) { el.banner.className = 'banner'; el.banner.innerHTML = ''; }
     if (!P) { ov.hidden = true; ov.classList.remove('on'); return; }
     document.getElementById('lvTitle').textContent = 'Lv.' + P.lv;
+    { // screen readers hear the level-up and the choices (the cards themselves keep focus off, so a held key never picks one)
+      let lr = document.getElementById('srLive');
+      if (!lr) { lr = document.createElement('div'); lr.id = 'srLive'; lr.setAttribute('aria-live', 'polite'); lr.className = 'sr-only'; document.body.appendChild(lr); }
+      lr.textContent = `레벨 ${P.lv} — 강화 선택: ` + perks.map((p, i) => `${i + 1}번 ${p.name}`).join(', ');
+    }
     const cards = document.getElementById('lvCards');
     cards.innerHTML = perks.map((p, i) => {
       const own = !!p.hero, lv = (P.up[p.id] || 0);
@@ -839,7 +846,7 @@
     if (!el.bigMap || el.bigMap.hidden || GAME.G.phase !== 'play') return;
     const d = { ArrowUp: [0, 1], KeyW: [0, 1], ArrowDown: [0, -1], KeyS: [0, -1], ArrowLeft: [-1, 0], KeyA: [-1, 0], ArrowRight: [1, 0], KeyD: [1, 0] }[e.code];
     if (d) { mapMove(d[0], d[1]); e.preventDefault(); }
-    else if (e.code === 'Enter' || e.code === 'Space' || INPUT.KEY.interact.includes(e.code)) { mapConfirm(); e.preventDefault(); } // confirm follows the interact binding
+    else if (e.code === 'Enter' || INPUT.KEY.interact.includes(e.code)) { mapConfirm(); e.preventDefault(); } // confirm follows the interact binding (Space is a dodge key: never a warp)
   });
   function toggleMap() {
     mapSel = null;
@@ -883,6 +890,9 @@
     const lane = d.busy && d.lane != null ? d.lane : numLane++ % 8; d.lane = lane;
     let [sx, sy] = GAME.worldToScreen(x + ((lane % 4) - 1.5) * 0.42, y + (lane < 4 ? 0 : 0.38));
     if (!el.bossBar.hidden && sy < 120) sy = 120 + Math.random() * 20;
+    /* numbers stay on the playfield: never over the minimap (top right) or the bottom HUD band */
+    sy = Math.max(70, Math.min(innerHeight - 170, sy));
+    { const mb = el.mapBox || (el.mapBox = document.getElementById('mapBox')); if (mb && mb.offsetParent) { const r = mb.getBoundingClientRect(); if (sx > r.left - 30 && sy < r.bottom + 20) sx = r.left - 40; } }
     d.busy = true;
     digits(d, amount, crit);
     const p = `translate3d(${Math.round(sx)}px, ${Math.round(sy)}px, 0)`;
@@ -906,7 +916,7 @@
   function toast(msg, cls) {
     // the top lane belongs to one thing at a time: a banner or cut-in in flight holds new toasts back briefly
     const busy = el.banner.classList.contains('on') && /phase|floor/.test(el.banner.className) || !el.skillCut.hidden;
-    if (busy && tq.length < 4) { tq.push([msg, cls]); setTimeout(() => { const q = tq.shift(); if (q) toastNow(q[0], q[1]); }, 1300); return; }
+    if (busy && tq.length < 4) { tq.push([msg, cls]); setTimeout(() => { const q = tq.shift(); if (q) toastNow(q[0], q[1]); }, 1300 + (tq.length - 1) * 900); return; } // queued toasts come out one after another, not all at once
     toastNow(msg, cls);
   }
   function clearToasts() { el.toasts.innerHTML = ''; tq.length = 0; }
@@ -920,7 +930,7 @@
     t.className = 'toast ' + (cls || '');
     t.innerHTML = msg;
     el.toasts.appendChild(t);
-    while (el.toasts.children.length > 2) el.toasts.firstChild.remove();
+    while (el.toasts.children.length > 3) el.toasts.firstChild.remove();
     setTimeout(() => t.remove(), 2600);
   }
   let chEl = null, chLast = -1;
@@ -1070,6 +1080,7 @@
     el.banner.className = 'banner'; el.banner.innerHTML = ''; el.toasts.innerHTML = ''; el.announce && (el.announce.hidden = true);
     r.className = win ? 'overlay win' : 'overlay lose';
     r.hidden = false;
+    setTimeout(() => { const b = $('#btnRetry'); if (b && !r.hidden) b.focus({ preventScroll: true }); }, 60); // keyboard / screen-reader focus lands on the result's first action
     r.querySelector('h2').textContent = win ? '임무 완료' : '임무 실패';
     // the hero's badge fills the panel's lower area: portrait, name, the run's level and depth
     { let hb = r.querySelector('.rhero'); if (!hb) { hb = document.createElement('div'); hb.className = 'rhero'; r.querySelector('.mc').insertBefore(hb, r.querySelector('.rbtns')); }
