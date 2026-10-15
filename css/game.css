@@ -295,7 +295,7 @@ body.lowhp #vignette { animation: lowBeat 1s ease-in-out infinite; }
 @keyframes lowBeat { 0%, 100% { box-shadow: inset 0 0 60px 10px rgba(255, 0, 20, 0.15); } 15% { box-shadow: inset 0 0 110px 26px rgba(255, 0, 20, 0.5); } }
 /* short landscape screens (phones held sideways) */
 @media (max-height: 520px) and (min-aspect-ratio: 1/1) {
-  #heroBox { transform: scale(0.8); transform-origin: left top; }
+  body.touchui #heroBox { transform: scale(0.8); transform-origin: left top; } /* (desktop windows scale through #hud zoom only: no stacked shrink) */
   #skillBox { top: calc(max(8px, env(safe-area-inset-top)) + 70px); transform: scale(0.85); transform-origin: left top; }
   #items { top: calc(max(8px, env(safe-area-inset-top)) + 122px); }
   #mapBox { width: 160px; } #minimap { width: 144px; height: 92px; } #mapBox .mh span { display: none; }
@@ -943,8 +943,8 @@ body.touchui #coach { top: auto; bottom: calc(max(8px, env(safe-area-inset-botto
   #title #heroInfo { display: none; } #title .hcard { padding: 4px 6px; } #title .hcard i { width: 44px; height: 44px; }
 }
 /* short desktop windows (<= 680 px tall): a slimmer HUD so the playfield keeps ~80 % of the height */
-@media (max-height: 680px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #hud { zoom: 0.82; } }
-@media (max-height: 560px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #hud { zoom: 0.7; } }
+@media (max-height: 680px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #hud { zoom: 0.88; } }
+@media (max-height: 560px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #hud { zoom: 0.8; } }
 
 #btnHeat[hidden], .tb[hidden] { display: none !important; }
 
@@ -990,7 +990,7 @@ body.fighting #coach { opacity: 0.6; }
 body.paused #coach, body.choosing #coach { display: none !important; }
 body.choosing #ammoW, body.choosing #reloadG, body.paused #ammoW, body.paused #reloadG { visibility: hidden !important; }
 .pgoal span.cur i { background: #ffcc00; }
-@media (max-height: 620px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #title .tl { zoom: 0.68 !important; } body:not(.touchui) #hud { zoom: 0.74; } }
+@media (max-height: 620px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #title .tl { zoom: 0.68 !important; } body:not(.touchui) #hud { zoom: 0.84; } }
 /* touch layout options: size, opacity, left-handed mirror */
 .touchonly { display: none; } body.touchui .touchonly { display: inline-flex; }
 body.touchui .tbtns { zoom: var(--tbz, 1); }
@@ -1240,8 +1240,6 @@ body:not(.touchui) #pauseOv .setrows .seg button.touchonly { display: none !impo
 #pauseOv .keys .kgrid .kv { overflow-wrap: anywhere; }
 @media (max-width: 620px) { #pauseOv .keys .kgrid { grid-template-columns: max-content minmax(0, 1fr); } }
 /* short desktop windows: the bottom HUD shrinks by itself */
-@media (max-height: 700px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #heroBox, body:not(.touchui) #gunBox, body:not(.touchui) #abil .ab, body:not(.touchui) #mapBox, body:not(.touchui) #items { zoom: calc(var(--hudz, 1) * 0.9); } }
-@media (max-height: 560px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #heroBox, body:not(.touchui) #gunBox, body:not(.touchui) #abil .ab, body:not(.touchui) #mapBox, body:not(.touchui) #items { zoom: calc(var(--hudz, 1) * 0.86); } }
 /* off-screen enemy arrows on the screen edge */
 #edgeArrows { position: fixed; inset: 0; pointer-events: none; z-index: 4; }
 #edgeArrows i { position: absolute; left: 0; top: 0; width: 18px; height: 16px; margin: -8px 0 0 -9px; background: #ff3f8f; clip-path: polygon(100% 50%, 0 0, 22% 50%, 0 100%); filter: drop-shadow(0 0 3px #000); opacity: 0.9; }
@@ -1290,10 +1288,23 @@ button:focus-visible, .card:focus-visible, .hcard:focus-visible { outline: 2px s
   body.touchui.lefty .tb.reload { right: auto !important; left: 66px !important; }
 }
 /* very short desktop windows: a smaller HUD still */
-@media (max-height: 440px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #heroBox, body:not(.touchui) #gunBox, body:not(.touchui) #abil .ab, body:not(.touchui) #mapBox, body:not(.touchui) #items { zoom: calc(var(--hudz, 1) * 0.76); } }
 /* card / panel copy reads at 12px+ */
 .lv-card em, .lv-card small, .pinfo small, .pi-run small, .card.lab small, #result small { font-size: 12px !important; }
 /* portrait phones: pause sits in the top HUD row between the hero panel and the minimap, not over the play area */
 @media (max-aspect-ratio: 1/1) {
   body.touchui .tb.pause { top: calc(max(8px, env(safe-area-inset-top)) + 6px) !important; right: calc(max(12px, env(safe-area-inset-right)) + 116px) !important; left: auto !important; bottom: auto !important; opacity: 0.85; }
+}
+/* one HUD scale on short desktop windows: #hud zoom only (never stacked with per-panel zooms), floored at 0.8 */
+@media (max-height: 560px) and (min-aspect-ratio: 1/1) { body:not(.touchui) #hud { zoom: 0.8 !important; } }
+/* pause: perk chips carry their effect line */
+.pi-perks span .pn { display: flex; flex-direction: column; font-style: normal; line-height: 1.25; }
+.pi-perks span .pn small { font-size: 12px; color: #aab4bd; font-weight: 400; }
+/* hero kit one-liner: only where the full info panel is hidden (short landscape screens) */
+#heroMini { display: none; }
+@media (orientation: landscape) and (max-height: 560px) { #title #heroMini { display: block; font-size: 12px; line-height: 1.4; color: #c9d1d8; margin: 4px 0 2px; } #title #heroMini b { color: var(--y, #ffcc00); } }
+/* research lab window scrolls inside itself on shorter windows */
+#labOv .pwin { max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; }
+/* reduced motion: every entrance / looping UI animation settles at once (screens, cards, banners, toasts) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }

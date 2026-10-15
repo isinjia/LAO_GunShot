@@ -351,6 +351,12 @@
     }
     p.classList.remove('on'); void p.offsetWidth; p.classList.add('on');
   }
+  /* short screens hide the full hero panel: a one-line kit summary stands in for it */
+  function heroMini(h) {
+    let m = document.getElementById('heroMini');
+    if (!m) { m = document.createElement('div'); m.id = 'heroMini'; el.heroInfo.parentNode.insertBefore(m, el.heroInfo); }
+    m.innerHTML = h ? `<b>${h.name}</b> · 무기 ${GUNS[h.gun].name} · 보조 ${h.sk2.name} · 궁극기 ${h.skillName}` : '<b>무작위 대원</b> · 출격 시 해금된 대원 중 한 명';
+  }
   function selectHero(i, quiet) {
     selHero = i;
     const cards = el.heroSel.querySelectorAll('.hcard');
@@ -359,6 +365,7 @@
       cards.forEach((b) => { const k = +b.dataset.i; b.classList.toggle('on', k === -1); if (k < 0) return; b.classList.toggle('locked', !unlocked(HEROES[k])); b.dataset.lock = !unlocked(HEROES[k]) ? DATA.UNLOCK[HEROES[k].id].text : ''; });
       el.heroInfo.innerHTML = infoHtml(-1);
       lockInfoHeight();
+      heroMini(null);
       if (!quiet) SFX.play('uiPick', 0.6);
       try { localStorage.setItem('lao_rogue_hero', 'random'); } catch (e) { /* ignore */ }
       plate(null);
@@ -371,6 +378,7 @@
     cards.forEach((b) => { const k = +b.dataset.i; b.classList.toggle('on', k === i); if (k < 0) return; b.classList.toggle('locked', !unlocked(HEROES[k])); b.dataset.lock = !unlocked(HEROES[k]) ? DATA.UNLOCK[HEROES[k].id].text : ''; });
     el.heroInfo.innerHTML = infoHtml(i);
     lockInfoHeight();
+    heroMini(HEROES[i]);
     plate(HEROES[i]);
     if (!quiet) { SFX.play('uiPick', 0.6); SFX.voice(HEROES[i].id, 'SortiePick', 1, true); }
     try { localStorage.setItem('lao_rogue_hero', HEROES[i].id); } catch (e) { /* ignore */ }
@@ -1034,7 +1042,7 @@
       if (kh && !INPUT.isTouch) kh.innerHTML = pauseKeysHtml();
       setTimeout(() => { const b = $('#btnResume'); if (b && !el.pauseOv.hidden) b.focus({ preventScroll: true }); }, 30); // keyboard users land on "resume"
       const P = G.P, F = DATA.FLOORS[G.fi], tm = Math.floor(G.stats.time);
-      const perks = Object.entries(P.up || {}).map(([id, l]) => { const p = DATA.PERKS.find((x) => x.id === id); return p ? `<span class="${p.hero ? 'own' : ''}" style="--c:${p.hero ? P.hero.color : '#ffcc00'}"><i style="background-image:var(--s-${p.icon})"></i>${p.name}<b>Lv.${l}</b></span>` : ''; }).join('');
+      const perks = Object.entries(P.up || {}).map(([id, l]) => { const p = DATA.PERKS.find((x) => x.id === id); return p ? `<span class="${p.hero ? 'own' : ''}" style="--c:${p.hero ? P.hero.color : '#ffcc00'}" title="${p.desc}"><i style="background-image:var(--s-${p.icon})"></i><em class="pn">${p.name}<b>Lv.${l}</b><small>${p.desc}</small></em></span>` : ''; /* each perk shows what it does */ }).join('');
       const run = `<div class="pi-run"><i class="pr-port" style="background-image:${portrait(P.hero)};--c:${P.hero.color}"></i>
         <div class="pr-main"><small>${F.key} · ${F.name}${G.heat ? ` · 위험 등급 ${G.heat}` : ''}</small><b>${P.hero.name}</b>
         <div class="pr-stats"><span>경과<em class="num">${Math.floor(tm / 60)}:${String(tm % 60).padStart(2, '0')}</em></span><span>처치<em class="num">${G.stats.kills}</em></span><span>레벨<em class="num">${P.lv}</em></span><span>체력<em class="num">${P.hp * 25}/${P.maxHp * 25}</em></span></div></div></div>

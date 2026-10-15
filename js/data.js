@@ -201,7 +201,7 @@
   const BAL = {
     rollTime: 0.42, rollSpeed: 12.5, rollIframe: 0.32, rollCd: 0.5, // i-frames over the first ~3/4 of the roll; the landing is vulnerable
     hurtIframe: 1.1,
-    heartDrop: 0.025, ammoDrop: 0.1,
+    heartDrop: 0.02, ammoDrop: 0.1,
     shop: { heart: 40, armor: 28, key: 35, ammo: 22, item: [55, 85, 130], gun: [70, 105, 160, 230] },
   };
 

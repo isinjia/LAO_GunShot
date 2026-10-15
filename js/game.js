@@ -984,7 +984,7 @@
   }
 
   // ── enemies ──────────────────────────────────────────────
-  const FLOOR_BOSS_HP = [740, 1200, 1750, 2800, 4200, 6400]; // a smoother step at B2 (the first "any boss" floor)
+  const FLOOR_BOSS_HP = [860, 1250, 1800, 2800, 4200, 6400]; // a smoother step at B2 (the first "any boss" floor)
   function spawnEnemy(defKey, x, y, opts = {}) {
     const def = ENEMIES[defKey] || ELITES[defKey] || BOSSES[defKey];
     const F = FLOORS[G.fi];
@@ -2594,9 +2594,9 @@
       const pool = F.enemies;
       const list = [];
       for (let i = 0; i < n; i++) list.push(pool[Math.floor(Math.random() * pool.length)]);
-      if (F.elites.length && w === waves - 1 && Math.random() < 0.3 + G.fi * 0.1) { list.splice(0, 2, F.elites[Math.floor(Math.random() * F.elites.length)]); }
+      if (F.elites.length && w === waves - 1 && Math.random() < 0.4 + G.fi * 0.1) { list.splice(0, 2, F.elites[Math.floor(Math.random() * F.elites.length)]); }
       // the last two floors can field an elite pair
-      if (F.elites.length && G.fi >= 4 && w === 0 && waves > 1 && Math.random() < 0.4) { list.splice(0, 2, F.elites[Math.floor(Math.random() * F.elites.length)]); }
+      if (F.elites.length && G.fi >= 2 && w === 0 && waves > 1 && Math.random() < (G.fi >= 4 ? 0.4 : 0.25)) /* mid floors meet a second elite now and then */ { list.splice(0, 2, F.elites[Math.floor(Math.random() * F.elites.length)]); }
       r.waves.push(list);
     }
     r.waveI = 0;
