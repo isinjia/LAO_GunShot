@@ -335,6 +335,8 @@
     const d = GUNS[id];
     return { id, d, mag: d.mag, ammo: infinite ? Infinity : d.ammo, infinite: !!infinite, hand: null };
   }
+  const MAX_GUNS = 3; // weapon slots: the hero's own gun + two picked up
+  const gunsFull = (P, id) => P.guns.length >= MAX_GUNS && !P.guns.some((g) => g.id === id);
   function giveGun(P, id, infinite) {
     if (P.guns.some((g) => g.id === id)) {
       const g = P.guns.find((x) => x.id === id);
@@ -346,7 +348,7 @@
     g.mag = magSize(g, P);
     P.guns.push(g);
     equip(P, P.guns.length - 1);
-    if (P.guns.length === 2 && G.phase === 'play') tip('guns', '두 번째 무기', INPUT.isTouch ? '교체 버튼으로 무기를 바꿉니다. 보급 무기는 탄약이 한정되어 있습니다' : `1~9 / ${UI.K('swap')} / 마우스 휠로 무기를 바꿉니다. 보급 무기는 탄약이 한정 — 다 쓰면 ${UI.K('interact')} 두 번으로 버리기`);
+    if (P.guns.length === 2 && G.phase === 'play') tip('guns', '두 번째 무기', INPUT.isTouch ? '교체 버튼으로 무기를 바꿉니다. 무기는 최대 3개, 보급 무기는 탄약이 한정되어 있습니다 — 줍기 버튼으로 버리기' : `1~3 / ${UI.K('swap')} / 마우스 휠로 무기를 바꿉니다. 무기는 최대 3개, 보급 무기는 탄약이 한정 — ${UI.K('interact')}로 버리기`);
     G.stats && G.stats.guns.add(id);
     return g;
   }
@@ -652,7 +654,7 @@
     if (INPUT.held('fire') && !P.roll && P.reloadT <= 0 && P.fireCd <= 0) {
       if (g.mag > 0) fire(P, g);
       else if (g.ammo > 0) startReload(P, g);
-      else { P.fireCd = 0.3; SFX.synth('empty'); if (!P.emptyWarned) { P.emptyWarned = true; UI.toast('탄약이 없습니다 — 무기를 교체하세요', 'warn'); UI.gunEmpty(); tip('ammo', '탄약 소진', INPUT.isTouch ? '교체 버튼으로 다른 무기로 바꾸세요. 기본 무기는 탄약이 무한합니다. 탄약 상자(초록)로 보충' : `1~9 / ${UI.K('swap')} / 휠로 다른 무기로 바꾸세요. 기본 무기는 탄약이 무한합니다. 빈 무기는 ${UI.K('interact')} 두 번으로 버릴 수 있습니다`); } }
+      else { P.fireCd = 0.3; SFX.synth('empty'); if (!P.emptyWarned) { P.emptyWarned = true; UI.toast('탄약이 없습니다 — 무기를 교체하세요', 'warn'); UI.gunEmpty(); tip('ammo', '탄약 소진', INPUT.isTouch ? '교체 버튼으로 다른 무기로 바꾸세요. 기본 무기는 탄약이 무한합니다. 탄약 상자(초록)로 보충' : `1~9 / ${UI.K('swap')} / 휠로 다른 무기로 바꾸세요. 기본 무기는 탄약이 무한합니다. 빈 무기는 ${UI.K('interact')}로 버릴 수 있습니다(무기는 최대 3개)`); } }
     } else if (!INPUT.held('fire') && g.mag === 0 && g.ammo > 0 && P.reloadT <= 0) startReload(P, g);
   }
 
@@ -768,7 +770,7 @@
     const d = g.d;
     const rof = P.mods.rof * (P.overdrive > 0 ? P.odRof || 2 : 1) * (P.adrT > 0 && P.mods.adrenRof ? 1.3 : 1) * (P.ocT > 0 ? 1.25 : 1);
     P.fireCd = d.rate / rof;
-    if (!(P.overdrive > 0 && g.infinite) && !(P.focusT > 0)) g.mag--; // ultimates (and 기관총 사격) make the hero's own gun bottomless, not picked-up ones
+    if (!(P.overdrive > 0 && g.infinite) && !(P.focusT > 0 && g.infinite)) g.mag--; // ultimates (and 기관총 사격) make the hero's own gun bottomless, not picked-up ones
     P.recoil = 1;
     poseHand(P);
     const [mx, my] = P.muzzle || [P.x, P.y + 0.6];
@@ -2603,7 +2605,7 @@
       case 'key': P.keys++; SFX.play('uiEquip', 0.8); UI.toast('열쇠 획득', 'gem'); return true;
       case 'ammo': {
         const g = curGun();
-        const target = !g.infinite ? g : P.guns.find((x) => !x.infinite && x.ammo < maxAmmo(x));
+        const target = !g.infinite && g.ammo < maxAmmo(g) ? g : P.guns.find((x) => !x.infinite && x.ammo < maxAmmo(x));
         if (!target) { P.gold += 20; SFX.play('coin'); UI.toast('탄약 상자 → 부품 +20 (보급 무기의 탄약이 가득합니다)', ''); return true; }
         const add = Math.ceil(maxAmmo(target) * 0.4); // a box tops up 40 %, not the whole reserve: high-grade rounds stay precious
         target.ammo = Math.min(maxAmmo(target), target.ammo + add);
@@ -2633,7 +2635,7 @@
     const offered = new Set(G.objs.filter((o) => o.type === 'loot' && o.loot && o.loot.kind === 'item').map((o) => o.loot.id));
     const items = ITEMS.filter((it) => ['heart', 'armor'].includes(it.id) || (!P.items.includes(it.id) && !offered.has(it.id)));
     const near = (arr, r) => { for (let d = 0; d <= 3; d++) { const c = arr.filter((x) => Math.abs(x.rank - r) <= d); if (c.length) return c[Math.floor(Math.random() * c.length)]; } return null; };
-    const wantGun = guns.length && (P.guns.length === 1 || Math.random() < (P.guns.length >= 4 ? 0.25 : 0.4) || !items.length); // first find is always a gun
+    const wantGun = guns.length && (P.guns.length === 1 || Math.random() < (P.guns.length >= MAX_GUNS ? 0.25 : 0.4) || !items.length); // first find is always a gun
     if (wantGun) { const g = near(guns, rank); if (g) return { kind: 'gun', id: g.id }; }
     const it = near(items, rank);
     return it ? { kind: 'item', id: it.id } : { kind: 'gold' };
@@ -2707,6 +2709,13 @@
   }
   function takeLoot(o) {
     const P = G.P;
+    if (o.loot.kind === 'gun' && gunsFull(P, o.loot.id)) {
+      // slots full: nothing is picked up (or paid for) — G drops the gun in hand instead, then G again takes the new one
+      const cg = curGun();
+      if (cg && !cg.infinite) dropGun(P, true);
+      else { SFX.synth('empty'); UI.toast(`무기는 최대 ${MAX_GUNS}개 — 버릴 무기로 바꾼 뒤 ${INPUT.isTouch ? '줍기 버튼' : UI.K('interact')}을(를) 누르세요 (기본 무기는 버릴 수 없습니다)`, 'warn'); }
+      return;
+    }
     if (o.price) {
       if (P.gold < o.price) { UI.toast('부품이 부족합니다', 'warn'); SFX.play('fail', 0.6); return; }
       if ((o.loot.kind === 'heart') && P.hp >= P.maxHp) { UI.toast('체력이 가득 찼습니다', 'warn'); return; }
@@ -2963,17 +2972,18 @@
     }
     return best;
   }
-  function dropGun(P) {
+  function dropGun(P, forSwap) {
     const g = P.guns[P.gi];
     if (!g) return;
     if (g.infinite) { SFX.synth('empty'); UI.toast('기본 무기는 버릴 수 없습니다', 'warn'); return; }
-    if (P.pickT && G.t - P.pickT < 1.2) return; // the press right after a pickup never throws the new gun
+    if (!forSwap && P.pickT && G.t - P.pickT < 0.4) return; // the press right after a pickup never throws the new gun
+    UI.toast(forSwap ? `${g.d.name} 버림 — 다시 ${INPUT.isTouch ? '줍기 버튼' : UI.K('interact')}으로 새 무기 획득` : `${g.d.name} 버림`, '');
     // it leaves the hand where it is drawn now and is tossed forward along the aim
     const from = g.hand ? { x: g.hand.outer.position.x, y: g.hand.outer.position.y, rot: g.hand.outer.rotation.z, fl: g.hand.outer.scale.y } : { x: P.x, y: P.y + 0.8, rot: P.aim, fl: 1 };
     if (g.hand) { g.hand.c.dispose(); P.handRoot.remove(g.hand.outer); g.hand = null; }
     P.guns.splice(P.gi, 1);
     equip(P, Math.min(P.gi, P.guns.length - 1));
-    const ca = Math.cos(P.aim), sa = Math.sin(P.aim);
+    const da = forSwap ? P.aim + Math.PI : P.aim, ca = Math.cos(da), sa = Math.sin(da); // a swap tosses it behind her, clear of the gun she's taking
     let dist = 2.2;
     while (dist > 0 && LEVEL.hitCircle(P.x + ca * dist, P.y + sa * dist * 0.8, 0.5)) dist -= 0.2;
     dist = Math.max(0, dist);
@@ -3074,6 +3084,7 @@
       let txt = '';
       if (near.type === 'chest') txt = near.free ? '상자 열기' : `상자 열기 <i class="kc"></i>1`;
       else if (near.type === 'loot' && near.price && near.loot.kind === 'heart' && P.hp >= P.maxHp) txt = '<b class="poor">체력이 가득 찼습니다</b>';
+      else if (near.type === 'loot' && near.loot.kind === 'gun' && gunsFull(P, near.loot.id)) { const cg = curGun(); txt = `<b class="poor">무기 슬롯 ${P.guns.length}/${MAX_GUNS}</b> · ` + (cg && !cg.infinite ? `${cg.d.name} 버리기` : '버릴 무기로 교체하세요') + ' · ' + lootName(near.loot); }
       else if (near.type === 'loot') txt = (near.price ? (P.gold >= near.price ? `구매 <b class="gold">${near.price}</b> · ` : `<b class="poor">부품 부족 ${P.gold}/${near.price}</b> · `) : '획득 · ') + lootName(near.loot);
       else if (near.type === 'shrine') { txt = '피의 계약 — 최대 체력 50 → S급 이상 장비'; tip('shrine', '피의 계약 제단', '최대 체력 한 칸(50)을 영구히 바치고 S급 이상 장비를 얻습니다. 체력이 넉넉할 때만!'); }
       else if (near.type === 'exit') txt = G.fi < FLOORS.length - 1 ? '승강기 탑승 — 다음 구역으로' : '귀환 — 작전 종료';
@@ -3085,12 +3096,9 @@
       { const sl = G.objs.find((o) => o.starterLbl); if (sl && !sl.m.visible) sl.m.visible = true; }
       if (INPUT.take('interact') && !P.dead && !P.roll) {
         if (!G.objs.some((o) => (o.type === 'loot' || o.type === 'chest' || o.type === 'exit' || o.type === 'shrine') && Math.hypot(P.x - o.x, P.y - o.y) < 3)) {
-          // dropping a gun takes a second press within 1 s (pad B / Enter double as "cancel" elsewhere)
+          // one press drops the gun in hand (the hero's own gun stays)
           const cg = curGun();
-          if (cg && !cg.infinite) {
-            if (G.t - (P.dropArmT || -9) < 1) { P.dropArmT = -9; dropGun(P); }
-            else { P.dropArmT = G.t; UI.toast(`${cg.d.name} 버리기 — ${INPUT.isTouch ? '줍기 버튼' : UI.K('interact')}을(를) 한 번 더 누르세요`, 'warn'); }
-          }
+          if (cg && !cg.infinite) dropGun(P);
         }
         else if (!(G.t - (P.nearHintT || -9) < 2)) { P.nearHintT = G.t; UI.toast('더 가까이 다가가세요', ''); }
       }

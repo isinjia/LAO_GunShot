@@ -103,7 +103,7 @@
       BOT.pathT -= 1 / 30;
       if (!BOT.path || BOT.pathT <= 0) {
         BOT.pathT = 1.2;
-        const objs = G.objs.filter((o) => !(BOT.skip && BOT.skip.has(o)) && !(o.type === 'loot' && o.loot.kind === 'heart' && P.hp >= P.maxHp)).filter((o) => (o.type === 'loot' && (!o.price || P.gold >= o.price + 10)) || (o.type === 'chest' && (o.free || P.keys > 0)));
+        const objs = G.objs.filter((o) => !(BOT.skip && BOT.skip.has(o)) && !(o.type === 'loot' && o.loot.kind === 'heart' && P.hp >= P.maxHp) && !(o.type === 'loot' && o.loot.kind === 'gun' && P.guns.length >= 3 && !P.guns.some((g) => g.id === o.loot.id))) /* weapon slots full: leave other guns */.filter((o) => (o.type === 'loot' && (!o.price || P.gold >= o.price + 10)) || (o.type === 'chest' && (o.free || P.keys > 0)));
         const pick = G.pickups.filter((p) => p.kind !== 'gold' || true);
         let goal = null;
         const near = (arr) => { let b = null, bd = 1e9; arr.forEach((o) => { const d = Math.hypot(o.x - P.x, o.y - P.y); if (d < bd) { bd = d; b = o; } }); return b; };
