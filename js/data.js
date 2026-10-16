@@ -41,7 +41,7 @@
       stats: { atk: 5, def: 2, mob: 4 }, desc: '관통하는 고위력 정밀 사격. 한 발 한 발이 치명적이다.',
     },
     {
-      id: 'kheshig', name: 'T-4 케시크', title: '앵거 오브 호드 의무병', img: 'c_BR_Kheshig_N', gun: 'ct11', hp: 10, armor: 1, speed: 6.1,
+      id: 'kheshig', name: 'T-4 케시크', title: '앵거 오브 호드 의무병', img: 'c_BR_Kheshig_N', gun: 'ct11', hp: 10, armor: 1, speed: 6.1, skate: true,
       skill: 'deploy', skillName: '전술 배치', skillDesc: '6초간 공격력 +28.5% · 연사 +14% · 피격 1회 무효, 체력이 줄었으면 응급 처치로 25 회복', color: '#ff8a5a', upF: 'u_deploy', upE: 'u_cqb',
       sk2: { id: 'pointblank', name: '근거리 포격', icon: 'i_power', cd: 5, desc: '지근거리 산탄 일격 — 가까울수록 피해 +28.5%, 맞은 적은 4초간 표식(받는 피해 +50%)' },
       stats: { atk: 4, def: 4, mob: 3 }, desc: 'CT-11 자동 산탄총을 든 의무병. 근접 화력과 응급 처치로 버틴다.',

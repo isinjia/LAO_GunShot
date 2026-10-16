@@ -425,7 +425,7 @@
       if (P.sprayTick <= 0) {
         P.sprayTick = 0.07;
         const mg = { d: Object.assign({}, GUNS.mg, { dmg: GUNS.mg.dmg * 1.3 * (1 + 0.2 * upF(P)), life: 0.6 }) };
-        for (let i = 0; i < 3; i++) { const b = spawnPBullet(P, mg, P.x + Math.cos(P.aim) * 0.5, P.y + 0.7, P.aim + rnd(-0.62, 0.62), rnd(19, 23)); if (b) b.pierce += 1; }
+        for (let i = 0; i < 3; i++) { const b = spawnPBullet(P, mg, ...muzzleOf(P), P.aim + rnd(-0.62, 0.62), rnd(19, 23)); if (b) b.pierce += 1; }
         if (Math.random() < 0.5) SFX.play('mg', 0.5);
       }
       if (P.sprayT <= 0) P.sprayT = 0;
@@ -1761,6 +1761,8 @@
   // skill upgrade levels: each hero names the perk that strengthens its ultimate (upF) and its support skill (upE)
   const upF = (P) => (P.hero.upF ? P.up[P.hero.upF] || 0 : 0);
   const upE = (P) => (P.hero.upE ? P.up[P.hero.upE] || 0 : 0);
+  // where a gun skill leaves from: the drawn gun's muzzle (set by poseHand each frame), else in front of the chest
+  function muzzleOf(P) { return P.muzzle && Number.isFinite(P.muzzle[0]) ? [P.muzzle[0], P.muzzle[1]] : [P.x + Math.cos(P.aim) * 0.5, P.y + 0.7]; }
   // enemies along a ray (nearest first): [{ e, t }]
   function lineHits(x0, y0, a, len, width) {
     const ca = Math.cos(a), sa = Math.sin(a);
@@ -1778,7 +1780,7 @@
     const h = P.hero;
     UI.skillCut(h);
     SFX.voice(h.id, 'SpSkill', 1, true);
-    const a = P.aim, mx = P.x + Math.cos(a) * 0.5, my = P.y + 0.6;
+    const a = P.aim, [mx, my] = muzzleOf(P); // gun skills leave from the muzzle
     // ultimates are pure damage; only the cast itself is covered (0.5 s)
     P.iframe = Math.max(P.iframe, 0.5);
     // (the source 'skill' clips carry root motion that walks the body away from the hero's position, so they're not played)
@@ -1835,7 +1837,7 @@
         P.ultT = 1.4;
         for (let i = 0; i < 3; i++) FX.later(0.15 + i * 0.32, () => {
           if (G.phase !== 'play' || !G.P) return;
-          const aa = G.P.aim, x0 = G.P.x + Math.cos(aa) * 0.5, y0 = G.P.y + 0.7;
+          const aa = G.P.aim, [x0, y0] = muzzleOf(G.P);
           const hit = lineHits(x0, y0, aa, 20, 0.45).slice(0, 3);
           const end = hit.length ? hit[hit.length - 1].t + 0.6 : 16;
           FX.beam(x0, y0, x0 + Math.cos(aa) * end, y0 + Math.sin(aa) * end, 0.12, 0xfff2a0, 0.25);
@@ -1901,21 +1903,21 @@
         break;
       case 'eyebeam': {
         // LRL · 사이클롭스 이터널 빔: the eye-patch comes off — a long beam that blinds (적중 감소) and slows (AP 감소)
-        const ca = Math.cos(a), sa = Math.sin(a), len = 22, wid = 1.6 * (1 + 0.3 * upF(P)), dur = 5 + upF(P);
+        const ca = Math.cos(a), sa = Math.sin(a), ex = P.x + ca * 0.25, ey = P.y + 1.3, len = 22, wid = 1.6 * (1 + 0.3 * upF(P)), dur = 5 + upF(P);
         SFX.play('charge');
         FX.later(0.3, () => {
-          FX.orbital(mx, my, mx + ca * len, my + sa * len, 0xff5a8a, 1.1);
+          FX.orbital(ex, ey, ex + ca * len, ey + sa * len, 0xff5a8a, 1.1);
           SFX.play('laserBig');
           for (const e of G.enemies) {
             if (!e.alive || e.spawnT > 0) continue;
-            const px = e.x - mx, py = e.y + e.h * 0.42 - my, t = px * ca + py * sa;
+            const px = e.x - ex, py = e.y + e.h * 0.42 - ey, t = px * ca + py * sa;
             if (t > 0 && t < len && Math.abs(-px * sa + py * ca) < wid + e.r) {
               e.blindT = Math.max(e.blindT || 0, dur); e.supT = Math.max(e.supT || 0, dur);
               if (e.boss) { e.seq.length = 0; e.tele = null; }
               hurtEnemy(e, 45 * P.mods.dmg, false, ca * 3, sa * 3);
             }
           }
-          for (let k = G.ebul.length - 1; k >= 0; k--) { const b = G.ebul[k], px = b.x - mx, py = b.y - my, t = px * ca + py * sa; if (t > 0 && t < len && Math.abs(-px * sa + py * ca) < wid) { popEB(b); ebRemove(k); } }
+          for (let k = G.ebul.length - 1; k >= 0; k--) { const b = G.ebul[k], px = b.x - ex, py = b.y - ey, t = px * ca + py * sa; if (t > 0 && t < len && Math.abs(-px * sa + py * ca) < wid) { popEB(b); ebRemove(k); } }
         });
         break;
       }
@@ -1943,7 +1945,7 @@
   function rushBlast(P) {
     const a = P.aim, ca = Math.cos(a), sa = Math.sin(a);
     const sg = { d: Object.assign({}, GUNS.sg, { dmg: GUNS.sg.dmg * 2.5, life: 0.3 }) };
-    const mx = P.x + ca * 0.5, my = P.y + 0.6 + sa * 0.5;
+    const [mx, my] = muzzleOf(P);
     P.iframe = Math.max(P.iframe, 0.2); // a beat of cover after landing in their midst
     const np = 12 + 4 * (P.up.u_rush || 0);
     for (let i = 0; i < np; i++) spawnPBullet(P, sg, mx, my, a + (i / (np - 1) - 0.5) * 1.1, rnd(18, 23));
@@ -2016,7 +2018,7 @@
     } else if (sk.id === 'sleep') {
       // 콘스탄챠 · 수면탄 (ref. Ana Sleep Dart): the first enemy along the aim (two with the upgrade) is put
       // out for 3.5 s and takes +50 % while down; a boss loses its current pattern
-      const lv = P.up.u_mark || 0, x0 = P.x + ca * 0.5, y0 = P.y + 0.7;
+      const lv = P.up.u_mark || 0, [x0, y0] = muzzleOf(P);
       const hit = G.enemies.filter((e) => e.alive && e.spawnT <= 0).map((e) => {
         const px = e.x - x0, py = e.y + e.h * 0.42 - y0, t = px * ca + py * sa;
         return { e, t, off: Math.abs(-px * sa + py * ca) };
@@ -2037,8 +2039,8 @@
     } else if (sk.id === 'checkfire') {
       // 브라우니 · 견제 사격: a three-round burst; whatever it hits is suppressed (fires slower, takes +15 %) for 4 s
       const pw = 1 + 0.2 * upE(P), rd = { d: Object.assign({}, GUNS.ar, { dmg: 16 * pw, life: 0.8, size: 0.42 }) };
-      for (let i = 0; i < 3; i++) FX.later(i * 0.08, () => { if (!G.P) return; const aa = G.P.aim, b = spawnPBullet(G.P, rd, G.P.x + Math.cos(aa) * 0.5, G.P.y + 0.7, aa + rnd(-0.03, 0.03), 26); if (b) b.sup = 4 + upE(P); SFX.play('rifle', 0.9); });
-      FX.muzzleFlash(P.x + ca * 0.5, P.y + 0.7, a, 0xffd34d, 1.6);
+      for (let i = 0; i < 3; i++) FX.later(i * 0.08, () => { if (!G.P) return; const aa = G.P.aim, b = spawnPBullet(G.P, rd, ...muzzleOf(G.P), aa + rnd(-0.03, 0.03), 26); if (b) b.sup = 4 + upE(P); SFX.play('rifle', 0.9); });
+      FX.muzzleFlash(...muzzleOf(P), a, 0xffd34d, 1.6);
     } else if (sk.id === 'mgfocus') {
       // 레프리콘 · 기관총 사격: 2 s of focused fire — double rate, tight spread, +20 % damage (+38 % on suppressed targets)
       P.overdrive = P.odMax = 2 + 0.5 * upE(P); P.odRof = 2; P.odDmg = 1.2; P.focusT = P.overdrive;
@@ -2046,11 +2048,11 @@
     } else if (sk.id === 'focusshot') {
       // 님프 · 집속 사격: a focused MG80 burst — eight heavy rounds down one line, +19 % on marked targets
       const pw = 1 + 0.2 * upE(P), rd = { d: Object.assign({}, GUNS.mg80, { dmg: GUNS.mg80.dmg * 2.4 * pw, life: 0.75, size: 0.34 }) };
-      for (let i = 0; i < 8; i++) FX.later(i * 0.045, () => { if (!G.P) return; const aa = G.P.aim, b = spawnPBullet(G.P, rd, G.P.x + Math.cos(aa) * 0.5, G.P.y + 0.7, aa + rnd(-0.025, 0.025), 24); if (b) b.markBonus = 1.19; if (i % 2) SFX.play('mg', 0.7); });
-      FX.muzzleFlash(P.x + ca * 0.5, P.y + 0.7, a, 0x7affd4, 1.8);
+      for (let i = 0; i < 8; i++) FX.later(i * 0.045, () => { if (!G.P) return; const aa = G.P.aim, b = spawnPBullet(G.P, rd, ...muzzleOf(G.P), aa + rnd(-0.025, 0.025), 24); if (b) b.markBonus = 1.19; if (i % 2) SFX.play('mg', 0.7); });
+      FX.muzzleFlash(...muzzleOf(P), a, 0x7affd4, 1.8);
     } else if (sk.id === 'pointblank') {
       // 케시크 · 근거리 포격: a point-blank shotgun blast — the closer, the harder (+28.5 %), and what it hits is marked
-      const pw = 1 + 0.2 * upE(P), R = 4.2, mx = P.x + ca * 0.5, my = P.y + 0.6 + sa * 0.5;
+      const pw = 1 + 0.2 * upE(P), R = 4.2, [mx, my] = muzzleOf(P);
       const sg = { d: Object.assign({}, GUNS.ct11, { dmg: GUNS.ct11.dmg * 1.9 * pw, life: 0.32 }) };
       for (let i = 0; i < 10; i++) { const b = spawnPBullet(P, sg, mx, my, a + (i / 9 - 0.5) * 0.5, rnd(19, 23)); if (b) b.pointBlank = true; }
       for (const e of G.enemies) { if (!e.alive || e.spawnT > 0) continue; const px = e.x - P.x, py = e.y + e.h * 0.4 - P.y - 0.6; if (Math.hypot(px, py) < R + e.r && Math.abs(angDiff(a, Math.atan2(py, px))) < 0.45) e.markT = Math.max(e.markT || 0, 4); }
@@ -2067,7 +2069,7 @@
       });
     } else if (sk.id === 'rifleshot') {
       // 콘스탄챠 S2 · 라이플 사격: one precise depleted-uranium round — heavy damage, and the target takes +19 % for 4 s (as a mark)
-      const pw = 1 + 0.25 * upE(P), x0 = P.x + ca * 0.5, y0 = P.y + 0.7;
+      const pw = 1 + 0.25 * upE(P), [x0, y0] = muzzleOf(P);
       const hit = lineHits(x0, y0, a, 20, 0.4).slice(0, 2);
       const end = hit.length ? hit[hit.length - 1].t + 0.5 : 16;
       FX.beam(x0, y0, x0 + ca * end, y0 + sa * end, 0.08, 0xff9af0, 0.25); SFX.play('handgun', 1); SFX.play('hitB', 0.5);
@@ -2076,7 +2078,7 @@
     } else if (sk.id === 'dualburst') {
       // 블랙 리리스 · 듀얼 버스트: an akimbo burst from both guns; hit targets are suppressed (attack down) — +48 % on them
       const pw = 1 + 0.2 * upE(P), rd = { d: Object.assign({}, GUNS.bl_dual, { dmg: GUNS.bl_dual.dmg * 2 * pw, life: 0.7, size: 0.34 }) };
-      for (let i = 0; i < 10; i++) FX.later(i * 0.04, () => { if (!G.P) return; const aa = G.P.aim, side = i % 2 ? 0.1 : -0.1, b = spawnPBullet(G.P, rd, G.P.x + Math.cos(aa) * 0.5, G.P.y + 0.7, aa + side + rnd(-0.04, 0.04), 24); if (b) b.sup = 4; if (i % 2) SFX.play('gun', 0.6); });
+      for (let i = 0; i < 10; i++) FX.later(i * 0.04, () => { if (!G.P) return; const aa = G.P.aim, side = i % 2 ? 0.1 : -0.1, b = spawnPBullet(G.P, rd, ...muzzleOf(G.P), aa + side + rnd(-0.04, 0.04), 24); if (b) b.sup = 4; if (i % 2) SFX.play('gun', 0.6); });
     } else if (sk.id === 'axe') {
       // LRL · 액스 오브 다크니스: a swing of the dragon-slayer axe in front of her — sometimes it finds a weak point (x2.45)
       const pw = 1 + 0.2 * upE(P), R = 2.8, luck = 0.2 + 0.08 * upE(P);
@@ -3509,6 +3511,15 @@
       const b = P.body;
       b.root.position.set(P.x, P.y, 0);
       b.c.update(dt);
+      // skating heroes (케시크's wheel boots): the source move clip is a glide, so the body leans into the push,
+      // sways side to side with each stride and kicks up sparks from the wheels
+      if (P.hero.skate && !P.roll && !P.dash) {
+        P.skateK = (P.skateK || 0) + ((P.moving ? 1 : 0) - (P.skateK || 0)) * Math.min(1, dt * 8);
+        const k = P.skateK, dir = P.lastDir ? Math.sign(P.lastDir[0]) || 0 : 0;
+        b.pivot.rotation.z = (-dir * 0.16 + Math.sin(G.t * 7) * 0.07) * k;
+        b.root.position.y += Math.abs(Math.sin(G.t * 7)) * 0.07 * k;
+        if (P.moving && Math.random() < dt * 14) FX.particle({ x: P.x + rnd(-0.25, 0.25), y: P.y + 0.04, vx: -(P.lastDir ? P.lastDir[0] : 0) * 2.5 + rnd(-0.6, 0.6), vy: rnd(0.3, 1.2), grav: 6, life: 0.3, size: 0.1, size1: 0.02, color: 0xffc070, tex: FX.tex.dot, alpha: 0.9 });
+      }
       const blink = P.iframe > 0 && !P.roll && Math.floor(G.t * 20) % 2 === 0;
       b.c.setOpacity(blink ? 0.6 : 1); // a gentle blink: she stays readable in boss rooms
       if (P.hurtFlash > 0) { const on = Math.sin(G.t * 50) > 0; b.c.setTint(on ? 1.7 : 1, on ? 0.55 : 1, on ? 0.55 : 1); } /* a red blink, never a white-out that hides her under explosion FX */ else if (P.overdrive > 0) b.c.setTint(1.1, 1.35, 1.0); else b.c.setTint(1, 1, 1);
