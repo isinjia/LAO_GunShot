@@ -1,6 +1,14 @@
 // patch notes shown from the title screen (bottom right): the current version only
 window.NOTES = [
   {
+    v: '1.05',
+    items: [
+      '레일건 — 손잡이를 쥐는 손과 총열을 받치는 손의 위치 수정',
+      '양손 총기 11종 — 무기 크기와 대원별 손 모양에 맞춰 손잡이 · 받침 위치 보정',
+      '손목 블래스터 — 겹쳐 있던 보조 손 제거, 한 손 착용 및 무기 크기 · 손목 연결 위치 수정',
+    ],
+  },
+  {
     v: '1.04',
     items: [
       '음성 — T-4 케시크 음성 연결',
