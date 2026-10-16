@@ -422,6 +422,7 @@
       P.focusT -= dt;
       if (P.focusT <= 0) { // overheat: the vent blast clears rounds around her
         const [vx, vy] = muzzleOf(P); blankWave(vx, vy, 2, false);
+        for (const e of G.enemies) { if (!e.alive || e.spawnT > 0) continue; const dx = e.x - vx, dy = e.y + e.h * 0.4 - vy, dd = Math.hypot(dx, dy) || 1; if (dd < 2 + e.r) hurtEnemy(e, 25 * P.mods.dmg, false, dx / dd * 5, dy / dd * 5, 'hitB'); }
         for (let k = 0; k < 10; k++) FX.particle({ x: vx, y: vy, vx: rnd(-2, 2), vy: rnd(0.5, 2.5), life: 0.6, size: 0.35, size1: 1.1, color: 0xc8d0d8, tex: FX.tex.dot, alpha: 0.45, normal: true });
         FX.ring(vx, vy, 0.2, 2, 0x9dff7a, 0.3); SFX.play('expS', 0.35);
       }
@@ -769,10 +770,16 @@
       const sp = (d.spread * Math.PI / 180) * (P.focusT > 0 ? 0.3 : 1) * (n > 1 ? (i / (n - 1) - 0.5) + rnd(-0.06, 0.06) : rnd(-0.5, 0.5)); /* 기관총 사격: focused fire tightens the spread */
       const ang = a + sp;
       const v = d.speed * P.mods.velo * (n > 1 ? rnd(0.85, 1.1) : 1);
-      const pb = spawnPBullet(P, g, mx, my, ang, v);
+      const fg = P.focusT > 0 ? Object.assign({}, g, { d: d._focusD || (d._focusD = Object.assign({}, d, { size: (d.size || 0.3) * 1.4, color: 0xeaffb0 })) }) : g; // 기관총 사격: fat, bright rounds (live gun state, cached look)
+      const pb = spawnPBullet(P, fg, mx, my, ang, v);
       if (pb && P.focusT > 0) pb.sup = 1.5; // 기관총 사격: focused rounds pin targets down (feeds the +38 % on suppressed)
     }
-    if (P.focusT > 0) { FX.beam(mx, my, mx + Math.cos(a) * 3, my + Math.sin(a) * 3, 0.08, 0xc8ff9a, 0.06); if (G.opt.shake) FX.shake(0.03); }
+    if (P.focusT > 0) {
+      P.focusN = (P.focusN || 0) + 1;
+      FX.beam(mx, my, mx + Math.cos(a) * 3, my + Math.sin(a) * 3, 0.08, 0xc8ff9a, 0.06);
+      if (P.focusN % 5 === 0) FX.beam(mx, my, mx + Math.cos(a) * 12, my + Math.sin(a) * 12, 0.06, 0xeaffb0, 0.1); // a tracer every 5th round
+      if (P.focusN % 3 === 0 && G.opt.shake) FX.shake(0.04);
+    }
     // 잔향 사격 모듈: every 6th trigger pull adds two free shots in a narrow fan
     if (P.mods.echo) {
       P.shotN = (P.shotN || 0) + 1;
@@ -2053,6 +2060,30 @@
       }
     }
   }
+  // T-4 Kheshig's original FX_Move, rebuilt from the prefab: soft grey puffs stream off the wheels (one per ~0.035 s,
+  // 0.4-0.6 s, growing) and a cartoon dust kick-up flipbook (Triton_dust1/2, 12 frames) bursts behind each stride (0.18 s)
+  function skateDust(P, dt) {
+    const sh = FX.sheets || {};
+    if (!P.moving) { P.kdStart = true; return; }
+    const ld = P.lastDir || [P.face || 1, 0], ll = Math.hypot(ld[0], ld[1]) || 1, bx = -ld[0] / ll, by = -ld[1] / ll;
+    const ord = 4; // the floor layer, under every character (one shared batch)
+    const puff = (n) => { for (let i = 0; i < n; i++) {
+      const c = Math.random(), col = (Math.round(0x59 + (0x84 - 0x59) * c) << 16) | (Math.round(0x52 + (0x7e - 0x52) * c) << 8) | Math.round(0x4d + (0x78 - 0x4d) * c);
+      FX.particle({ x: P.x + bx * 0.25 + rnd(-0.3, 0.3), y: P.y + 0.12 + rnd(-0.06, 0.1), vx: bx * rnd(2.2, 3.6) + rnd(-0.4, 0.4), vy: by * rnd(1.2, 2.2) + rnd(0.1, 0.5), drag: 5,
+        life: rnd(0.4, 0.6), size: rnd(0.45, 0.65), size1: rnd(1, 1.35), rot: rnd(0, TAU), spin: rnd(-1, 1), color: col, tex: FX.tex.kpuff || FX.tex.glow, alpha: rnd(0.23, 0.55), normal: true, order: ord });
+    } };
+    if (P.kdStart) { P.kdStart = false; puff(5); } // the push-off: a burst of 5, like the original's opening burst
+    P.kdT = (P.kdT || 0) - dt;
+    if (P.kdT <= 0) { P.kdT = 0.035; puff(1); }
+    P.kkT = (P.kkT || 0) - dt;
+    if (P.kkT <= 0 && sh.kdust1 && sh.kdust1.length) {
+      P.kkT = 0.18; P.kkN = (P.kkN || 0) + 1;
+      // the art sprays up and back for a right-facing skater: mirror it when she rolls left
+      const m = bx > 0, w = rnd(1.9, 2.4), foot = P.kkN % 2 ? 0.18 : -0.18;
+      FX.particle({ x: P.x + bx * 0.55 + foot, y: P.y + w * 0.75 * 0.36, vx: bx * 0.6, life: rnd(0.55, 0.75), size: w, size1: w * 1.05, aspect: 0.75,
+        frames: P.kkN % 2 ? (m ? sh.kdust1m : sh.kdust1) : (m ? sh.kdust2m : sh.kdust2), color: 0xffffff, alpha: 0.95, normal: true, order: ord });
+    }
+  }
   // where a placed skill lands: the mouse cursor (clamped), else the locked target, else a fixed distance down the aim
   function aimPoint(P, d0, lo = 2.5, hi = 9) {
     const src = INPUT.aim(), ca = Math.cos(P.aim), sa = Math.sin(P.aim);
@@ -2237,7 +2268,7 @@
         for (let k = 0; k < 8; k++) FX.particle({ x: tx + rnd(-0.3, 0.3), y: ty + rnd(0, 1), vy: rnd(1.5, 3), vx: rnd(-0.4, 0.4), life: 1.2, size: 0.4, size1: 1.4, color: 0xd04040, tex: FX.tex.dot, alpha: 0.35, normal: true }); // red marker smoke
         if (G.opt.shake) FX.shake(0.14);
         for (const e of G.enemies) { if (!e.alive || e.spawnT > 0 || Math.hypot(e.x - tx, e.y + e.h * 0.4 - ty) > R + e.r) continue; e.markT = Math.max(e.markT || 0, 5); { const dx = tx - e.x, dy = ty - e.y - e.h * 0.4, dd = Math.hypot(dx, dy) || 1; hurtEnemy(e, 60 * P.mods.dmg, false, e.boss ? 0 : dx / dd * 5, e.boss ? 0 : dy / dd * 5, 'hitB'); } /* the flare's blast pulls them in for the follow-up grenade */ if (!e.boss) e.stun = Math.max(e.stun, 0.4); FX.ring(e.x, e.y + e.h * 0.45, e.r * 3.5, e.r * 1.3, 0xff3d6d, 0.35); }
-        FX.particle({ x: tx, y: ty, life: 5, size: R * 2, size1: R * 1.8, aspect: 0.6, color: 0xff3d6d, tex: FX.tex.ring || FX.tex.glow, alpha: 0.45 }); // the target reticle stays on the floor while the mark holds
+        FX.particle({ x: tx, y: ty, life: 2, size: R * 2, size1: R * 1.8, aspect: 0.6, color: 0xff3d6d, tex: FX.tex.ring || FX.tex.glow, alpha: 0.45 }); // the target reticle stays on the floor while the mark holds
         damageProps(tx, ty, R, 30);
       });
     } else if (sk.id === 'rifleshot') {
@@ -3722,7 +3753,8 @@
         const k = P.skateK, dir = P.lastDir ? Math.sign(P.lastDir[0]) || 0 : 0;
         b.pivot.rotation.z = (-dir * 0.16 + Math.sin(G.t * 7) * 0.07) * k;
         b.root.position.y += Math.abs(Math.sin(G.t * 7)) * 0.07 * k;
-        if (P.moving && Math.random() < dt * 14) FX.particle({ x: P.x + rnd(-0.25, 0.25), y: P.y + 0.04, vx: -(P.lastDir ? P.lastDir[0] : 0) * 2.5 + rnd(-0.6, 0.6), vy: rnd(0.3, 1.2), grav: 6, life: 0.3, size: 0.1, size1: 0.02, color: 0xffc070, tex: FX.tex.dot, alpha: 0.9 });
+        if (P.moving && Math.random() < dt * 6) FX.particle({ x: P.x + rnd(-0.25, 0.25), y: P.y + 0.04, vx: -(P.lastDir ? P.lastDir[0] : 0) * 2.5 + rnd(-0.6, 0.6), vy: rnd(0.3, 1.2), grav: 6, life: 0.3, size: 0.1, size1: 0.02, color: 0xffc070, tex: FX.tex.dot, alpha: 0.9 });
+        skateDust(P, dt);
       }
       const blink = P.iframe > 0 && !P.roll && Math.floor(G.t * 20) % 2 === 0;
       b.c.setOpacity(blink ? 0.6 : 1); // a gentle blink: she stays readable in boss rooms

@@ -164,6 +164,13 @@
     sheets.fire = splitSheet(images.fx_firehit, 2, 2);
     sheets.aura = splitSheet(images.fx_aura, 2, 2);
     sheets.bolt = splitSheet(images.fx_bolt, 2, 2);
+    // T-4 Kheshig's original skate dust (FX_Move): two 3 x 4 kick-up flipbooks and a soft puff
+    sheets.kdust1 = images.fx_kdust1 ? splitSheet(images.fx_kdust1, 3, 4) : [];
+    sheets.kdust2 = images.fx_kdust2 ? splitSheet(images.fx_kdust2, 3, 4) : [];
+    if (images.fx_kpuff) tex.kpuff = t(images.fx_kpuff);
+    // mirrored copies for rolling left (a negative quad scale would be back-face culled)
+    const mirror = (fr) => fr.map((f) => { const cv = document.createElement('canvas'); cv.width = f.image.width; cv.height = f.image.height; const g = cv.getContext('2d'); g.translate(cv.width, 0); g.scale(-1, 1); g.drawImage(f.image, 0, 0); return canvasTex(cv); });
+    sheets.kdust1m = mirror(sheets.kdust1); sheets.kdust2m = mirror(sheets.kdust2);
     tex.beam = softTex('beam');
     tex.dot = softTex('dot');
     tex.slash = softTex('slash');
@@ -173,7 +180,7 @@
     tex.white = canvasTex(wc); // solid quads (HP bars) in the particle batches
 
     buildAtlas([...['glow', 'cross', 'ring', 'spark', 'elec', 'beam', 'dot', 'slash', 'snow', 'white'].map((k) => tex[k]),
-      ...sheets.smoke, ...sheets.fire, ...sheets.aura, ...sheets.bolt]);
+      ...sheets.smoke, ...sheets.fire, ...sheets.aura, ...sheets.bolt, ...sheets.kdust1, ...sheets.kdust2, ...sheets.kdust1m, ...sheets.kdust2m, ...(tex.kpuff ? [tex.kpuff] : [])]);
 
     flashMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(200, 200),
@@ -605,7 +612,7 @@
   }
 
   window.FX = {
-    L, tex, init, update, clear, particle, sprite, kill, setTex, setBudget, draw: drawParticles, sparks, hit, explosion, ring, lightning, beam, slash, flame, wave, frost, holy,
+    L, tex, sheets, init, update, clear, particle, sprite, kill, setTex, setBudget, draw: drawParticles, sparks, hit, explosion, ring, lightning, beam, slash, flame, wave, frost, holy,
     trail, muzzle, muzzleFlash, summonBurst, mergeFx, deathFx, goldPop, meteor, raindrop, pillar, orbital, thunderBolt, freezeAll,
     shake, flash, follow, later: setTimeout0, state, rnd, tickers, ribbon, jagged,
   };
