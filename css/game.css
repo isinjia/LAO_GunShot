@@ -1339,3 +1339,8 @@ body.touchui .tb.act:not(.avail) { background: rgba(60, 64, 70, 0.6) !important;
 /* loading screen: the percentage sits under the bar in normal flow, so a long tip can never run into it */
 #loading .lpct { position: relative !important; right: auto !important; bottom: auto !important; margin-top: 10px; font-size: 24px !important; }
 #loading .ltip { max-width: min(1200px, 86vw); text-align: center; line-height: 1.45; padding: 0 8px; box-sizing: border-box; }
+/* seven cards (random + six heroes): one row on wide screens, 4 + 3 on portrait phones */
+#heroSel { grid-template-columns: repeat(7, minmax(0, 1fr)) !important; }
+#title #heroSel { grid-template-columns: repeat(7, minmax(0, 1fr)) !important; }
+@media (max-aspect-ratio: 1/1) { #heroSel, #title #heroSel { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; } }
+#heroSel .hcard b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }

@@ -20,6 +20,7 @@
     undine: { hide: /^(bone_L_Upperarm|bone_R_Upperarm)$/, hand: 'bone_R_Hand', ang: 0 },
     harpy: { hide: /^(Bone_UpperArm_R|Bone_UpperArm_L)$/, hand: 'Bone_Hand_R', ang: 0 },
     leona: { hide: /^(Arm_up_R|Arm_up_L|FK_Arm_up_R|FK_Arm_up_L)$/, hand: 'hand_R', ang: 0 },
+    kheshig: { hide: /^(Bone_UpperArm_R|Bone_UpperArm_L|bone_gun_die)$/, hand: 'Bone_Hand_R', handL: 'Bone_Hand_L', ang: 0 },
     // hidden heroes
     blacklilith: { hide: /^(arm|shield|die_gun)$/, hand: 'hand_r', handL: 'hand_l', ang: 0 },
     PECS_LRL: { hide: /^(Arm_up_R|Arm_up_L|FK_Arm_up_R_01|FK_Arm_up_L_01)$/, hand: 'hand_R', handL: 'hand_L', ang: 0 },

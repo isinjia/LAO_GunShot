@@ -23,10 +23,10 @@
       stats: { atk: 4, def: 4, mob: 2 }, desc: '압도적인 연사력과 튼튼한 체력. 탄막으로 적을 짓누른다.',
     },
     {
-      id: 'nymph', name: 'T-10 님프', title: '스틸라인 화력 지원병', img: 'c_BR_Nymph_N', gun: 'sg', hp: 10, armor: 0, speed: 5.9,
+      id: 'nymph', name: 'T-10 님프', title: '스틸라인 화력 지원병', img: 'c_BR_Nymph_N', gun: 'mg80', hp: 10, armor: 1, speed: 5.9,
       skill: 'zone', skillName: '제압 난사', skillDesc: '조준 지점 일대에 탄을 퍼부어 피해 — 맞은 적은 제압(사격 속도 감소, 받는 피해 증가), 표식 대상에게 피해 증가', color: '#7affd4', upF: 'u_zone', upE: 'u_focus',
       sk2: { id: 'focusshot', name: '집속 사격', icon: 'i_power', cd: 5, desc: '탄을 한데 모은 강력한 근거리 일격 — 표식 대상에게 피해 +19%' },
-      stats: { atk: 5, def: 4, mob: 3 }, desc: '산탄총을 든 근접 돌격병. 파고들어 한 번에 쓸어버린다.',
+      stats: { atk: 4, def: 3, mob: 3 }, desc: 'MG80 경기관총의 화력 지원. 제압 난사로 적의 손발을 묶는다.',
     },
     {
       id: 'gnome', name: 'T-20S 노움', title: '스틸라인 유탄병', img: 'c_BR_Gnome_N', gun: 'gl', hp: 8, armor: 1, speed: 5.9,
@@ -39,6 +39,12 @@
       skill: 'snare', skillName: '발목 잡기', skillDesc: '보리와 함께 조준 지점 일대의 적을 4초간 이동 불가 · 표식 · 행동 저하 — 보스는 패턴이 끊긴다', color: '#ff6af0', upF: 'u_snare', upE: 'u_rifle',
       sk2: { id: 'rifleshot', name: '라이플 사격', icon: 'i_crit', cd: 6, desc: '열화우라늄 탄 한 발 — 조준선의 적 최대 2명에게 큰 피해, 4초간 받는 피해 증가' },
       stats: { atk: 5, def: 2, mob: 4 }, desc: '관통하는 고위력 정밀 사격. 한 발 한 발이 치명적이다.',
+    },
+    {
+      id: 'kheshig', name: 'T-4 케시크', title: '앵거 오브 호드 의무병', img: 'c_BR_Kheshig_N', gun: 'ct11', hp: 10, armor: 1, speed: 6.1,
+      skill: 'deploy', skillName: '전술 배치', skillDesc: '6초간 공격력 +28.5% · 연사 +14% · 피격 1회 무효, 체력이 줄었으면 응급 처치로 25 회복', color: '#ff8a5a', upF: 'u_deploy', upE: 'u_cqb',
+      sk2: { id: 'pointblank', name: '근거리 포격', icon: 'i_power', cd: 5, desc: '지근거리 산탄 일격 — 가까울수록 피해 +28.5%, 맞은 적은 4초간 표식(받는 피해 +50%)' },
+      stats: { atk: 4, def: 4, mob: 3 }, desc: 'CT-11 자동 산탄총을 든 의무병. 근접 화력과 응급 처치로 버틴다.',
     },
   ];
 
@@ -72,7 +78,7 @@
     mg: { hitSnd: 'hitS', name: 'M-60 경기관총', donor: 'leprechaun', rank: 0, kind: 'bullet', auto: true, rate: 0.07, dmg: 3.9, speed: 21, spread: 6, mag: 90, ammo: 720, reload: 2.1, life: 0.65, sfx: 'mg', color: 0x9dff7a, size: 0.28, hit: 'skill_hit_simple', recoil: 0.05, desc: '대용량 탄창, 흩뿌리는 탄막' },
     gl: { hitSnd: 'hitB', name: 'G-40 유탄발사기', donor: 'gnome', rank: 1, kind: 'grenade', auto: false, rate: 0.5, dmg: 20, splash: 1.8, speed: 13, spread: 2, mag: 6, ammo: 72, reload: 1.5, life: 0.9, sfx: 'cannon', color: 0xa8ff6a, size: 0.5, hit: 'simple_explosion', recoil: 0.14, desc: '착탄 시 광역 폭발' },
     dmr: { hitSnd: 'hitM', name: 'CS-2 정밀소총', donor: 'constantia', rank: 1, kind: 'bullet', auto: false, rate: 0.3, dmg: 16, pierce: 2, speed: 34, spread: 0.8, mag: 10, ammo: 140, reload: 1.3, life: 0.8, sfx: 'handgun', color: 0x8fe8ff, size: 0.45, hit: 'Constantia_hit', recoil: 0.12, desc: '적 2명을 관통하는 고위력탄' },
-    sg: { hitSnd: 'hitM', name: 'N-12 산탄총', donor: 'nymph', scale: 1.18, rank: 1, kind: 'bullet', auto: false, rate: 0.66, dmg: 4.2, pellets: 7, speed: 19, spread: 30, mag: 6, ammo: 84, reload: 1.4, life: 0.36, sfx: 'gun', color: 0x7affd4, size: 0.34, hit: 'skill_hit_simple', recoil: 0.16, desc: '근거리에서 압도적인 산탄' },
+    sg: { hitSnd: 'hitM', name: 'N-12 산탄총', donor: 'kheshig', scale: 1.1, rank: 1, kind: 'bullet', auto: false, rate: 0.66, dmg: 4.2, pellets: 7, speed: 19, spread: 30, mag: 6, ammo: 84, reload: 1.4, life: 0.36, sfx: 'gun', color: 0x7affd4, size: 0.34, hit: 'skill_hit_simple', recoil: 0.16, desc: '근거리에서 압도적인 산탄' },
     pistol: { hitSnd: 'hitE', name: 'RV-7 손목 블래스터', donor: 'raven', scale: 1.5, hold: { l: [0.02, -0.13] }, rank: 0, kind: 'bullet', auto: true, rate: 0.11, dmg: 4.6, speed: 26, spread: 4, mag: 20, ammo: 300, reload: 0.85, life: 0.6, sfx: 'laser', color: 0x7fe3ff, size: 0.3, hit: 'skill_hit_simple', recoil: 0.04, desc: '손목에 차는 에너지 블래스터, 빠른 재장전' },
     sylph: { hitSnd: 'hitS', name: 'SY-4 고속 소총', donor: 'sylphid', scale: 1.22, rank: 2, kind: 'bullet', auto: true, rate: 0.12, dmg: 8.5, pierce: 1, speed: 32, spread: 2.2, mag: 32, ammo: 320, reload: 1.2, life: 0.75, sfx: 'rifle', color: 0x9ff0ff, size: 0.34, hit: 'skill_hit_simple', recoil: 0.06, desc: '고속 관통탄 연사' },
     shock: { hitSnd: 'hitE', name: 'T-9 전격총', donor: 'thetis', rank: 2, kind: 'chain', auto: true, rate: 0.24, dmg: 14, chain: 3, range: 8, mag: 24, ammo: 260, reload: 1.4, sfx: 'elec', color: 0x66ccff, hit: 'Thetis_skill2_Hit', recoil: 0.04, desc: '조준 방향의 적에게 연쇄 번개' },
@@ -83,7 +89,9 @@
     minigun: { hitSnd: 'hitS', name: 'M-134 회전포', donor: 'leprechaun', scale: 1.18, rank: 3, kind: 'bullet', auto: true, rate: 0.045, dmg: 3.6, speed: 22, spread: 11, mag: 200, ammo: 1000, reload: 2.6, life: 0.6, sfx: 'mg', color: 0xc8ff7a, size: 0.26, hit: 'skill_hit_simple', recoil: 0.04, desc: '압도적인 탄막, 긴 재장전' },
     mortar: { hitSnd: 'hitB', name: 'G-90 박격포', donor: 'gnome', scale: 1.2, rank: 2, kind: 'grenade', auto: false, rate: 0.85, dmg: 34, splash: 2.5, speed: 10, spread: 3, mag: 4, ammo: 48, reload: 1.9, life: 1.1, sfx: 'cannon', color: 0xb8ffa0, size: 0.6, hit: 'simple_explosion', recoil: 0.18, desc: '느리지만 넓은 폭발' },
     amr: { hitSnd: 'hitB', name: 'CS-5 대물저격총', donor: 'constantia', scale: 1.14, rank: 3, kind: 'bullet', auto: false, rate: 0.62, dmg: 46, pierce: 4, speed: 40, spread: 0.4, mag: 5, ammo: 60, reload: 1.6, life: 0.9, sfx: 'handgun', color: 0xbff8ff, size: 0.5, hit: 'Constantia_hit', recoil: 0.2, desc: '적 4명을 꿰뚫는 대물탄' },
-    // hidden heroes' own weapons (never dropped as loot)
+    // heroes' own weapons (never dropped as loot)
+    mg80: { hitSnd: 'hitS', name: 'MG80 경기관총', donor: 'nymph', scale: 1.18, noLoot: true, rank: 0, kind: 'bullet', auto: true, rate: 0.075, dmg: 3.8, speed: 21, spread: 5, mag: 80, ammo: 640, reload: 2.0, life: 0.65, sfx: 'mg', color: 0x7affd4, size: 0.28, hit: 'skill_hit_simple', recoil: 0.05, desc: '님프의 MG80 — 안정적인 지원 사격' },
+    ct11: { hitSnd: 'hitM', name: 'CT-11 자동 산탄총', donor: 'kheshig', scale: 1.1, noLoot: true, rank: 0, kind: 'bullet', auto: true, rate: 0.34, dmg: 3.9, pellets: 6, speed: 19, spread: 24, mag: 10, ammo: 150, reload: 1.6, life: 0.36, sfx: 'gun', color: 0xffb08a, size: 0.32, hit: 'skill_hit_simple', recoil: 0.12, desc: '연사가 되는 자동 산탄총' },
     bl_dual: { hitSnd: 'hitS', name: 'BL 쌍권총', donor: 'blacklilith', noLoot: true, rank: 1, kind: 'bullet', auto: true, rate: 0.085, dmg: 4.4, speed: 23, spread: 5, mag: 36, ammo: 504, reload: 1.15, life: 0.6, sfx: 'rifle', color: 0xb6a0ff, size: 0.28, hit: 'skill_hit_simple', recoil: 0.05, desc: '빠르게 번갈아 쏘는 쌍권총' },
     lrl_wand: { hitSnd: 'hitF', name: 'LRL 마도 지팡이', donor: 'PECS_LRL', noLoot: true, rank: 1, kind: 'fireball', auto: false, rate: 0.5, dmg: 22, splash: 1.9, speed: 12, spread: 2, mag: 8, ammo: 120, reload: 1.4, life: 1.0, sfx: 'expS', color: 0x9fe8ff, size: 0.6, hit: 'skill_hit_simple', recoil: 0.12, desc: '폭발하는 마탄' },
     ramp_cannon: { hitSnd: 'hitB', name: 'RP 어깨 포', donor: 'e_Rampart_N', noLoot: true, rank: 1, kind: 'bullet', auto: true, rate: 0.3, dmg: 13, pierce: 1, speed: 18, spread: 3, mag: 16, ammo: 240, reload: 1.6, life: 0.75, sfx: 'rifle', color: 0x9fffd8, size: 0.4, hit: 'skill_hit_simple', recoil: 0.14, desc: '무거운 관통 포탄' },
@@ -260,6 +268,8 @@
     { id: 'u_cover', hero: 'gnome', name: '원호 확장', icon: 'i_target', max: 3, desc: '원호 사격: 범위 +20%, 쿨타임 -0.6초' },
     { id: 'u_snare', hero: 'constantia', name: '보리 훈련', icon: 'i_battle', max: 3, desc: '발목 잡기: 지속 +1초' },
     { id: 'u_rifle', hero: 'constantia', name: '열화우라늄 탄', icon: 'i_crit', max: 3, desc: '라이플 사격: 피해 +25%, 쿨타임 -0.6초' },
+    { id: 'u_deploy', hero: 'kheshig', name: '배치 숙련', icon: 'i_battle', max: 3, desc: '전술 배치: 지속 +1.5초' },
+    { id: 'u_cqb', hero: 'kheshig', name: '지근거리 사격', icon: 'i_power', max: 3, desc: '근거리 포격: 피해 +20%, 쿨타임 -0.6초' },
     { id: 'u_escort', hero: 'blacklilith', name: '경호 연장', icon: 'i_battle', max: 3, desc: '요인 경호: 지속 +1.5초' },
     { id: 'u_dual', hero: 'blacklilith', name: '아킴보 숙련', icon: 'i_power', max: 3, desc: '듀얼 버스트: 피해 +20%, 쿨타임 -0.6초' },
     { id: 'u_beam', hero: 'lrl', name: '봉인 해제', icon: 'i_battle', max: 3, desc: '사이클롭스 이터널 빔: 폭 +30%, 효과 +1초' },
@@ -270,9 +280,10 @@
     // signature-weapon mastery: one per hero, rewards sticking with her own gun
     { id: 'm_brownie', hero: 'brownie', name: '돌격소총 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%, 재장전 +15%' },
     { id: 'm_leprechaun', hero: 'leprechaun', name: '기관총 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +12%, 탄창 +20%' },
-    { id: 'm_nymph', hero: 'nymph', name: '산탄 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%, 처치 시 회피 쿨타임 초기화(20%)' },
+    { id: 'm_nymph', hero: 'nymph', name: '기관총 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%, 처치 시 회피 쿨타임 초기화(20%)' },
     { id: 'm_gnome', hero: 'gnome', name: '유탄 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%, 폭발 범위 +10%' },
     { id: 'm_constantia', hero: 'constantia', name: '정밀 사격 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%, 치명타 +5%' },
+    { id: 'm_kheshig', hero: 'kheshig', name: '산탄 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%' },
     { id: 'm_blacklilith', hero: 'blacklilith', name: '쌍권총 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%' },
     { id: 'm_lrl', hero: 'lrl', name: '마탄 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%' },
     { id: 'm_ramparion', hero: 'ramparion', name: '어깨 포 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%' },

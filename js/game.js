@@ -837,6 +837,8 @@
           const sp = Math.hypot(b.vx, b.vy) || 1;
           if (b.kind === 'grenade' || b.kind === 'fireball') { dead = true; break; }
           if (b.sup) { e.supT = Math.max(e.supT || 0, b.sup); } // 견제 / 듀얼 버스트 rounds suppress what they hit
+          if (b.markBonus && e.markT > 0) { b.dmg *= b.markBonus; b.markBonus = 0; } // 집속 사격: harder on marked targets (once per round)
+          if (b.pointBlank && Math.hypot(e.x - P.x, e.y - P.y) < 2.2) { b.dmg *= 1.285; b.pointBlank = false; } // 근거리 포격: at arm's length
           if (P.mods.frost) { e.slowT = 1.5; FX.particle({ x: b.x, y: b.y, life: 0.3, size: 0.3, size1: 0.7, color: 0x9feaff, tex: FX.tex.snow, spin: 4 }); }
           const crit2 = b.crit || (P.syn.has('취약 노출') && e.slowT > 0 && Math.random() < 0.25);
           hurtEnemy(e, b.dmg * (crit2 && !b.crit ? 2 : 1), crit2, b.vx / sp * 0.7, b.vy / sp * 0.7, b.g.hitSnd || 'hitS');
@@ -1882,6 +1884,14 @@
         });
         break;
       }
+      case 'deploy':
+        // 케시크 · 전술 배치 (+ 응급 처치): attack +28.5 %, act +14 %, one hit nullified for 6 s — and a field dressing if she's hurt
+        P.overdrive = P.odMax = 6 + 1.5 * upF(P); P.odDmg = 1.285; P.odRof = 1.14;
+        P.emplaceT = P.overdrive; P.emplaceGuard = 1;
+        if (P.hp < P.maxHp) { P.hp = Math.min(P.maxHp, P.hp + 1); FX.ring(P.x, P.y + 0.6, 0.2, 1.4, 0xff4060, 0.45); }
+        SFX.play('reinforce'); SFX.play('shield', 0.6);
+        FX.ring(P.x, P.y + 0.6, 0.3, 2.6, 0xff8a5a, 0.6); FX.flash(0xff8a5a, 0.12);
+        break;
       case 'escort':
         // 블랙 리리스 · 요인 경호: two hits nullified, attack +23.5 % and sure aim for 6 s
         P.overdrive = P.odMax = 6 + 1.5 * upF(P); P.odDmg = 1.235; P.odRof = 1; P.visorT = P.overdrive;
@@ -2034,12 +2044,18 @@
       P.overdrive = P.odMax = 2 + 0.5 * upE(P); P.odRof = 2; P.odDmg = 1.2; P.focusT = P.overdrive;
       SFX.play('reloadOut', 0.8); FX.ring(P.x, P.y + 0.6, 0.3, 1.6, 0x9dff7a, 0.35);
     } else if (sk.id === 'focusshot') {
-      // 님프 · 집속 사격: one concentrated blast — a tight cone of heavy pellets, +19 % on marked targets
-      const pw = 1 + 0.2 * upE(P), sg = { d: Object.assign({}, GUNS.sg, { dmg: GUNS.sg.dmg * 1.8 * pw, life: 0.36 }) };
-      const mx = P.x + ca * 0.5, my = P.y + 0.6 + sa * 0.5;
-      for (let i = 0; i < 10; i++) spawnPBullet(P, sg, mx, my, a + (i / 9 - 0.5) * 0.32, rnd(20, 24));
-      FX.muzzleFlash(mx, my, a, 0x7affd4, 2.2); SFX.play('gun'); SFX.play('expS', 0.4);
-      if (G.opt.shake) FX.shake(0.15);
+      // 님프 · 집속 사격: a focused MG80 burst — eight heavy rounds down one line, +19 % on marked targets
+      const pw = 1 + 0.2 * upE(P), rd = { d: Object.assign({}, GUNS.mg80, { dmg: GUNS.mg80.dmg * 2.4 * pw, life: 0.75, size: 0.34 }) };
+      for (let i = 0; i < 8; i++) FX.later(i * 0.045, () => { if (!G.P) return; const aa = G.P.aim, b = spawnPBullet(G.P, rd, G.P.x + Math.cos(aa) * 0.5, G.P.y + 0.7, aa + rnd(-0.025, 0.025), 24); if (b) b.markBonus = 1.19; if (i % 2) SFX.play('mg', 0.7); });
+      FX.muzzleFlash(P.x + ca * 0.5, P.y + 0.7, a, 0x7affd4, 1.8);
+    } else if (sk.id === 'pointblank') {
+      // 케시크 · 근거리 포격: a point-blank shotgun blast — the closer, the harder (+28.5 %), and what it hits is marked
+      const pw = 1 + 0.2 * upE(P), R = 4.2, mx = P.x + ca * 0.5, my = P.y + 0.6 + sa * 0.5;
+      const sg = { d: Object.assign({}, GUNS.ct11, { dmg: GUNS.ct11.dmg * 1.9 * pw, life: 0.32 }) };
+      for (let i = 0; i < 10; i++) { const b = spawnPBullet(P, sg, mx, my, a + (i / 9 - 0.5) * 0.5, rnd(19, 23)); if (b) b.pointBlank = true; }
+      for (const e of G.enemies) { if (!e.alive || e.spawnT > 0) continue; const px = e.x - P.x, py = e.y + e.h * 0.4 - P.y - 0.6; if (Math.hypot(px, py) < R + e.r && Math.abs(angDiff(a, Math.atan2(py, px))) < 0.45) e.markT = Math.max(e.markT || 0, 4); }
+      FX.muzzleFlash(mx, my, a, 0xffb08a, 2.4); SFX.play('gun'); SFX.play('expS', 0.45);
+      if (G.opt.shake) FX.shake(0.18);
     } else if (sk.id === 'covermark') {
       // 노움 · 원호 사격: a marking round — everything near the impact is marked (+50 % damage taken, dodges less) for 5 s
       const d = 6, tx = P.x + ca * d, ty = P.y + 0.5 + sa * d, R = 2.4 * (1 + 0.2 * upE(P));
