@@ -298,8 +298,11 @@
     return out;
   }
   function readObj(key) { try { const v = JSON.parse(localStorage.getItem(key) || '{}'); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } }
+  // every playable hero: the card heroes, then the hidden ones (only the random card reaches those)
+  const ALLH = [...HEROES, ...(DATA.HIDDEN || [])];
+  const rigOf = (h) => h.rig || h.id;
   function newPlayer(heroIdx) {
-    const hero = HEROES[heroIdx];
+    const hero = ALLH[heroIdx];
     const P = {
       hero, x: 0, y: 0, r: 0.3, hp: hero.hp, maxHp: hero.hp, armor: hero.armor, keys: 1, gold: 0,
       guns: [], gi: 0, items: [], aim: 0, aimT: 0, face: 1, target: null, roll: null, rollCd: 0, iframe: 0, fireCd: 0, reloadT: 0,
@@ -319,7 +322,7 @@
     P.metaLuck = ml.luck || 0;
     P.metaXp = ml.xp || 0; P.cards = 3 + (ml.cards || 0); // research: 전투 데이터 분석 / 강화 모듈 확장
     P.revives = ml.revive || 0;
-    P.body = makeBody(hero.id, HERO_H, RIGS[hero.id].hide, false);
+    P.body = makeBody(rigOf(hero), HERO_H, RIGS[rigOf(hero)].hide, !!hero.rigFlip);
     P.body.root.position.set(0, 0, 0);
     scene.add(P.body.root);
     P.shadow = FX.sprite({ x: 0, y: 0, size: 0.95, aspect: 0.32, color: 0x000000, alpha: 0.55, tex: FX.tex.dot, normal: true, order: 3 });
@@ -2085,7 +2088,7 @@
   function rollLoot(rank) {
     const P = G.P;
     const offeredG = new Set(G.objs.filter((o) => o.type === 'loot' && o.loot && o.loot.kind === 'gun').map((o) => o.loot.id));
-    const guns = Object.values(GUNS).filter((g) => !P.guns.some((x) => x.id === g.id) && !offeredG.has(g.id));
+    const guns = Object.values(GUNS).filter((g) => !g.noLoot && !P.guns.some((x) => x.id === g.id) && !offeredG.has(g.id));
     const offered = new Set(G.objs.filter((o) => o.type === 'loot' && o.loot && o.loot.kind === 'item').map((o) => o.loot.id));
     const items = ITEMS.filter((it) => ['heart', 'armor'].includes(it.id) || (!P.items.includes(it.id) && !offered.has(it.id)));
     const near = (arr, r) => { for (let d = 0; d <= 3; d++) { const c = arr.filter((x) => Math.abs(x.rank - r) <= d); if (c.length) return c[Math.floor(Math.random() * c.length)]; } return null; };
@@ -2224,7 +2227,7 @@
   }
   // the max-HP ceiling (half-hearts): the meta upgrade raises it with the base, so it never voids an upgrade
   function hpCap(P) { return P.hero.hp + 8 + (P.metaHp || 0); }
-  function perkPool(P) { return PERKS.filter((p) => (!p.hero || p.hero === P.hero.id) && (P.up[p.id] || 0) < p.max && !(p.id === 'p_hp' && P.maxHp >= hpCap(P))); }
+  function perkPool(P) { return PERKS.filter((p) => (!p.hero || p.hero === P.hero.id || (P.hero.perks && P.hero.perks.includes(p.id))) && (P.up[p.id] || 0) < p.max && !(p.id === 'p_hp' && P.maxHp >= hpCap(P))); }
   function levelUp() {
     const P = G.P;
     if (!P || P.dead || G.choosing || G.phase !== 'play') return; // never over a result screen
@@ -2369,7 +2372,7 @@
     const items = ITEMS.filter((it) => it.rank >= 2 && !P.items.includes(it.id));
     const it = items.length ? items[Math.floor(Math.random() * items.length)] : null;
     // nothing S+ left to give: an S/SS gun she doesn't carry, else a stack of armour
-    const guns = Object.keys(GUNS).filter((id) => GUNS[id].rank >= 2 && !P.guns.some((g) => g.id === id));
+    const guns = Object.keys(GUNS).filter((id) => GUNS[id].rank >= 2 && !GUNS[id].noLoot && !P.guns.some((g) => g.id === id));
     const reward = it ? { kind: 'item', id: it.id } : guns.length ? { kind: 'gun', id: guns[Math.floor(Math.random() * guns.length)] } : { kind: 'item', id: 'armor' };
     spawnPedestal(o.x, o.y - 1.2, reward);
     UI.toast('피의 계약 — 최대 체력 50을 바쳤습니다', 'fail');
@@ -2794,7 +2797,7 @@
     Object.assign(G, { enemies: [], corpses: [], pbul: [], ebul: [], pickups: [], props: [], objs: [], hazards: [], vents: [], bossE: null, room: null });
     G.fi = fi;
     if (SD.evict && SD.loaded) { /* any rig outside this floor and the next is released, including a finished run's last floor */
-      const keep = new Set([...HEROES.map((h) => h.id), ...Object.values(GUNS).map((x) => x.donor), 'labiata', ...floorRigs(fi), ...(fi + 1 < DATA.FLOORS.length ? floorRigs(fi + 1) : [])]);
+      const keep = new Set([...HEROES.map((h) => h.id), ...(G.P ? [rigOf(G.P.hero)] : []), ...Object.values(GUNS).filter((x) => !x.noLoot || (G.P && G.P.hero.gun === x.id)).map((x) => x.donor), 'labiata', ...floorRigs(fi), ...(fi + 1 < DATA.FLOORS.length ? floorRigs(fi + 1) : [])]);
       SD.loaded().forEach((id) => { if (!keep.has(id)) SD.evict(id); });
     }
     // progress: the deepest floor ever reached unlocks heroes
@@ -2959,15 +2962,15 @@
   async function startRunInner(heroIdx) {
     if (!scene || G.phase === 'loading' || G.phase === 'boot') return; // not booted yet / already starting
     heroIdx = Math.floor(Number(heroIdx));
-    if (!(heroIdx >= 0 && heroIdx < HEROES.length)) heroIdx = Math.floor(Math.random() * HEROES.length); /* out of range (or the random slot): a random hero */
+    if (!(heroIdx >= 0 && heroIdx < ALLH.length)) heroIdx = Math.floor(Math.random() * HEROES.length); /* out of range (or the random slot): a random hero */
     G.heroIdx = heroIdx;
     G.heat = UI.heat ? UI.heat() : 0;
     G.phase = 'loading';
     bgAfter = Math.max(bgAfter, performance.now() + 60000); // title-time streaming stands down at once
     { const t = document.getElementById('title'); if (t) t.hidden = true; }
     UI.loading(0, '작전 지역 데이터 수신 중');
-    const hero = HEROES[heroIdx];
-    const need = [hero.id, GUNS[hero.gun].donor, 'labiata'];
+    const hero = ALLH[heroIdx];
+    const need = [rigOf(hero), GUNS[hero.gun].donor, 'labiata'];
     const F = FLOORS[0];
     G.bossKeys = [];
     {
@@ -3000,7 +3003,7 @@
       return;
     }
     // the remaining gun donors, elites and the next floor stream in one at a time while the first rooms are played
-    G.lateRigs = [...new Set(Object.values(GUNS).map((x) => x.donor)), ...F.elites.map((k) => ELITES[k].rig)];
+    G.lateRigs = [...new Set(Object.values(GUNS).filter((x) => !x.noLoot).map((x) => x.donor)), ...F.elites.map((k) => ELITES[k].rig)];
     // reset
     if (G.deadGun) { G.deadGun.h.c.dispose(); scene.remove(G.deadGun.h.outer); G.deadGun = null; }
     if (G.P) { G.P.body.c.dispose(); scene.remove(G.P.body.root); G.P.guns.forEach((g) => g.hand && g.hand.c.dispose()); scene.remove(G.P.handRoot); FX.kill(G.P.shadow); if (G.P.odAura) FX.kill(G.P.odAura); if (G.P.shieldFx) G.P.shieldFx.forEach((s) => FX.kill(s)); killDrone(G.P); }

@@ -20,6 +20,10 @@
     undine: { hide: /^(bone_L_Upperarm|bone_R_Upperarm)$/, hand: 'bone_R_Hand', ang: 0 },
     harpy: { hide: /^(Bone_UpperArm_R|Bone_UpperArm_L)$/, hand: 'Bone_Hand_R', ang: 0 },
     leona: { hide: /^(Arm_up_R|Arm_up_L|FK_Arm_up_R|FK_Arm_up_L)$/, hand: 'hand_R', ang: 0 },
+    // hidden heroes
+    blacklilith: { hide: /^(arm|shield|die_gun)$/, hand: 'hand_r', handL: 'hand_l', ang: 0 },
+    PECS_LRL: { hide: /^(Arm_up_R|Arm_up_L|FK_Arm_up_R_01|FK_Arm_up_L_01)$/, hand: 'hand_R', handL: 'hand_L', ang: 0 },
+    e_Rampart_N: { hide: /^(bone_Arm_F_1|bone_Arm_B_1)$/, hand: 'bone_Arm_B_3', ang: 0 },
   };
 
   // the floating hand: a second instance of the rig showing only the hand subtree, frozen in its idle pose,

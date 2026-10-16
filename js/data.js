@@ -42,6 +42,29 @@
     },
   ];
 
+  // hidden heroes: not on the hero cards; the random card turns one up 2% of the time each.
+  // Kits reuse the core skill mechanics in new pairings (perks: the skill upgrades that go with them).
+  const HIDDEN = [
+    {
+      id: 'blacklilith', name: '블랙 리리스', title: '히든 · 쌍권총 전투 바이오로이드', img: 'c_HID_BlackLilith', gun: 'bl_dual', hp: 10, armor: 1, speed: 6.6, hidden: true,
+      skill: 'blossom', skillName: '쌍권총 난무', skillDesc: '3초간 움직이며 사방으로 탄환을 쉬지 않고 난사 — 둘러싸였을 때 진가를 발휘', color: '#c070ff',
+      sk2: { id: 'shield', name: '전개 방패', icon: 'i_research', cd: 10, desc: '3초간 양팔의 방패가 적탄을 흡수 — 끝나면 흡수량만큼 5초간 피해 증가(최대 +50%)' },
+      perks: ['u_storm', 'u_shield'], stats: { atk: 4, def: 3, mob: 5 }, desc: '쌍권총의 빠른 연사와 방패. 탄막 한가운데서 춤추듯 싸운다.',
+    },
+    {
+      id: 'lrl', name: 'LRL', title: '히든 · 자칭 흑마법사', img: 'c_HID_LRL', rig: 'PECS_LRL', gun: 'lrl_wand', hp: 8, armor: 1, speed: 6.0, hidden: true,
+      skill: 'barrage', skillName: '흑염룡 강림', skillDesc: '방 안의 적들에게 흑염 운석 16발을 연속으로 떨어뜨린다', color: '#ff5a8a',
+      sk2: { id: 'turret', name: '사역마 소환', icon: 'i_target', cd: 11, desc: '8초간 가까운 적을 자동으로 공격하는 사역마 소환' },
+      perks: ['u_barr', 'u_mine'], stats: { atk: 5, def: 2, mob: 3 }, desc: '폭발하는 마탄과 사역마. 직접 맞서기보다 전장을 불태운다.',
+    },
+    {
+      id: 'ramparion', name: '램파리온', title: '히든 · 강철의 수호자', img: 'c_HID_Ramparion', rig: 'e_Rampart_N', rigFlip: true, gun: 'ramp_cannon', hp: 14, armor: 3, speed: 5.1, hidden: true,
+      skill: 'emplace', skillName: '강철 요새', skillDesc: '6초간 거치 — 이동 50%, 연사 3배 · 피해 +30%, 탄약 무한, 피격 1회 무효', color: '#ffd27a',
+      sk2: { id: 'rush', name: '방패 돌진', icon: 'i_power', cd: 7, desc: '조준 방향으로 무적 돌진 후 근거리 충격 — 적을 밀쳐내고, 체력이 절반 이하일 때 맞히면 25 회복(구역당 1회)' },
+      perks: ['u_od', 'u_rush'], stats: { atk: 3, def: 5, mob: 1 }, desc: '거대한 체구와 두꺼운 장갑. 느리지만 무엇이든 버텨낸다.',
+    },
+  ];
+
   // kind: bullet | grenade | rail | chain | fireball
   // rate: seconds between shots; spread: degrees; life: projectile seconds; donor: rig whose hand + gun is drawn
   const GUNS = {
@@ -60,6 +83,10 @@
     minigun: { hitSnd: 'hitS', name: 'M-134 회전포', donor: 'leprechaun', scale: 1.18, rank: 3, kind: 'bullet', auto: true, rate: 0.045, dmg: 3.6, speed: 22, spread: 11, mag: 200, ammo: 1000, reload: 2.6, life: 0.6, sfx: 'mg', color: 0xc8ff7a, size: 0.26, hit: 'skill_hit_simple', recoil: 0.04, desc: '압도적인 탄막, 긴 재장전' },
     mortar: { hitSnd: 'hitB', name: 'G-90 박격포', donor: 'gnome', scale: 1.2, rank: 2, kind: 'grenade', auto: false, rate: 0.85, dmg: 34, splash: 2.5, speed: 10, spread: 3, mag: 4, ammo: 48, reload: 1.9, life: 1.1, sfx: 'cannon', color: 0xb8ffa0, size: 0.6, hit: 'simple_explosion', recoil: 0.18, desc: '느리지만 넓은 폭발' },
     amr: { hitSnd: 'hitB', name: 'CS-5 대물저격총', donor: 'constantia', scale: 1.14, rank: 3, kind: 'bullet', auto: false, rate: 0.62, dmg: 46, pierce: 4, speed: 40, spread: 0.4, mag: 5, ammo: 60, reload: 1.6, life: 0.9, sfx: 'handgun', color: 0xbff8ff, size: 0.5, hit: 'Constantia_hit', recoil: 0.2, desc: '적 4명을 꿰뚫는 대물탄' },
+    // hidden heroes' own weapons (never dropped as loot)
+    bl_dual: { hitSnd: 'hitS', name: 'BL 쌍권총', donor: 'blacklilith', noLoot: true, rank: 1, kind: 'bullet', auto: true, rate: 0.085, dmg: 4.4, speed: 23, spread: 5, mag: 36, ammo: 504, reload: 1.15, life: 0.6, sfx: 'rifle', color: 0xb6a0ff, size: 0.28, hit: 'skill_hit_simple', recoil: 0.05, desc: '빠르게 번갈아 쏘는 쌍권총' },
+    lrl_wand: { hitSnd: 'hitF', name: 'LRL 마도 지팡이', donor: 'PECS_LRL', noLoot: true, rank: 1, kind: 'fireball', auto: false, rate: 0.5, dmg: 22, splash: 1.9, speed: 12, spread: 2, mag: 8, ammo: 120, reload: 1.4, life: 1.0, sfx: 'expS', color: 0x9fe8ff, size: 0.6, hit: 'skill_hit_simple', recoil: 0.12, desc: '폭발하는 마탄' },
+    ramp_cannon: { hitSnd: 'hitB', name: 'RP 어깨 포', donor: 'e_Rampart_N', noLoot: true, rank: 1, kind: 'bullet', auto: true, rate: 0.3, dmg: 13, pierce: 1, speed: 18, spread: 3, mag: 16, ammo: 240, reload: 1.6, life: 0.75, sfx: 'rifle', color: 0x9fffd8, size: 0.4, hit: 'skill_hit_simple', recoil: 0.14, desc: '무거운 관통 포탄' },
   };
   Object.entries(GUNS).forEach(([id, g]) => { g.id = id; });
 
@@ -238,7 +265,10 @@
     { id: 'm_nymph', hero: 'nymph', name: '산탄 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%, 처치 시 회피 쿨타임 초기화(20%)' },
     { id: 'm_gnome', hero: 'gnome', name: '유탄 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%, 폭발 범위 +10%' },
     { id: 'm_constantia', hero: 'constantia', name: '정밀 사격 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%, 치명타 +5%' },
+    { id: 'm_blacklilith', hero: 'blacklilith', name: '쌍권총 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%' },
+    { id: 'm_lrl', hero: 'lrl', name: '마탄 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%' },
+    { id: 'm_ramparion', hero: 'ramparion', name: '어깨 포 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%' },
   ];
 
-  window.DATA = { RANKS, HEROES, GUNS, ITEMS, ENEMIES, ELITES, BOSSES, FLOORS, BAL, SYNERGY, UNLOCK, META, PERKS };
+  window.DATA = { RANKS, HEROES, HIDDEN, GUNS, ITEMS, ENEMIES, ELITES, BOSSES, FLOORS, BAL, SYNERGY, UNLOCK, META, PERKS };
 })();

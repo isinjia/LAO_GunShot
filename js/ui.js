@@ -301,6 +301,15 @@
   // the random card: any unlocked hero, decided when the run starts
   function pickHero() {
     if (selHero >= 0) return selHero;
+    // hidden heroes: 2% each on the random card (indices after the card heroes)
+    const HID = DATA.HIDDEN || [];
+    const roll = Math.random();
+    if (roll < HID.length * 0.02) {
+      const k = Math.min(HID.length - 1, Math.floor(roll / 0.02)), h = HID[k];
+      setTimeout(() => announce('히든 대원 출현', h.name, h.title.replace(/^히든 · /, ''), 3, 'i_random'), 1800); // shown once the run is on screen
+      toast(`히든 대원 — ${h.name}!`, 'gem'); SFX.play('rankUpSS', 0.8);
+      return HEROES.length + k;
+    }
     const pool = HEROES.map((h, i) => i).filter((i) => unlocked(HEROES[i]));
     const i = pool[Math.floor(Math.random() * pool.length)] || 0;
     toast(`무작위 출격 — ${HEROES[i].name}`, 'gem');
@@ -311,7 +320,7 @@
     if (i < 0) {
       const n = HEROES.filter(unlocked).length;
       return `<div class="hi-l"><div class="hi-name" style="--c:#d8dee8"><b>무작위 출격</b><small>RANDOM DEPLOY</small></div><p>해금된 대원 ${n}명 중 한 명이 무작위로 출격합니다. 누가 나올지는 출격하는 순간 결정됩니다.</p></div>
-        <div class="hi-r"><div class="hi-row"><span class="sk2i" style="background-image:var(--s-i_random)"></span><div><small>후보</small><b>${HEROES.filter(unlocked).map((h) => h.name).join(' · ')}</b><em>각 대원의 기본 무기와 스킬로 시작</em></div></div>
+        <div class="hi-r"><div class="hi-row"><span class="sk2i" style="background-image:var(--s-i_random)"></span><div><small>후보</small><b>${HEROES.filter(unlocked).map((h) => h.name).join(' · ')}</b><em>각 대원의 기본 무기와 스킬로 시작 · 아주 드물게 히든 대원이 나타납니다</em></div></div>
         <div class="hi-cands">${HEROES.filter(unlocked).map((h) => `<i style="background-image:${portrait(h)};--c:${h.color}" title="${h.name}"></i>`).join('')}</div></div>`;
     }
     const h = HEROES[i], g = GUNS[h.gun];
