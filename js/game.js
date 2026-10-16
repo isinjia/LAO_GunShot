@@ -405,7 +405,8 @@
     if (P.adrT > 0) { P.adrT -= dt; if (Math.random() < dt * 14) FX.particle({ x: P.x + rnd(-0.4, 0.4), y: P.y + rnd(0.2, 1.3), vy: 1.6, life: 0.35, size: 0.12, size1: 0, color: 0xff5a3a, tex: FX.tex.dot }); }
     updateOrbs(P, dt);
     if (P.visorT > 0) P.visorT -= dt;
-    if (P.emplaceT > 0) { P.emplaceT -= dt; if (P.emplaceT <= 0) P.emplaceGuard = 0; }
+    if (P.emplaceT > 0) { P.emplaceT -= dt; if (P.emplaceT <= 0 && !(P.guardT > 0)) P.emplaceGuard = 0; }
+    if (P.guardT > 0) { P.guardT -= dt; if (P.guardT <= 0 && !(P.emplaceT > 0)) P.emplaceGuard = 0; } // skill guards: no slow
     if (P.blossomT > 0) {
       // 산탄 회오리: a ring of buckshot every 0.15 s, the ring turning as it goes
       P.blossomT -= dt; P.blossomTick -= dt;
@@ -428,7 +429,9 @@
       }
       // 기관총 사격: the wall of lead in front of her chews up incoming rounds
       const [mx, my] = muzzleOf(P);
-      for (let k = G.ebul.length - 1; k >= 0; k--) { const b = G.ebul[k]; if (Math.hypot(b.x - mx, b.y - my) < 1.4) { FX.sparks(b.x, b.y, 0x9dff7a, 3, 2, 0.08, 0.2); popEB(b); ebRemove(k); } }
+      for (let k = G.ebul.length - 1; k >= 0; k--) { const b = G.ebul[k], dx = b.x - mx, dy = b.y - my; if (Math.hypot(dx, dy) < 4 && Math.abs(angDiff(P.aim, Math.atan2(dy, dx))) < 0.65) { FX.sparks(b.x, b.y, 0x9dff7a, 3, 2, 0.08, 0.2); popEB(b); ebRemove(k); } }
+      // the barrel glows hotter through the window (white-yellow at the end), so the player sees how long is left
+      { const heat = 1 - P.focusT / (P.odMax || 2); if (Math.random() < dt * 30) FX.particle({ x: mx - Math.cos(P.aim) * 0.25, y: my, life: 0.12, size: 0.3 + heat * 0.5, size1: 0.1, color: heat > 0.7 ? 0xfff0a0 : heat > 0.35 ? 0xffa040 : 0xff5a2a, tex: FX.tex.glow, alpha: 0.6 + heat * 0.4 }); }
       if (Math.random() < dt * 20) FX.particle({ x: mx, y: my, vy: rnd(0.6, 1.4), life: 0.35, size: 0.25, size1: 0.6, color: 0x9aa4ae, tex: FX.tex.dot, alpha: 0.3, normal: true });
     }
     // 경기관총 난사: a wide fan of light-MG rounds toward the aim
@@ -486,7 +489,7 @@
       if (P.wallT <= 0) {
         P.wallT = 0; P.wallFx.forEach((s) => { s.hidden = true; });
         // the foam crumbles outward, throwing back what it soaked up (5 per round, up to 150)
-        const dmg = Math.min(150, 20 + 5 * (P.wallAbs || 0)) * P.mods.dmg; P.wallAbs = 0;
+        const dmg = Math.min(260, 60 + 8 * (P.wallAbs || 0)) * P.mods.dmg; P.wallAbs = 0;
         FX.ring(P.x, P.y + 0.6, 0.5, 3.4, 0xd8c8a0, 0.45); SFX.play('expM', 0.6); if (G.opt.shake) FX.shake(0.2);
         for (const e of G.enemies) { if (!e.alive || e.spawnT > 0) continue; const dx = e.x - P.x, dy = e.y - P.y, dd = Math.hypot(dx, dy) || 1; if (dd < 3.4 + e.r) hurtEnemy(e, dmg, false, dx / dd * 6, dy / dd * 6, 'hitB'); }
       }
@@ -497,6 +500,7 @@
       if (Math.random() < dt * 18) FX.particle({ x: P.x + rnd(-0.5, 0.5), y: P.y + rnd(0.1, 1.4), vy: rnd(1, 2.4), life: 0.5, size: 0.14, size1: 0, color: heroHex(P), tex: FX.tex.dot, alpha: 0.9 });
       P.odPulse = (P.odPulse || 0) - dt;
       if (P.hero.skill === 'deploy' && P.odPulse <= 0) { P.odPulse = 0.45; FX.ring(P.x, P.y + 0.1, 1.6, 1.1, 0xff8a5a, 0.4, 0.7); for (let k = 0; k < 6; k++) { const aa = k / 6 * TAU + G.t; FX.particle({ x: P.x + Math.cos(aa) * 1.4, y: P.y + 0.1 + Math.sin(aa) * 0.6, life: 0.4, size: 0.35, size1: 0.1, color: 0xffb08a, tex: FX.tex.glow, alpha: 0.8 }); } } // 전술 배치: a hex of plates around her
+      if (P.hero.skill === 'escort') { P.escT = (P.escT || 1.2) - dt; if (P.escT <= 0) { P.escT = 1.2; escortRing(P); } }
       if (P.hero.skill === 'escort') { // 요인 경호: two bodyguard drones circle her and eat rounds
         if (!P.guards) P.guards = [0, 1].map(() => FX.sprite({ x: P.x, y: P.y, size: 0.7, color: 0xd8a0ff, alpha: 0.9, tex: FX.tex.glow, order: L.PROJ + 1.5 }));
         P.guards.forEach((gs, i) => {
@@ -772,7 +776,7 @@
       const v = d.speed * P.mods.velo * (n > 1 ? rnd(0.85, 1.1) : 1);
       const fg = P.focusT > 0 ? Object.assign({}, g, { d: d._focusD || (d._focusD = Object.assign({}, d, { size: (d.size || 0.3) * 1.4, color: 0xeaffb0 })) }) : g; // 기관총 사격: fat, bright rounds (live gun state, cached look)
       const pb = spawnPBullet(P, fg, mx, my, ang, v);
-      if (pb && P.focusT > 0) pb.sup = 1.5; // 기관총 사격: focused rounds pin targets down (feeds the +38 % on suppressed)
+      if (pb && P.focusT > 0) { pb.sup = 2; pb.pierce += 1; } // 기관총 사격: focused rounds punch through and pin targets down (feeds the +38 % on suppressed)
     }
     if (P.focusT > 0) {
       P.focusN = (P.focusN || 0) + 1;
@@ -1795,10 +1799,10 @@
     G.stats.src[src] = (G.stats.src[src] || 0) + 1;
     if (GOD) { G.stats.hits++; P.iframe = 0.5; return; }
     if (G.tut) { P.iframe = 0.6; P.hurtFlash = 0.2; UI.toast('연습탄 명중 — 훈련 중에는 피해가 없습니다', ''); return; } // basic training never hurts
-    if (P.emplaceGuard > 0 && P.emplaceT > 0) {
+    if (P.emplaceGuard > 0 && (P.emplaceT > 0 || P.guardT > 0)) {
       // 거치 사격: the emplacement's plating takes the hit
       P.emplaceGuard--; P.iframe = 0.5; SFX.play('shield'); if (P.hero.skill === 'escort') escortRing(P); FX.ring(P.x, P.y + 0.6, 0.3, 1.8, 0x9dff7a, 0.35);
-      UI.toast(`거치 장갑 ${P.emplaceGuard}회 남음`, 'gem');
+      UI.toast(`${P.emplaceT > 0 ? '거치 장갑' : '피해 무효'} ${P.emplaceGuard}회 남음`, 'gem');
       return;
     }
     if (P.armor > 0) { P.armor--; FX.ring(P.x, P.y + 0.6, 0.9, 2.4, 0x2bc4ff, 0.35, 0.45); SFX.play('shield'); blankWave(P.x, P.y + 0.5, 4.5, false); /* a breaking shield clears only the bullets around her */ if (P.syn.has('반응 역장')) { blankWave(P.x, P.y + 0.5, 6, false); G.enemies.forEach((e) => { if (e.alive && e.spawnT <= 0 && Math.hypot(e.x - P.x, e.y - P.y) < 6) hurtEnemy(e, 40, false, 0, 0); }); } }
@@ -1918,10 +1922,10 @@
             SFX.play('rifle', 1); SFX.play('hitB', 0.5); if (big) SFX.play('expS', 0.5); if (G.opt.shake) FX.shake(big ? 0.24 : 0.12);
             hit.forEach(({ e }) => {
               const bonus = e.supT > 0 || e.slowT > 0 || e.stun > 0 ? 1.29 : 1;
-              hurtEnemy(e, (big ? 210 : 140) * pw * bonus * G.P.mods.dmg, true, Math.cos(aa) * (big ? 9 : 5), Math.sin(aa) * (big ? 9 : 5), 'hitB');
+              hurtEnemy(e, (big ? 320 : 200) * pw * bonus * G.P.mods.dmg, true, Math.cos(aa) * (big ? 9 : 5), Math.sin(aa) * (big ? 9 : 5), 'hitB');
               FX.sparks(e.x, e.y + e.h * 0.42, 0xfff2a0, big ? 14 : 8, 6, 0.1, 0.35);
               FX.particle({ x: e.x, y: e.y + e.h * 0.42, life: 0.22, size: 0.6, size1: big ? 2.6 : 1.6, color: 0xffe08a, tex: FX.tex.glow, alpha: 0.8 });
-              if (big && !e.boss) e.stun = Math.max(e.stun, 0.6);
+              if (!e.boss) e.stun = Math.max(e.stun, big ? 0.8 : 0.35);
             });
             hitPropsOnLine(x0, y0, x0 + Math.cos(aa) * end, y0 + Math.sin(aa) * end, 80);
             if (big) { // the heavy round bursts where it stops
@@ -1950,7 +1954,7 @@
       case 'barrier':
         // 노움 · 방벽 생성: foam-concrete wall in front of her that stops enemy rounds; one hit on her is nullified
         P.wallT = 6 + 1.5 * upF(P); P.ultT = 1.2; P.wallAbs = 0;
-        P.emplaceT = P.wallT; P.emplaceGuard = 2;
+        P.guardT = P.wallT; P.emplaceGuard = 2;
         SFX.play('quake', 0.6); SFX.play('shield', 0.7); SFX.play('expM', 0.5);
         FX.ring(P.x, P.y + 0.6, 0.4, 2.4, 0xd8c8a0, 0.6); FX.ring(P.x, P.y + 0.3, 0.6, 4.2, 0xb8a888, 0.5);
         // the foam slams out of the launcher: a shockwave shoves back and staggers everyone close, and clears rounds nearby
@@ -1959,7 +1963,7 @@
           if (!e.alive || e.spawnT > 0) continue;
           const dx = e.x - P.x, dy = e.y - P.y, dd = Math.hypot(dx, dy) || 1;
           if (dd > 4.2 + e.r) continue;
-          hurtEnemy(e, 40 * (1 + 0.25 * upF(P)) * P.mods.dmg, false, dx / dd * 9, dy / dd * 9, 'hitB');
+          hurtEnemy(e, 90 * (1 + 0.25 * upF(P)) * P.mods.dmg, false, dx / dd * 9, dy / dd * 9, 'hitB');
           if (!e.boss) e.stun = Math.max(e.stun, 1);
         }
         blankWave(P.x, P.y + 0.5, 4.2, false);
@@ -1989,19 +1993,20 @@
       case 'deploy':
         // 케시크 · 전술 배치 (+ 응급 처치): attack +28.5 %, act +14 %, one hit nullified for 6 s — and a field dressing if she's hurt
         P.overdrive = P.odMax = 6 + 1.5 * upF(P); P.odDmg = 1.45; P.odRof = 1.3;
-        P.emplaceT = P.overdrive; P.emplaceGuard = 1;
-        if (P.hp < P.maxHp) { P.hp = Math.min(P.maxHp, P.hp + 1); FX.ring(P.x, P.y + 0.6, 0.2, 1.4, 0xff4060, 0.45); }
+        P.guardT = P.overdrive; P.emplaceGuard = 1;
+        if (P.hp < P.maxHp) { P.hp = Math.min(P.maxHp, P.hp + 1); FX.ring(P.x, P.y + 0.6, 0.2, 1.4, 0xff4060, 0.45); UI.toast('응급 처치 — 체력 25 회복', 'gem'); SFX.play('reinforce', 0.5); }
         SFX.play('reinforce'); SFX.play('shield', 0.6);
         FX.ring(P.x, P.y + 0.6, 0.3, 2.6, 0xff8a5a, 0.6); FX.flash(0xff8a5a, 0.12);
         castPillar(P, 0xff8a5a); blankWave(P.x, P.y + 0.5, 4, false); P.sk2Cd = 0; // 전술 배치 readies the next point-blank blast
         // she stamps into position: everything close is shoved back and staggered
-        for (const e of G.enemies) { if (!e.alive || e.spawnT > 0) continue; const dx = e.x - P.x, dy = e.y - P.y, dd = Math.hypot(dx, dy) || 1; if (dd > 4 + e.r) continue; hurtEnemy(e, 50 * P.mods.dmg, false, dx / dd * 8, dy / dd * 8, 'hitB'); if (!e.boss) e.stun = Math.max(e.stun, 0.6); }
+        for (const e of G.enemies) { if (!e.alive || e.spawnT > 0) continue; const dx = e.x - P.x, dy = e.y - P.y, dd = Math.hypot(dx, dy) || 1; if (dd > 4 + e.r) continue; e.markT = Math.max(e.markT || 0, 4); hurtEnemy(e, 120 * P.mods.dmg, false, dx / dd * 8, dy / dd * 8, 'hitB'); if (!e.boss) e.stun = Math.max(e.stun, 0.6); }
+        FX.ring(P.x, P.y + 0.3, 0.5, 4, 0xff3d6d, 0.4, 0.6);
         SFX.play('expM', 0.6);
         break;
       case 'escort':
         // 블랙 리리스 · 요인 경호: two hits nullified, attack +23.5 % and sure aim for 6 s
         P.overdrive = P.odMax = 6 + 1.5 * upF(P); P.odDmg = 1.35; P.odRof = 1.2; P.visorT = P.overdrive;
-        P.emplaceT = P.overdrive; P.emplaceGuard = 2;
+        P.guardT = P.overdrive; P.emplaceGuard = 2;
         SFX.play('shield'); SFX.play('reinforce', 0.7);
         FX.ring(P.x, P.y + 0.6, 0.3, 2.6, 0xc070ff, 0.6); FX.flash(0xc070ff, 0.12);
         castPillar(P, 0xc070ff); blankWave(P.x, P.y + 0.5, 3.6, false); escortRing(P);
@@ -2285,7 +2290,7 @@
       SFX.play('rifle', 1); SFX.play('handgun', 0.7); SFX.play('hitB', 0.5); if (G.opt.shake) FX.shake(0.14);
       hit.forEach(({ e }) => {
         e.markT = Math.max(e.markT || 0, 4); const cr = Math.random() < 0.35;
-        hurtEnemy(e, 110 * pw * (cr ? 1.8 : 1) * P.mods.dmg, cr, ca * 10, sa * 10, 'hitB');
+        hurtEnemy(e, 170 * pw * (cr ? 1.8 : 1) * P.mods.dmg, cr, ca * 10, sa * 10, 'hitB'); if (!e.boss) e.stun = Math.max(e.stun, 0.35);
         if (cr) { G.slowT = Math.max(G.slowT, 0.04); if (G.opt.shake) FX.shake(0.22); }
         FX.ring(e.x, e.y + e.h * 0.42, 0.2, 1.6, 0xff9af0, 0.3);
         FX.sparks(e.x, e.y + e.h * 0.42, 0xff9af0, 10, 6, 0.1, 0.35); FX.particle({ x: e.x, y: e.y + e.h * 0.42, life: 0.22, size: 0.5, size1: 1.9, color: 0xffc0f4, tex: FX.tex.glow, alpha: 0.8 });
@@ -2316,6 +2321,8 @@
       FX.ring(P.x + ca * 1.2, P.y + 0.6 + sa * 1.2, 0.4, R, 0xff5a8a, 0.35); SFX.play('swing', 0.9); SFX.play('expS', 0.4);
       // the crescent sweeps across the arc in order, so it reads as one swing rather than a burst
       for (let i = 0; i < 14; i++) { const aa = a + (i / 13 - 0.5) * 2.3; FX.later(i * 0.008, () => { for (const rr of [2.0, 2.9, 3.7]) FX.particle({ x: P.x + Math.cos(aa) * rr, y: P.y + 0.6 + Math.sin(aa) * rr, life: 0.28, size: rr === 2.9 ? 1 : 0.55, size1: 0.1, color: rr === 2.9 ? 0xffd0e0 : 0xff5a8a, tex: FX.tex.glow, alpha: 0.85 }); }); }
+      // the blade itself: a broad slash streak across the arc, white core over pink
+      for (const [k, c, al] of [[1, 0xff5a8a, 0.95], [0.75, 0xffffff, 0.85]]) FX.particle({ x: P.x + ca * 2.4, y: P.y + 0.6 + sa * 2.4, life: 0.24, size: 4.2 * k, size1: 5 * k, color: c, tex: FX.tex.slash, rot: a - Math.PI / 2, alpha: al });
       if (G.opt.shake) FX.shake(0.12);
       let weak = false;
       for (const e of G.enemies) {
@@ -2325,7 +2332,7 @@
         const crit = Math.random() < luck; if (crit) weak = true;
         hurtEnemy(e, 80 * pw * (crit ? 2.45 : 1) * P.mods.dmg, crit, px / d * 9, py / d * 9, 'hitB');
         if (!e.boss) e.stun = Math.max(e.stun, 0.35);
-        FX.sparks(e.x, e.y + e.h * 0.42, crit ? 0xffffff : 0xff5a8a, crit ? 16 : 8, 6, 0.12, 0.35);
+        FX.sparks(e.x, e.y + e.h * 0.42, crit ? 0xffffff : 0xff5a8a, crit ? 16 : 8, 6, 0.12, 0.35); FX.slash(e.x, e.y + e.h * 0.45, 0xff5a8a, crit ? 2 : 1.3);
       }
       for (let k = G.ebul.length - 1; k >= 0; k--) { const b = G.ebul[k], px = b.x - P.x, py = b.y - P.y - 0.6; if (Math.hypot(px, py) < R && Math.abs(angDiff(a, Math.atan2(py, px))) < 1.15) { popEB(b); ebRemove(k); } }
       if (weak) { UI.toast('약점 적중!', 'gem'); SFX.play('hitB', 0.8); if (G.opt.shake) FX.shake(0.25); G.slowT = Math.max(G.slowT, 0.08); P.sk2Cd *= 0.5; FX.flash(0xff5a8a, 0.1); }
