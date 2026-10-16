@@ -64,9 +64,9 @@
       stats: { atk: 5, def: 2, mob: 3 }, desc: '자칭 흑마법사. 도끼와 봉인된 눈의 빔으로 싸운다.',
     },
     {
-      id: 'ramparion', name: '램파리온', title: '히든 · 강철의 수호자', img: 'c_HID_Ramparion', rig: 'e_Rampart_N', rigFlip: true, gun: 'ramp_cannon', hp: 14, armor: 3, speed: 5.1, hidden: true,
-      skill: 'emplace', skillName: '강철 요새', skillDesc: '6초간 거치 — 이동 50%, 연사 3배 · 피해 +30%, 탄약 무한, 피격 1회 무효', color: '#ffd27a',
-      sk2: { id: 'rush', name: '방패 돌진', icon: 'i_power', cd: 7, desc: '조준 방향으로 무적 돌진 후 근거리 충격 — 적을 밀쳐내고, 체력이 절반 이하일 때 맞히면 25 회복(구역당 1회)' },
+      id: 'ramparion', name: '램파리온', title: '히든 · 강철의 수호자', img: 'c_HID_Ramparion', rig: 'AGS_Rampart_NS1', rigFlip: false, gun: 'ramp_cannon', hp: 14, armor: 3, speed: 5.1, hidden: true,
+      skill: 'heavenhell', skillName: 'HEAVEN AND HELL', skillDesc: '전자기 토네이도가 조준 방향의 적을 붙잡고, 거대 사자가 그 길을 달린다 — 황금빛 하이퍼로 빛을 모아 섬광처럼 관통 돌진 후 귀환 (시전 중 무적)', color: '#ffd27a',
+      sk2: { id: 'breastlion', name: '브레스트 라이언', icon: 'i_power', cd: 7, desc: '가슴에 빛을 모았다가 불꽃 사자를 발사 — 조준 방향 일직선의 모든 적을 관통하며 불태우고 밀쳐낸다' },
       perks: ['u_od', 'u_rush'], stats: { atk: 3, def: 5, mob: 1 }, desc: '거대한 체구와 두꺼운 장갑. 느리지만 무엇이든 버텨낸다.',
     },
   ];
@@ -275,8 +275,8 @@
     { id: 'u_beam', hero: 'lrl', name: '봉인 해제', icon: 'i_battle', max: 3, desc: '사이클롭스 이터널 빔: 폭 +30%, 효과 +1초' },
     { id: 'u_axe', hero: 'lrl', name: '용살자의 행운', icon: 'i_power', max: 3, desc: '액스 오브 다크니스: 피해 +20%, 약점 확률 +8%, 쿨타임 -0.6초' },
     // (램파리온 keeps the emplace / dash kit and its upgrades)
-    { id: 'u_od', hero: 'ramparion', name: '거치 연장', icon: 'i_battle', max: 3, desc: '강철 요새: 지속 +1.5초' },
-    { id: 'u_rush', hero: 'ramparion', name: '연속 돌진', icon: 'i_power', max: 3, desc: '방패 돌진: 쿨타임 -1.2초' },
+    { id: 'u_od', hero: 'ramparion', name: '천국과 지옥', icon: 'i_battle', max: 3, desc: 'HEAVEN AND HELL: 피해 +20%, 토네이도 속박 +0.5초' },
+    { id: 'u_rush', hero: 'ramparion', name: '불타는 사자', icon: 'i_power', max: 3, desc: '브레스트 라이언: 쿨타임 -1.2초, 피해 +15%' },
     // signature-weapon mastery: one per hero, rewards sticking with her own gun
     { id: 'm_brownie', hero: 'brownie', name: '돌격소총 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%, 재장전 +15%' },
     { id: 'm_leprechaun', hero: 'leprechaun', name: '기관총 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +12%, 탄창 +20%' },

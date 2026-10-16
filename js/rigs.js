@@ -25,6 +25,7 @@
     blacklilith: { hide: /^(arm|shield|die_gun)$/, hand: 'hand_r', handL: 'hand_l', ang: 0 },
     PECS_LRL: { hide: /^(Arm_up_R|Arm_up_L|FK_Arm_up_R_01|FK_Arm_up_L_01)$/, hand: 'hand_R', handL: 'hand_L', ang: 0 },
     e_Rampart_N: { hide: /^(bone_Arm_F_1|bone_Arm_B_1)$/, hand: 'bone_Arm_B_3', ang: 0 },
+    AGS_Rampart_NS1: { hide: /^(bone_Arm_F_1|bone_Arm_B_1)$/, hand: 'bone_Arm_B_3', ang: 0 }, // 램파리온 (Skin_AGS_Rampart_1); breaks down into e_Rampart_N
   };
 
   // the floating hand: a second instance of the rig showing only the hand subtree, frozen in its idle pose,

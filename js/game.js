@@ -421,6 +421,7 @@
       }
     }
     if (P.ultT > 0) P.ultT -= dt;
+    if (P.hyperT > 0 && !P.hh) P.hyperT -= dt;
     if (P.focusT > 0) {
       P.focusT -= dt;
       if (P.focusT <= 0) { // overheat: a 3-tile vent cone that scales with the rounds fired and staggers the suppressed
@@ -489,6 +490,9 @@
         blankWave(z.x, z.y, z.R, false);
       }
     }
+    if (P.hero.id === 'ramparion') updateRampForm(P, dt);
+    if (P.lionCharge > 0) updateLionCharge(P, dt);
+    if (P.hh) updateHeavenHell(P, dt);
     // 방벽 생성: a concrete wall arc in front of her that stops enemy rounds
     if (P.wallT > 0) {
       P.wallT -= dt;
@@ -581,10 +585,10 @@
       SFX.play('roll', 0.9);
       if (Math.abs(d[0]) > 0.1) P.face = Math.sign(d[0]);
     } else {
-      const sp = P.hero.speed * P.mods.speed * (P.reloadT > 0 ? 0.92 : 1) * (P.emplaceT > 0 ? 0.5 : 1) * (P.sprayT > 0 ? 0.6 : 1); // 거치 사격: half speed · 난사 slows her
+      const sp = P.hero.speed * P.mods.speed * (P.reloadT > 0 ? 0.92 : 1) * (P.emplaceT > 0 ? 0.5 : 1) * (P.sprayT > 0 ? 0.6 : 1) * (P.hh || P.formAnim > 0 ? 0 : P.lionCharge > 0 ? 0.35 : 1); // 거치 사격: half speed · 난사 slows her · 램파리온 plants for his chant
       LEVEL.move(P, mv[0] * sp * dt, mv[1] * sp * dt);
     }
-    if (moving !== P.moving || (moving && P.body.c.clipName !== 'move')) {
+    if (P.formAnim > 0) { /* 램파리온's assembly / break-down clip plays out */ } else if (moving !== P.moving || (moving && P.body.c.clipName !== 'move')) {
       P.moving = moving;
       if (!P.roll) P.body.c.play(moving ? 'move' : 'idle', null, true);
     }
@@ -1882,6 +1886,17 @@
         FX.ring(P.x, P.y + 0.6, 0.3, 3, 0xffd34d, 0.5);
         FX.flash(0xffd34d, 0.15);
         break;
+      case 'heavenhell': {
+        // 램파리온 · HEAVEN AND HELL (2_LAO_MINI_ACTION's X): the hand thrusts out and an electromagnetic tornado shoots down the
+        // lane, catching and rooting what is in it; the giant lion flies off the hand down it; then Hyper gold, two lights
+        // (gold = hell, green = heaven) circle in and merge, and it bursts forward through everything like a flash and flies back
+        P.hh = { t: 0, a: P.aim, x0: P.x, y0: P.y, len: 13, tick: 0, lion: false, lights: null, burst: false, back: false, k: 1 + 0.2 * (P.up.u_od || 0) };
+        P.ultT = 3.3; P.iframe = Math.max(P.iframe, 3.3);
+        SFX.play('ramp_skill2', 1); SFX.play('ramp_elec', 0.8);
+        UI.shout('천국과 지옥의 힘이여…!', false, '#9dffb8');
+        if (G.opt.shake) FX.shake(0.3);
+        break;
+      }
       case 'emplace':
         // 레프리콘 · 거치 사격 (ref. Bastion sentry / Zarya): plants her feet — slow, but triple fire rate,
         // +1 pierce, +30 % damage, and the first two hits in the window are absorbed
@@ -2192,6 +2207,176 @@
     spawnStatic('FX_hit_bori', e.x, e.y + e.h * 0.4, 0.22);
     SFX.play('hitB', 0.5);
   }
+  // ── 램파리온 ⇄ 램파트 ──
+  // Wrecked (HP 0), 램파리온 sheds its armour — its own battle-in assembly (battle_in, Rampart -> Rampalion) played backwards —
+  // and the bare Rampart frame (e_Rampart_N) fights on, very weak and without skills. Survive 120 s and it assembles again.
+  const RAMP_HOLD = 120;
+  function swapBody(P, rig, flip) {
+    const old = P.body, nb = makeBody(rig, HERO_H, RIGS[rig].hide, flip);
+    if (!nb) return false;
+    nb.root.position.copy(old.root.position);
+    scene.add(nb.root); old.c.dispose(); scene.remove(old.root);
+    P.body = nb; setFace(nb, P.face);
+    return true;
+  }
+  function rampBreak(P) {
+    P.form = 'rampart'; P.formAnim = 2.4; P.iframe = Math.max(P.iframe, 3); P.hh = null; P.lionCharge = 0; P.hyperT = 0;
+    P.saved = { maxHp: P.maxHp, armor: P.armor, dmg: P.mods.dmg, speed: P.mods.speed };
+    P.maxHp = 3; P.hp = 3; P.armor = 0; P.mods.dmg = P.saved.dmg * 0.4; P.mods.speed = P.saved.speed * 0.8;
+    P.skill = 0; P.formT = RAMP_HOLD; P.formTold = RAMP_HOLD; P.sk2Cd = P.sk2Max = RAMP_HOLD; // the E slot counts the 120 s down
+    G.slowT = Math.max(G.slowT, 0.6); clearEBullets(true); blankWave(P.x, P.y + 0.5, 6, true);
+    SFX.play('expM', 0.9); SFX.play('ramp_swing', 0.8); if (G.opt.shake) FX.shake(0.6);
+    FX.particle({ x: P.x, y: P.y + 1, life: 0.5, size: 1.5, size1: 5, frames: FX.sheets.airboom, color: 0xffd080, alpha: 0.9 });
+    for (let k = 0; k < 18; k++) { const aa = Math.random() * TAU; FX.particle({ x: P.x, y: P.y + 1, vx: Math.cos(aa) * rnd(2, 6), vy: rnd(2, 6), grav: 9, life: 0.9, size: 0.3, size1: 0.2, color: 0xd8c8a0, tex: FX.tex.dot, alpha: 0.9, normal: true, spin: 6 }); } // armour plates fly off
+    UI.shout('램파리온 대파 — 램파트로 버텨라!', false, '#ff6a4a');
+    UI.toast(`${RAMP_HOLD}초 동안 버티면 램파리온으로 복귀합니다 (램파트: 체력 75 · 공격력 40% · 스킬 불가)`, 'warn');
+    if (P.body.c.has('trans')) P.body.c.playReverse('trans', () => { if (G.P === P && P.form === 'rampart') swapBody(P, 'e_Rampart_N', true); });
+    else swapBody(P, 'e_Rampart_N', true);
+  }
+  function rampRestore(P) {
+    P.form = 'ramparion'; P.formAnim = 2.4; P.iframe = Math.max(P.iframe, 2.6);
+    const sv = P.saved || {};
+    P.maxHp = sv.maxHp || P.maxHp; P.hp = P.maxHp; P.armor = Math.max(P.armor, sv.armor || 0); P.mods.dmg = sv.dmg || P.mods.dmg; P.mods.speed = sv.speed || P.mods.speed;
+    P.sk2Cd = 0; P.sk2Max = sk2Cool(P); P.saved = null;
+    if (swapBody(P, 'AGS_Rampart_NS1', false) && P.body.c.has('trans')) P.body.c.play('trans'); // the original assembly, forward
+    SFX.play('ramp_charge', 0.9); FX.later(1.2, () => { SFX.play('ramp_light', 0.9); SFX.play('reinforce'); });
+    castPillar(P, 0xffd27a);
+    FX.later(2.2, () => { // fully assembled: a shock ring throws everything back
+      if (G.P !== P) return;
+      FX.particle({ x: P.x, y: P.y + 1, life: 0.45, size: 1.5, size1: 6, frames: FX.sheets.shockring, color: 0xffd080, alpha: 0.9 });
+      for (const e of G.enemies) { if (!e.alive || e.spawnT > 0) continue; const dx = e.x - P.x, dy = e.y - P.y, dd = Math.hypot(dx, dy) || 1; if (dd < 4.5 + e.r) hurtEnemy(e, 80 * P.mods.dmg, false, dx / dd * 10, dy / dd * 10, 'hitB'); }
+      blankWave(P.x, P.y + 0.5, 5, false); if (G.opt.shake) FX.shake(0.4);
+      UI.shout('램파리온, 재기동!!', true, '#ffd27a');
+    });
+  }
+  function updateRampForm(P, dt) {
+    if (P.formAnim > 0) P.formAnim -= dt;
+    if (P.form !== 'rampart') return;
+    P.formT -= dt; P.skill = 0; P.sk2Cd = Math.max(0.05, P.formT); P.sk2Max = RAMP_HOLD;
+    for (const mark of [90, 60, 30, 10, 5]) if (P.formTold > mark && P.formT <= mark) UI.toast(`램파리온 복귀까지 ${mark}초`, mark <= 10 ? 'gem' : '');
+    P.formTold = P.formT;
+    if (P.formT <= 0 && P.hp > 0 && !P.dead) rampRestore(P);
+  }
+  // ── 램파리온 ──
+  const chestOf = (P) => [P.x + Math.cos(P.aim) * 0.75, P.y + 1.05 + Math.sin(P.aim) * 0.45];
+  // 브레스트 라이언's charge: light rays and motes rush in on a point in front of the chest, the ball grows, squeezes white, fires
+  function updateLionCharge(P, dt) {
+    P.lionCharge -= dt;
+    const [cx, cy] = chestOf(P), k = 1 - P.lionCharge / P.lionChargeMax;
+    if (Math.random() < dt * 40) { const aa = Math.random() * TAU, r = rnd(1.4, 2.4); FX.particle({ x: cx + Math.cos(aa) * r, y: cy + Math.sin(aa) * r, vx: -Math.cos(aa) * r / 0.3, vy: -Math.sin(aa) * r / 0.3, life: 0.3, size: 0.22, size1: 0.05, color: Math.random() < 0.5 ? 0xffd27a : 0xffffff, tex: FX.tex.glow, alpha: 0.95 }); }
+    if (Math.random() < dt * 10) { const aa = Math.random() * TAU; FX.beam(cx + Math.cos(aa) * 2.2, cy + Math.sin(aa) * 2.2, cx, cy, 0.03, 0xffe0a0, 0.12); } // rays
+    const squeeze = P.lionCharge < 0.2;
+    FX.particle({ x: cx, y: cy, life: dt * 1.5, size: squeeze ? 0.5 : 0.3 + k * 0.9, size1: squeeze ? 0.4 : 0.3 + k * 0.9, color: squeeze ? 0xffffff : 0xffb040, tex: FX.tex.glow, alpha: 0.9 });
+    if (P.lionCharge <= 0) { P.lionCharge = 0; fireLion(P, false); }
+  }
+  // a lion of fire off the chest (big: the HEAVEN AND HELL lion down the tornado)
+  function fireLion(P, big, a = P.aim) {
+    const ca = Math.cos(a), sa = Math.sin(a), [cx0, cy0] = chestOf(P), cx = cx0, cy = cy0;
+    const right = ca >= 0, F = right ? FX.sheets.rlionM : FX.sheets.rlion, C = FX.sheets.rlionc;
+    if (!F || !F.length) return;
+    const len = big ? 14 : 11, dur = big ? 0.9 : 0.8, S = big ? 5.2 : 2.9, W = big ? 2 : 1.25;
+    const dmg = (big ? 230 * (P.hh ? P.hh.k : 1) : 130 * (1 + 0.15 * (P.up.u_rush || 0))) * P.mods.dmg;
+    const rot = right ? a : a - Math.PI;
+    const sp = FX.sprite({ x: cx, y: cy, size: S, tex: F[0], color: 0xff8a3a, alpha: 0.95, order: L.PROJ + 1, rot });
+    const au = FX.sprite({ x: cx, y: cy, size: S * 1.15, tex: C[0], color: 0xffc070, alpha: 0.7, order: L.PROJ + 0.9, rot });
+    // fired off the chest: recoil, a shock ring and an air burst at the muzzle
+    FX.particle({ x: cx + ca * 0.4, y: cy + sa * 0.4, life: 0.4, size: 1.5, size1: 4.2, frames: FX.sheets.shockring, color: 0xffd090, alpha: 0.9 });
+    FX.particle({ x: cx + ca * 0.6, y: cy + sa * 0.6, life: 0.35, size: 1.4, size1: 3, frames: FX.sheets.airboom, color: 0xffffff, alpha: 0.8 });
+    FX.flash(0xffb040, big ? 0.16 : 0.1); G.slowT = Math.max(G.slowT, 0.05); if (G.opt.shake) FX.shake(big ? 0.5 : 0.35);
+    SFX.play('ramp_skill2', big ? 1 : 0.85); SFX.play('expM', 0.6);
+    if (!big) UI.shout('브레스트 라이언!!', true, '#ff8a3a');
+    const hit = new Set(); let t = 0;
+    FX.tickers.push((dt) => {
+      t += dt;
+      const f = Math.min(1, t / dur), x = cx + ca * len * f, y = cy + sa * len * f;
+      sp.x = au.x = x; sp.y = au.y = y;
+      FX.setTex(sp, F[Math.min(8, Math.floor(f * 9))]); FX.setTex(au, C[Math.floor(t * 18) % 9]);
+      if (Math.random() < dt * 30) FX.particle({ x: x - ca * S * 0.3 + rnd(-0.3, 0.3), y: y - sa * S * 0.3 + rnd(-0.3, 0.3), life: 0.4, size: S * 0.35, size1: S * 0.2, frames: FX.sheets.rfire, color: 0xffffff, alpha: 0.85 });
+      for (const e of G.enemies) {
+        if (!e.alive || e.spawnT > 0 || hit.has(e)) continue;
+        const px = e.x - cx, py = e.y + e.h * 0.42 - cy, tt = px * ca + py * sa;
+        if (tt < 0 || tt > len * f + 0.5 || Math.abs(-px * sa + py * ca) > W + e.r) continue;
+        hit.add(e);
+        hurtEnemy(e, dmg, true, ca * 10, sa * 10, 'hitB');
+        e.slowT = Math.max(e.slowT || 0, 2);
+        FX.particle({ x: e.x, y: e.y + e.h * 0.45, life: 0.45, size: 1.2 + e.r, size1: 1.8 + e.r, frames: FX.sheets.rfire, color: 0xffffff, alpha: 0.95 });
+        FX.particle({ x: e.x, y: e.y + e.h * 0.45, life: 0.3, size: 0.8, size1: 2, frames: FX.sheets.rsparks, color: 0xffe0a0, alpha: 0.9 });
+      }
+      for (let k = G.ebul.length - 1; k >= 0; k--) { const b = G.ebul[k]; if (Math.hypot(b.x - x, b.y - y) < S * 0.45) { popEB(b); ebRemove(k); } }
+      if (f >= 1) { FX.kill(sp); FX.kill(au); FX.particle({ x, y, life: 0.4, size: S * 0.6, size1: S, frames: FX.sheets.airboom, color: 0xffb070, alpha: 0.8 }); return false; }
+      return true;
+    });
+  }
+  // HEAVEN AND HELL, driven per frame: 0-1.6 tornado (roots + pulls), 0.45 the giant lion, 1.25-2.3 Hyper gold and the two
+  // lights merging, 2.3 the flash burst down the lane, 2.6-3.1 flying back
+  function updateHeavenHell(P, dt) {
+    const h = P.hh; h.t += dt;
+    const ca = Math.cos(h.a), sa = Math.sin(h.a), ox = h.x0, oy = h.y0 + 0.9;
+    if (h.t < 1.6) {
+      P.aim = h.a;
+      const reach = h.len * Math.min(1, h.t / 0.35);
+      h.tick -= dt;
+      if (h.tick <= 0) {
+        h.tick = 0.08;
+        // the electromagnetic tornado: crescent rings spinning down the lane, bolts crackling along it
+        for (let d = 0.8; d < reach; d += 1.6) {
+          const jx = ox + ca * d, jy = oy + sa * d;
+          FX.particle({ x: jx, y: jy, life: 0.3, size: 1.6, size1: 2.2, frames: FX.sheets.rring, color: 0x9fe6ff, alpha: 0.75, rot: h.a + Math.PI / 2 + h.t * 9 + d });
+          if (Math.random() < 0.5) FX.particle({ x: jx + rnd(-0.5, 0.5), y: jy + rnd(-0.5, 0.5), life: 0.25, size: 1.1, size1: 1.4, frames: FX.sheets.rbolts, color: 0xc8f4ff, alpha: 0.9 });
+        }
+        for (const e of G.enemies) {
+          if (!e.alive || e.spawnT > 0) continue;
+          const px = e.x - ox, py = e.y + e.h * 0.42 - oy, tt = px * ca + py * sa, off = -px * sa + py * ca;
+          if (tt < 0 || tt > reach || Math.abs(off) > 1.8 + e.r) continue;
+          prime(e, 'root', 3 + 0.5 * (P.up.u_od || 0));
+          if (!e.boss) { e.x += sa * off * 0.18; e.y -= ca * off * 0.18; } // drawn in to the eye of the storm
+          hurtEnemy(e, 8 * h.k * P.mods.dmg, false, 0, 0, 'hitE');
+        }
+        for (let k = G.ebul.length - 1; k >= 0; k--) { const b = G.ebul[k], px = b.x - ox, py = b.y - oy, tt = px * ca + py * sa; if (tt > 0 && tt < reach && Math.abs(-px * sa + py * ca) < 1.8) { popEB(b); ebRemove(k); } }
+        if (Math.random() < 0.4) SFX.play('elec', 0.4);
+      }
+    }
+    if (!h.lion && h.t >= 0.45) { h.lion = true; fireLion(P, true, h.a); }
+    if (h.t >= 1.25 && h.t < 2.3) {
+      // Hyper: gold body, a white glow, gold (hell) and green (heaven) lights circling in and merging
+      P.hyperT = 2.2;
+      if (!h.lights) { h.lights = [0xffc030, 0x6dff9a].map((c) => FX.sprite({ x: P.x, y: P.y + 1, size: 0.9, color: c, alpha: 0.95, tex: FX.tex.glow, order: L.PROJ + 2 })); SFX.play('ramp_light', 0.9); UI.shout('HEAVEN…', false, '#6dff9a'); }
+      const k = (h.t - 1.25) / 1.05, r = 2.3 * (1 - k), sp0 = h.t * 7;
+      h.lights.forEach((s, i) => { const aa = sp0 + i * Math.PI; s.x = P.x + Math.cos(aa) * r; s.y = P.y + 1 + Math.sin(aa) * r * 0.7; s.size = s.size1 = 0.7 + k * 0.6; });
+      if (Math.random() < dt * 30) FX.particle({ x: P.x + rnd(-0.6, 0.6), y: P.y + rnd(0.2, 1.8), vy: rnd(1, 2.4), life: 0.4, size: 0.18, size1: 0, color: Math.random() < 0.5 ? 0xffd040 : 0x9dffb8, tex: FX.tex.glow });
+      FX.particle({ x: P.x, y: P.y + 1, life: dt * 1.5, size: 1 + k * 2.4, size1: 1 + k * 2.4, color: 0xffffff, tex: FX.tex.glow, alpha: 0.25 + k * 0.4 });
+    }
+    if (!h.burst && h.t >= 2.3) {
+      // the burst: a flash of light straight down the lane, through everything
+      h.burst = true;
+      if (h.lights) h.lights.forEach((s) => FX.kill(s));
+      UI.shout('HEAVEN AND HELL!!', true, '#ffd040');
+      SFX.play('ramp_launch', 1); SFX.play('expM', 0.8); FX.flash(0xffffff, 0.28); G.slowT = Math.max(G.slowT, 0.08); if (G.opt.shake) FX.shake(0.7);
+      const x0 = P.x, y0 = P.y; let dist = 0;
+      for (let d = 0; d < 11; d += 0.25) { if (LEVEL.hitCircle(x0 + ca * d, y0 + sa * d, 0.4)) break; dist = d; }
+      h.bx = x0 + ca * dist; h.by = y0 + sa * dist;
+      FX.orbital(x0, y0 + 0.9, h.bx, h.by + 0.9, 0xffd040, 0.9);
+      FX.beam(x0, y0 + 0.9, h.bx, h.by + 0.9, 0.5, 0xffffff, 0.35);
+      for (const e of G.enemies) {
+        if (!e.alive || e.spawnT > 0) continue;
+        const px = e.x - x0, py = e.y + e.h * 0.42 - y0 - 0.9, tt = px * ca + py * sa;
+        if (tt < -0.5 || tt > dist + 1 || Math.abs(-px * sa + py * ca) > 1.7 + e.r) continue;
+        hurtEnemy(e, 380 * h.k * P.mods.dmg, true, ca * 14, sa * 14, 'hitB');
+        FX.particle({ x: e.x, y: e.y + e.h * 0.45, life: 0.4, size: 1, size1: 3, frames: FX.sheets.shockring, color: 0xffe080, alpha: 0.9 });
+        FX.particle({ x: e.x, y: e.y + e.h * 0.45, life: 0.3, size: 0.8, size1: 2.2, frames: FX.sheets.rsparks, color: 0xffffff, alpha: 0.9 });
+      }
+      blankWave((x0 + h.bx) / 2, (y0 + h.by) / 2 + 0.5, dist / 2 + 1.5, false);
+      FX.particle({ x: h.bx, y: h.by + 0.9, life: 0.5, size: 2, size1: 6, frames: FX.sheets.airboom, color: 0xffd080, alpha: 0.9 });
+      P.x = h.bx; P.y = h.by;
+    }
+    if (h.burst && !h.back && h.t >= 2.6) { h.back = true; SFX.play('ramp_swing', 0.8); }
+    if (h.back) { // flies back in
+      const k = Math.min(1, (h.t - 2.6) / 0.45), e2 = k * k * (3 - 2 * k);
+      P.x = h.bx + (h.x0 - h.bx) * e2; P.y = h.by + (h.y0 - h.by) * e2;
+      if (Math.random() < dt * 40) FX.particle({ x: P.x, y: P.y + 0.9, life: 0.3, size: 0.6, size1: 0.1, color: 0xffd040, tex: FX.tex.glow, alpha: 0.7 });
+    }
+    if (h.t >= 3.15) { P.x = h.x0; P.y = h.y0; P.hh = null; P.hyperT = 0; }
+  }
   // where a placed skill lands: the mouse cursor (clamped), else the locked target, else a fixed distance down the aim
   function aimPoint(P, d0, lo = 2.5, hi = 9) {
     const src = INPUT.aim(), ca = Math.cos(P.aim), sa = Math.sin(P.aim);
@@ -2340,6 +2525,12 @@
       const pw = 1 + 0.2 * upE(P), rd = { d: Object.assign({}, GUNS.ar, { dmg: 16 * pw, life: 0.8, size: 0.42 }) };
       for (let i = 0; i < 3; i++) FX.later(i * 0.08, () => { if (!G.P) return; const aa = G.P.aim, b = spawnPBullet(G.P, rd, ...muzzleOf(G.P), aa + rnd(-0.03, 0.03), 26); if (b) b.sup = 4 + upE(P); SFX.play('rifle', 0.9); });
       FX.muzzleFlash(...muzzleOf(P), a, 0xffd34d, 1.6);
+    } else if (sk.id === 'breastlion') {
+      // 램파리온 · 브레스트 라이언 (2_LAO_MINI_ACTION's special Lv2, a Mazinger "Breast Fire" parody): the chest gathers light
+      // while he chants, squeezes white, then a fire lion leaps off it and runs down the aim through everything in its lane
+      P.lionCharge = P.lionChargeMax = 0.85; P.iframe = Math.max(P.iframe, 0.4);
+      SFX.play('ramp_charge', 0.9); FX.later(0.38, () => SFX.play('ramp_elec', 0.6));
+      UI.shout('가슴의 사자여 불타올라라!', false, '#ffb040');
     } else if (sk.id === 'mgfocus') {
       // 레프리콘 · 기관총 사격: 2 s of focused fire — double rate, tight spread, +20 % damage (+38 % on suppressed targets)
       P.overdrive = P.odMax = 2 + 0.5 * upE(P); P.odRof = 2.5; P.odDmg = 1.35; P.focusT = P.overdrive; P.focusFired = 0; P.focusCast = newCast();
@@ -2546,6 +2737,7 @@
 
   function playerDeath(src) {
     const P = G.P;
+    if (P.hero.id === 'ramparion' && P.form !== 'rampart') { rampBreak(P); return; } // 램파리온 is wrecked, not killed: the bare Rampart frame fights on
     if (P.revives > 0) {
       // research: emergency restore — once per run, back on her feet with a screen-clearing pulse
       P.revives--; P.hp = Math.min(P.maxHp, 4); P.iframe = 2.5;
@@ -3576,6 +3768,7 @@
     bgAfter = Math.max(bgAfter, performance.now() + 60000); // hold the title-time queue while the run loads
     let done = 0;
     const jobs = [...all.map((id) => SD.prepare(id)), ...COMMON_FX.slice(0, 2).map((n) => FXB.prepare(n)), ...(hero.skill === 'snare' ? [FXB.prepare('FX_hit_bori')] : [])];
+    if (hero.skill === 'heavenhell') ['ramp_charge', 'ramp_elec', 'ramp_skill2', 'ramp_light', 'ramp_launch', 'ramp_swing'].forEach((k) => SFX.play(k, 0)); // warm the decoder
     await Promise.all(jobs.map((p) => Promise.resolve(p).then(() => UI.loading(++done / (jobs.length + 1)))));
     bgAfter = performance.now() + 8000; // and resume it once the first room is under way
     const missing = () => need.filter((id) => !SD.ready(id));
@@ -3906,7 +4099,7 @@
       }
       const blink = P.iframe > 0 && !P.roll && Math.floor(G.t * 20) % 2 === 0;
       b.c.setOpacity(blink ? 0.6 : 1); // a gentle blink: she stays readable in boss rooms
-      if (P.hurtFlash > 0) { const on = Math.sin(G.t * 50) > 0; b.c.setTint(on ? 1.7 : 1, on ? 0.55 : 1, on ? 0.55 : 1); } /* a red blink, never a white-out that hides her under explosion FX */ else if (P.overdrive > 0) b.c.setTint(1.1, 1.35, 1.0); else b.c.setTint(1, 1, 1);
+      if (P.hurtFlash > 0) { const on = Math.sin(G.t * 50) > 0; b.c.setTint(on ? 1.7 : 1, on ? 0.55 : 1, on ? 0.55 : 1); } /* a red blink, never a white-out that hides her under explosion FX */ else if (P.hyperT > 0) { const g = 1 + 0.25 * Math.sin(G.t * 20); b.c.setTint(1.7 * g, 1.35 * g, 0.55); } /* 램파리온 Hyper: gold */ else if (P.overdrive > 0) b.c.setTint(1.1, 1.35, 1.0); else b.c.setTint(1, 1, 1);
       // standing "behind" a tall boss / elite would hide her under its sprite: draw her in front instead
       let oy = P.y;
       for (const e of G.enemies) if (e.alive && (e.boss || e.elite) && Math.abs(P.x - e.x) < e.r + 0.9 && P.y > e.y && P.y - e.y < e.h * 0.85) oy = Math.min(oy, e.y - 0.05);

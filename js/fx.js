@@ -176,6 +176,12 @@
     sheets.borirun = images.fx_borirun ? splitSheet(images.fx_borirun, 8, 3).slice(0, 17) : [];
     sheets.borirunM = mirror(sheets.borirun);
     if (images.fx_dogaim) tex.dogaim = t(images.fx_dogaim);
+    // 램파리온 (2_LAO_MINI_ACTION's originals): the lion (faces left; mirrored copy faces right), its aura, Rampart fire /
+    // crescent ring / bolts / sparks, and the LO shock ring and air burst
+    const sh = (k, c, r) => (images[k] ? splitSheet(images[k], c, r) : []);
+    sheets.rlion = sh('fx_rlion', 3, 3); sheets.rlionM = mirror(sheets.rlion); sheets.rlionc = sh('fx_rlionc', 3, 3);
+    sheets.rfire = sh('fx_rfire', 3, 3); sheets.rring = sh('fx_rring', 3, 3); sheets.rbolts = sh('fx_rbolts', 4, 4);
+    sheets.rsparks = sh('fx_rsparks', 2, 2); sheets.shockring = sh('fx_shockring', 3, 3); sheets.airboom = sh('fx_airboom', 3, 3);
     sheets.borifang = images.fx_borifang ? splitSheet(images.fx_borifang, 5, 2) : [];
     tex.beam = softTex('beam');
     tex.dot = softTex('dot');
@@ -186,7 +192,7 @@
     tex.white = canvasTex(wc); // solid quads (HP bars) in the particle batches
 
     buildAtlas([...['glow', 'cross', 'ring', 'spark', 'elec', 'beam', 'dot', 'slash', 'snow', 'white'].map((k) => tex[k]),
-      ...sheets.smoke, ...sheets.fire, ...sheets.aura, ...sheets.bolt, ...sheets.kdust1, ...sheets.kdust2, ...sheets.kdust1m, ...sheets.kdust2m, ...sheets.borifang, ...sheets.borirun, ...sheets.borirunM, ...[tex.dogaim].filter(Boolean), ...(tex.kpuff ? [tex.kpuff] : [])]);
+      ...sheets.smoke, ...sheets.fire, ...sheets.aura, ...sheets.bolt, ...sheets.kdust1, ...sheets.kdust2, ...sheets.kdust1m, ...sheets.kdust2m, ...sheets.borifang, ...sheets.borirun, ...sheets.borirunM, ...sheets.rlion, ...sheets.rlionM, ...sheets.rlionc, ...sheets.rfire, ...sheets.rring, ...sheets.rbolts, ...sheets.rsparks, ...sheets.shockring, ...sheets.airboom, ...[tex.dogaim].filter(Boolean), ...(tex.kpuff ? [tex.kpuff] : [])]);
 
     flashMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(200, 200),

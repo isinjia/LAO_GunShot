@@ -1043,6 +1043,17 @@
     d.classList.remove('on'); void d.offsetWidth; d.classList.add('on');
     clearTimeout(skillCut.t); skillCut.t = setTimeout(() => { d.hidden = true; }, 1200); // a second cut-in restarts the timer
   }
+  // a shout stamped over the field (램파리온's chant lines): big = the finisher, small = the chant
+  function shout(text, big, color) {
+    const host = el.skillCut && el.skillCut.parentNode; if (!host) return;
+    const d = document.createElement('div');
+    d.className = 'shout' + (big ? ' big' : '');
+    if (color) d.style.setProperty('--c', color);
+    d.textContent = text;
+    host.appendChild(d);
+    while (host.querySelectorAll('.shout').length > 2) host.querySelector('.shout').remove();
+    setTimeout(() => d.remove(), big ? 1500 : 1200);
+  }
   function hurt() { el.hurtFx.classList.remove('on'); void el.hurtFx.offsetWidth; el.hurtFx.classList.add('on'); clearTimeout(hurt.t); hurt.t = setTimeout(() => el.hurtFx.classList.remove('on'), 450); } /* the class always clears (with flashes off it used to stay as a permanent red vignette) */
   function fade(cb) {
     el.fade.classList.add('on');
@@ -1152,7 +1163,7 @@
   }
 
   window.UI = {
-    init, gunEmpty, sk2Used, reloadGauge, loading, loaded, title, titleTick, startRun, hud, gunChanged, toggleMap, dmg, toast, clearToasts, banner, chTimer, ammoWarn, levelUp, shock, chTimer, announce, prompt, boss, hideBoss, bossIntro, skillCut, hurt, fade,
+    init, gunEmpty, sk2Used, reloadGauge, loading, loaded, title, titleTick, startRun, hud, gunChanged, toggleMap, dmg, toast, clearToasts, banner, chTimer, ammoWarn, levelUp, shock, chTimer, announce, prompt, boss, hideBoss, bossIntro, skillCut, shout, hurt, fade,
     togglePause, result, coach, heat, K, hideBossIntro, keyLabels: () => keyLabels(), mapDirty() { mapDirty = true; }, get sel() { return selHero; }, mapOpen: () => !!el.bigMap && !el.bigMap.hidden, goalHtml,
   };
 })();

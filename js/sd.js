@@ -727,7 +727,16 @@
 
     has(name) { return !!this.tpl.data.clips[name]; }
 
+    // a clip played backwards from its last frame (램파리온's assembly undone); onEnd fires at t = 0
+    playReverse(name, onEnd) {
+      this.play(name, onEnd);
+      if (!this.clip) return;
+      this.rev = true; this.time = Math.max(0, this.clip.dur - 1e-3);
+      this.apply(); if (this.fadeD) this.blend(); this.render();
+    }
+
     play(name, onEnd, loop) {
+      this.rev = false;
       const c = this.tpl.data.clips[name] || this.tpl.data.clips.idle || Object.values(this.tpl.data.clips)[0];
       // crossfade (game only): hold the pose being left and blend the bones into the new clip
       this.fadeD = SD.crossfade && this.clip ? SD.crossfade : 0;
@@ -774,6 +783,12 @@
 
     update(dt) {
       if (!this.clip) return;
+      if (this.rev) {
+        this.time -= dt * this.speed;
+        if (this.time <= 0) { this.time = 0; this.rev = false; const cb = this.onEnd; this.onEnd = null; this.play('idle'); if (cb) cb(); return; }
+        if (dt > 0) { this.apply(); if (this.fadeD) { this.fadeT += dt; this.blend(); } this.render(); }
+        return;
+      }
       this.time += dt * this.speed;
       const c = this.clip;
       if (this.time >= c.dur) {
