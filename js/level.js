@@ -235,7 +235,14 @@
   const texCache = {};
   function loadTex(name) {
     if (texCache[name]) return texCache[name];
-    const t = new THREE.TextureLoader().load('assets/tiles/' + name + '.webp');
+    const file = 'assets/tiles/' + name + '.webp';
+    let t;
+    if (window.PACKED && PACKED.on && /^https?:$/.test(location.protocol)) {
+      // the deployed build ships the tiles scrambled: restored to pixels in a canvas, no image URL for the dev tools
+      t = new THREE.Texture();
+      PACKED.bitmap(file).then((bm) => (bm ? PACKED.toCanvas(bm, 1) : PACKED.url(file).then((u) => new Promise((res) => { const im = new Image(); im.onload = () => { URL.revokeObjectURL(u); res(im); }; im.onerror = () => res(null); im.src = u; }))))
+        .then((src) => { if (src) { t.image = src; t.needsUpdate = true; } }).catch(() => {});
+    } else t = new THREE.TextureLoader().load(file);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.anisotropy = 4;
     texCache[name] = t;

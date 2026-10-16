@@ -1,0 +1,14 @@
+// Cloudflare Workers static-asset deploy (Workers Builds runs `npx wrangler deploy` on every push to main).
+// The build step (tools/build_dist.mjs) copies only the game files into dist/, minifies / mangles the game's own
+// scripts and ships every image scrambled (js/pack.js restores them); the repository keeps the readable source.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lao-gunshot",
+  "compatibility_date": "2026-10-12",
+  "build": {
+    "command": "node tools/build_dist.mjs"
+  },
+  "assets": {
+    "directory": "./dist"
+  }
+}
