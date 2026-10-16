@@ -89,6 +89,38 @@
     g.bezierCurveTo(x + s * 0.1, y + s * 0.7, x + s * 0.5, y + s * 0.55, x + s * 0.5, y + s * 0.25);
     g.bezierCurveTo(x + s * 0.5, y - s * 0.1, x, y, x, y + s * 0.3);
   }
+  // ── ammo families ──
+  const AMMO = DATA.AMMO;
+  const famOf = (id) => Object.keys(AMMO).find((f) => AMMO[f].guns.includes(id)) || null;
+  // an ammo pickup's family: mostly one the hero is carrying a loot gun of, now and then any
+  function ammoKind() {
+    const P = G.P, held = P ? [...new Set(P.guns.filter((g) => !g.infinite).map((g) => famOf(g.id)).filter(Boolean))] : [];
+    const pool = held.length && Math.random() < 0.8 ? held : Object.keys(AMMO);
+    return 'ammo_' + pool[Math.floor(Math.random() * pool.length)];
+  }
+  function drawAmmoIcon(g, fam) {
+    const A = AMMO[fam], col = A.color, dark = '#141a10';
+    const box = (c) => { g.fillStyle = c; g.fillRect(-42, -4, 84, 40); g.strokeStyle = dark; g.lineWidth = 6; g.strokeRect(-42, -4, 84, 40); };
+    if (fam === 'rifle') { // pointed rifle cartridges in an ammo can
+      for (let i = 0; i < 4; i++) { g.fillStyle = '#d9a43a'; g.fillRect(-33 + i * 18, -34, 11, 30); g.fillStyle = col; g.beginPath(); g.moveTo(-33 + i * 18, -34); g.lineTo(-27.5 + i * 18, -50); g.lineTo(-22 + i * 18, -34); g.fill(); }
+      box('#4a5a3a');
+    } else if (fam === 'belt') { // a linked belt draped over the can
+      box('#4a4a3a');
+      for (let i = 0; i < 6; i++) { const x = -40 + i * 15, y = -18 + Math.sin(i * 0.9) * 6; g.fillStyle = '#6a6a6a'; g.fillRect(x - 1, y + 6, 14, 5); g.fillStyle = '#d9a43a'; g.fillRect(x + 2, y - 14, 8, 22); g.fillStyle = col; g.beginPath(); g.arc(x + 6, y - 14, 4, Math.PI, 0); g.fill(); }
+    } else if (fam === 'shell') { // fat red shotgun shells with brass heads
+      for (let i = 0; i < 3; i++) { const x = -34 + i * 24; g.fillStyle = col; g.fillRect(x, -44, 20, 54); g.fillStyle = '#e8c060'; g.fillRect(x - 2, 6, 24, 14); g.strokeStyle = dark; g.lineWidth = 4; g.strokeRect(x, -44, 20, 64); g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(x + 3, -40, 4, 44); }
+    } else if (fam === 'sniper') { // two long magnum rounds and a reticle
+      for (let i = 0; i < 2; i++) { const x = -22 + i * 28; g.fillStyle = '#c99a3a'; g.fillRect(x, -24, 16, 50); g.fillStyle = col; g.beginPath(); g.moveTo(x, -24); g.lineTo(x + 8, -50); g.lineTo(x + 16, -24); g.fill(); g.strokeStyle = dark; g.lineWidth = 3; g.strokeRect(x, -24, 16, 50); }
+      g.strokeStyle = '#ff5a5a'; g.lineWidth = 4; g.beginPath(); g.arc(30, 22, 14, 0, TAU); g.moveTo(30, 4); g.lineTo(30, 40); g.moveTo(12, 22); g.lineTo(48, 22); g.stroke();
+    } else if (fam === 'explo') { // grenade rounds
+      for (let i = 0; i < 2; i++) { const x = -20 + i * 40; g.fillStyle = '#5a6a3a'; g.beginPath(); g.ellipse(x, -10, 17, 26, 0, 0, TAU); g.fill(); g.strokeStyle = dark; g.lineWidth = 5; g.stroke(); g.fillStyle = col; g.fillRect(x - 17, -14, 34, 7); g.fillStyle = '#c99a3a'; g.fillRect(x - 13, 14, 26, 16); }
+    } else { // an energy cell with a bolt
+      g.fillStyle = '#22303a'; g.fillRect(-26, -40, 52, 76); g.strokeStyle = dark; g.lineWidth = 6; g.strokeRect(-26, -40, 52, 76); g.fillStyle = '#9aa4ae'; g.fillRect(-10, -50, 20, 10);
+      g.fillStyle = col; g.beginPath(); g.moveTo(6, -30); g.lineTo(-12, 2); g.lineTo(0, 2); g.lineTo(-6, 28); g.lineTo(14, -6); g.lineTo(2, -6); g.closePath(); g.fill();
+    }
+    g.shadowBlur = 0; g.fillStyle = '#ffffff'; g.font = 'bold 20px sans-serif'; g.textAlign = 'center'; g.strokeStyle = '#000'; g.lineWidth = 4;
+    g.strokeText(A.short, 0, 56); g.fillText(A.short, 0, 56);
+  }
   function pickupTex(kind) {
     return canvasTex('pk_' + kind, 128, 128, (g) => {
       g.translate(64, 64);
@@ -107,6 +139,8 @@
         g.rotate(-0.6); g.lineWidth = 12; g.strokeStyle = '#ffcc00';
         g.beginPath(); g.arc(-22, 0, 18, 0, TAU); g.stroke();
         g.fillStyle = '#ffcc00'; g.fillRect(-4, -6, 58, 12); g.fillRect(34, 4, 9, 18); g.fillRect(48, 4, 8, 13);
+      } else if (kind.startsWith('ammo_')) {
+        drawAmmoIcon(g, kind.slice(5));
       } else if (kind === 'ammo') {
         g.fillStyle = '#4a5a3a'; g.fillRect(-42, -26, 84, 58); g.strokeStyle = '#141a10'; g.lineWidth = 6; g.strokeRect(-42, -26, 84, 58);
         g.fillStyle = '#ffcc00'; for (let i = 0; i < 4; i++) { g.fillRect(-32 + i * 18, -44, 11, 26); g.beginPath(); g.arc(-26.5 + i * 18, -44, 5.5, Math.PI, 0); g.fill(); }
@@ -1262,7 +1296,7 @@
     const gold = e.noReward ? 0 : Math.round(e.def.gold * 0.5 * (P.mods.lucky ? 1.5 : 1) * rnd(0.6, 1.2));
     if (gold) dropPickup(e.x, e.y, 'gold', gold);
     if (Math.random() < BAL.heartDrop * (e.elite ? 4 : 1) * Math.max(0.2, 1 - G.fi * 0.17)) dropPickup(e.x, e.y, 'half'); // healing thins out with depth
-    if (Math.random() < BAL.ammoDrop * 0.5) dropPickup(e.x, e.y, 'ammo');
+    if (Math.random() < BAL.ammoDrop * 0.5) dropPickup(e.x, e.y, ammoKind());
     if (e.elite && Math.random() < 0.6) dropPickup(e.x, e.y, 'key');
     if (P.mods.overclock) P.ocT = 3;
     if (P.mods.vamp && Math.random() < 0.06 * (P.mods.vampX || 1) && P.hp < P.maxHp) { P.hp++; FX.ring(P.x, P.y + 0.6, 0.2, 1, 0xff4060, 0.4); SFX.play('reinforce', 0.5); }
@@ -2792,7 +2826,7 @@
     scene.add(m);
     const a = Math.random() * TAU, v = rnd(1.5, 3.5);
     const p = { x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, kind, val, m, t: 0, r: 0.3 };
-    p.glow = FX.sprite({ x, y, size: 0.9, color: { gold: 0xffcc00, heart: 0xff3355, half: 0xff3355, key: 0xffdd55, armor: 0x2bc4ff, ammo: 0xaaff66 }[kind] || 0xffffff, alpha: 0.25, tex: FX.tex.glow, order: 5 });
+    p.glow = FX.sprite({ x, y, size: 0.9, color: (kind.startsWith('ammo_') && AMMO[kind.slice(5)] ? AMMO[kind.slice(5)].hex : 0) || { gold: 0xffcc00, heart: 0xff3355, half: 0xff3355, key: 0xffdd55, armor: 0x2bc4ff, ammo: 0xaaff66 }[kind] || 0xffffff, alpha: 0.25, tex: FX.tex.glow, order: 5 });
     if (G.pickups.length > 150) { /* a ceiling on loose pickups: the oldest loose parts are banked straight away */
       const i = G.pickups.findIndex((q) => q.kind === 'gold');
       if (i >= 0) { const q = G.pickups[i]; G.pickups.splice(i, 1); if (G.P) { G.P.gold += q.val; G.stats.gold += q.val; } killObj(q.m); FX.kill(q.glow); }
@@ -2831,13 +2865,19 @@
         SFX.play('reinforce'); FX.ring(P.x, P.y + 0.6, 0.2, 1.2, 0xff4060, 0.4); UI.toast(p.kind === 'heart' ? '체력 +50' : '체력 +25', 'gem'); if (p.kind === 'heart') SFX.voice(P.hero.id, 'Repair'); return true;
       case 'armor': P.armor++; SFX.play('ice'); UI.toast('방어막 +1', 'gem'); return true;
       case 'key': P.keys++; SFX.play('uiEquip', 0.8); UI.toast('열쇠 획득', 'gem'); return true;
-      case 'ammo': {
-        const g = curGun();
-        const target = !g.infinite && g.ammo < maxAmmo(g) ? g : P.guns.find((x) => !x.infinite && x.ammo < maxAmmo(x));
-        if (!target) { P.gold += 20; SFX.play('coin'); UI.toast('탄약 상자 → 부품 +20 (보급 무기의 탄약이 가득합니다)', ''); return true; }
-        const add = Math.ceil(maxAmmo(target) * 0.4); // a box tops up 40 %, not the whole reserve: high-grade rounds stay precious
+      default: {
+        if (!p.kind.startsWith('ammo_')) return true;
+        // family ammo: only a gun of that family takes it, 10 % of its reserve (the gun in hand first)
+        const fam = p.kind.slice(5), A = AMMO[fam]; if (!A) return true;
+        const g = curGun(), fits = (x) => !x.infinite && famOf(x.id) === fam && x.ammo < maxAmmo(x);
+        const target = g && fits(g) ? g : P.guns.find(fits);
+        if (!target) {
+          const has = P.guns.some((x) => !x.infinite && famOf(x.id) === fam);
+          P.gold += 8; SFX.play('coin'); UI.toast(`${A.name} → 부품 +8 (${has ? '해당 무기의 탄약이 가득합니다' : '맞는 무기가 없습니다'})`, ''); return true;
+        }
+        const add = Math.max(1, Math.ceil(maxAmmo(target) * 0.1));
         target.ammo = Math.min(maxAmmo(target), target.ammo + add);
-        SFX.play('reinforce'); UI.toast(`${target.d.name} 탄약 +${add}`, 'gem'); return true;
+        SFX.play('reloadOut', 0.8); UI.toast(`${A.name} +${add} · ${target.d.name}`, 'gem'); return true;
       }
     }
     return true;
@@ -2928,9 +2968,11 @@
   function lootName(loot) {
     if (loot.kind === 'gun') return GUNS[loot.id].name;
     if (loot.kind === 'item') return ITEMS.find((i) => i.id === loot.id).name;
+    if (loot.kind.startsWith('ammo_') && AMMO[loot.kind.slice(5)]) return AMMO[loot.kind.slice(5)].name;
     return { heart: '체력 회복 (+50)', armor: '방어막', key: '열쇠', ammo: '탄약 상자' }[loot.kind] || loot.kind;
   }
   function lootDesc(loot) {
+    if (loot.kind.startsWith('ammo_') && AMMO[loot.kind.slice(5)]) { const A = AMMO[loot.kind.slice(5)]; return `${A.guns.map((id) => GUNS[id].name).join(' · ')}의 예비 탄약을 최대치의 10% 채웁니다`; }
     if (loot.kind === 'gun') { const g = GUNS[loot.id]; return `${RANKS[g.rank].key}급 무기 · ${g.desc}`; }
     if (loot.kind === 'item') { const it = ITEMS.find((i) => i.id === loot.id); return `${RANKS[it.rank].key}급 장비 · ${it.desc}`; }
     return { heart: '체력을 50 회복합니다', armor: '피격 1회를 막아 주는 방어막 +1', key: '보급 상자를 여는 열쇠 +1', ammo: '들고 있는 무기의 예비 탄약을 최대치의 40% 채웁니다' }[loot.kind] || '';
@@ -3177,7 +3219,7 @@
     const stock = [
       { loot: { kind: 'heart' }, price: F.heart },
       { loot: { kind: 'key' }, price: F.key },
-      G.P.guns.some((g) => !g.infinite) && Math.random() < 0.5 ? { loot: { kind: 'ammo' }, price: F.ammo } : { loot: { kind: 'armor' }, price: F.armor },
+      G.P.guns.some((g) => !g.infinite) && Math.random() < 0.5 ? { loot: { kind: 'ammo_' + (famOf(G.P.guns.filter((g) => !g.infinite)[0].id) || 'rifle') }, price: Math.round(F.ammo * 0.5) } : { loot: { kind: 'armor' }, price: F.armor },
     ];
     const priceOf = (it) => (it.kind === 'gun' ? F.gun[GUNS[it.id].rank] : F.item[Math.min(2, ITEMS.find((i) => i.id === it.id).rank)]);
     for (let k = 0; k < 6 && stock.length < 5; k++) {
@@ -3531,7 +3573,7 @@
     if (roll < 0.14) dropPickup(r.cx, r.cy, 'key');
     // healing gets scarcer with depth (10 % on B1 → 4 % from B6), never zero; low HP still gets a mercy roll
     else if (roll < 0.14 + Math.max(0.03, 0.09 - G.fi * 0.014) || (P.hp <= 2 && roll < 0.4)) dropPickup(r.cx, r.cy, P.hp < P.maxHp ? 'heart' : 'armor');
-    else if (roll < 0.42) dropPickup(r.cx, r.cy, 'ammo');
+    else if (roll < 0.42) dropPickup(r.cx, r.cy, ammoKind());
     else if (roll < 0.47 - G.fi * 0.015) dropPickup(r.cx, r.cy, 'armor');
     else if (roll < 0.58) spawnChest(r.cx, r.cy, 0, true);
     dropPickup(r.cx, r.cy, 'gold', Math.round((4 + G.fi * 2) * (G.P.mods.lucky ? 1.5 : 1))); /* 행운의 참치 counts here too */
@@ -3812,7 +3854,7 @@
     G.paused = false;
     // data chips for the research lab: depth, bosses, kills
     const quit = !win && G.stats.cause === '작전 포기' && G.stats.time < 60; // an instant abort pays nothing
-    const chips = quit ? 0 : Math.round((8 + G.fi * 12 + G.stats.bosses * 15 + G.stats.roomsCleared * 2 + Math.floor(G.stats.kills / 6) + (win ? 30 : 0)) * (1 + (G.heat || 0) * 0.25));
+    const chips = quit ? 0 : Math.round((G.fi * 12 + G.stats.bosses * 15 + G.stats.roomsCleared * 2 + Math.floor(G.stats.kills / 6) + (win ? 30 : 0)) * (1 + (G.heat || 0) * 0.25));
     G.stats.chips = chips;
     G.stats.heat = G.heat || 0;
     // clearing at the highest risk level opens the next one

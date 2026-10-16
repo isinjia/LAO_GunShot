@@ -220,17 +220,17 @@
 
   // research lab: permanent upgrades bought with data chips earned every run
   const META = [
-    { id: 'hp', name: '생체 강화', icon: 'i_nutrient', max: 4, cost: [30, 60, 100, 170], desc: (l) => `시작 체력 +${l * 25}` },
-    { id: 'key', name: '보급 열쇠', icon: 'i_lock', max: 2, cost: [25, 55], desc: (l) => `시작 열쇠 +${l}` },
-    { id: 'gold', name: '초기 자금', icon: 'i_gear', max: 3, cost: [20, 40, 70], desc: (l) => `시작 부품 +${l * 20}` },
-    { id: 'skill', name: '스킬 예열', icon: 'i_squad', max: 2, cost: [30, 70], desc: (l) => `스킬 게이지 ${l * 35}%로 시작` },
-    { id: 'dmg', name: '탄두 개량', icon: 'i_atk', max: 5, cost: [40, 80, 130, 190, 260], desc: (l) => `공격력 +${l * 6}%` },
-    { id: 'armor', name: '전개식 방어막', icon: 'i_check', max: 2, cost: [60, 140], desc: (l) => `시작 방어막 +${l}` },
-    { id: 'roll', name: '기동 보조 장치', icon: 'i_time', max: 3, cost: [45, 90, 150], desc: (l) => `회피 쿨타임 -${l * 10}%` },
-    { id: 'luck', name: '보급망 확충', icon: 'i_research', max: 3, cost: [50, 110, 180], desc: (l) => `상점 가격 -${l * 7}%, 보급 상자 등급 상승` },
-    { id: 'xp', name: '전투 데이터 분석', icon: 'i_detail', max: 3, cost: [40, 90, 150], desc: (l) => `경험치 +${l * 12}%` },
-    { id: 'cards', name: '강화 모듈 확장', icon: 'i_making', max: 1, cost: [260], desc: () => '레벨업 선택지 4장' },
-    { id: 'revive', name: '긴급 복구 프로토콜', icon: 'i_skull', max: 1, cost: [320], desc: () => '작전 불능 시 1회 부활 (체력 최대 100)' },
+    { id: 'hp', name: '생체 강화', icon: 'i_nutrient', max: 4, cost: [150, 400, 830, 1700], desc: (l) => `시작 체력 +${l * 25}` },
+    { id: 'key', name: '보급 열쇠', icon: 'i_lock', max: 2, cost: [120, 550], desc: (l) => `시작 열쇠 +${l}` },
+    { id: 'gold', name: '초기 자금', icon: 'i_gear', max: 3, cost: [100, 300, 700], desc: (l) => `시작 부품 +${l * 20}` },
+    { id: 'skill', name: '스킬 예열', icon: 'i_squad', max: 2, cost: [150, 700], desc: (l) => `스킬 게이지 ${l * 35}%로 시작` },
+    { id: 'dmg', name: '탄두 개량', icon: 'i_atk', max: 5, cost: [200, 500, 980, 1660, 2600], desc: (l) => `공격력 +${l * 6}%` },
+    { id: 'armor', name: '전개식 방어막', icon: 'i_check', max: 2, cost: [300, 1400], desc: (l) => `시작 방어막 +${l}` },
+    { id: 'roll', name: '기동 보조 장치', icon: 'i_time', max: 3, cost: [220, 680, 1500], desc: (l) => `회피 쿨타임 -${l * 10}%` },
+    { id: 'luck', name: '보급망 확충', icon: 'i_research', max: 3, cost: [250, 820, 1800], desc: (l) => `상점 가격 -${l * 7}%, 보급 상자 등급 상승` },
+    { id: 'xp', name: '전투 데이터 분석', icon: 'i_detail', max: 3, cost: [200, 680, 1500], desc: (l) => `경험치 +${l * 12}%` },
+    { id: 'cards', name: '강화 모듈 확장', icon: 'i_making', max: 1, cost: [1950], desc: () => '레벨업 선택지 4장' },
+    { id: 'revive', name: '긴급 복구 프로토콜', icon: 'i_skull', max: 1, cost: [2400], desc: () => '작전 불능 시 1회 부활 (체력 최대 100)' },
   ];
 
   const BAL = {
@@ -289,5 +289,14 @@
     { id: 'm_ramparion', hero: 'ramparion', name: '어깨 포 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%' },
   ];
 
-  window.DATA = { RANKS, HEROES, HIDDEN, GUNS, ITEMS, ENEMIES, ELITES, BOSSES, FLOORS, BAL, SYNERGY, UNLOCK, META, PERKS };
+  // ammo by gun family: a pickup only feeds guns of its own family, 10 % of that gun's reserve
+  const AMMO = {
+    rifle: { name: '소총탄', short: '소총', color: '#ffcc33', hex: 0xffcc33, guns: ['ar', 'burst', 'sylph'] },
+    belt: { name: '기관총 탄띠', short: '탄띠', color: '#ff9a3a', hex: 0xff9a3a, guns: ['mg', 'minigun'] },
+    shell: { name: '산탄', short: '산탄', color: '#ff5a4a', hex: 0xff5a4a, guns: ['sg'] },
+    sniper: { name: '저격탄', short: '저격', color: '#cfe2ff', hex: 0xcfe2ff, guns: ['dmr', 'amr'] },
+    explo: { name: '폭발탄', short: '폭발', color: '#9dff5a', hex: 0x9dff5a, guns: ['gl', 'mortar', 'cannon'] },
+    energy: { name: '에너지 셀', short: '에너지', color: '#5ae8ff', hex: 0x5ae8ff, guns: ['pistol', 'shock', 'rail'] },
+  };
+  window.DATA = { RANKS, AMMO, HEROES, HIDDEN, GUNS, ITEMS, ENEMIES, ELITES, BOSSES, FLOORS, BAL, SYNERGY, UNLOCK, META, PERKS };
 })();
