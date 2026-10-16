@@ -744,6 +744,11 @@
       this.time = 0;
       this.onEnd = onEnd || null;
       this.apply();
+      // the pin reference is the clip's own pose at t = 0, never the first rendered frame: a clip replayed mid-travel
+      // (a boss re-triggering 'atk' every pattern) or crossfading out of a displaced pose would otherwise anchor the
+      // rig at the travelled spot and throw the image far from the unit
+      const pb = this.tpl.pinBone && this.tpl.pinBone[name];
+      if (pb != null) { this.worldPass(); this.pinRef = [this.W[pb * 12 + 9], this.W[pb * 12 + 10]]; }
       if (this.fadeD) this.blend();
       this.render();
     }

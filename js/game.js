@@ -1988,6 +1988,9 @@
         const [tx, ty] = aimPoint(P, 6.5), R = 3.2, dur = 4 + upF(P);
         { const [x0, y0] = muzzleOf(P); FX.beam(x0, y0, tx, ty, 0.06, 0xd0b8ff, 0.3); FX.muzzleFlash(x0, y0, a, 0xb08cff, 1.6); }
         FX.ring(tx, ty, R, 0.3, 0xb08cff, 0.3); // the target circle closes in before it bites
+        // 보리 guards her too: anything within 2.2 tiles of Constantia is pinned and shoved off at once
+        FX.ring(P.x, P.y + 0.3, 0.3, 2.2, 0xd0b8ff, 0.35);
+        for (const e of G.enemies) { if (!e.alive || e.spawnT > 0) continue; const dx = e.x - P.x, dy = e.y - P.y, dd = Math.hypot(dx, dy) || 1; if (dd > 2.2 + e.r) continue; prime(e, 'root', 2.5); hurtEnemy(e, 30 * P.mods.dmg, false, e.boss ? 0 : dx / dd * 8, e.boss ? 0 : dy / dd * 8, 'hitM'); FX.ring(e.x, e.y + 0.2, e.r * 2.2, e.r * 1.1, 0xb08cff, 0.4); }
         FX.later(0.3, () => {
           FX.ring(tx, ty, 0.4, R, 0xb08cff, 0.6); FX.particle({ x: tx, y: ty, life: 0.6, size: 1, size1: R * 2, color: 0xb08cff, tex: FX.tex.glow, alpha: 0.45 });
           for (let k = 0; k < 16; k++) { const aa = k / 16 * TAU; FX.particle({ x: tx + Math.cos(aa) * R, y: ty + Math.sin(aa) * R * 0.75, vx: -Math.cos(aa) * 4, vy: -Math.sin(aa) * 3, life: 0.35, size: 0.3, size1: 0.05, color: 0xd0b8ff, tex: FX.tex.glow, alpha: 0.9 }); }

@@ -42,7 +42,7 @@
     },
     {
       id: 'constantia', name: '콘스탄챠 S2', title: '정밀 사격 전문가', img: 'c_3P_ConstantiaS2_N', gun: 'dmr', hp: 9, armor: 2, speed: 6.5,
-      skill: 'snare', skillName: '발목 잡기', skillDesc: '[부여] 보리와 함께 커서 일대의 적을 4초간 속박 · 표식 · 제압 — 보스는 패턴이 끊긴다', color: '#ff6af0', upF: 'u_snare', upE: 'u_rifle',
+      skill: 'snare', skillName: '발목 잡기', skillDesc: '[부여] 보리와 함께 커서 일대의 적을 4초간 속박 · 표식 · 제압, 곁에 붙은 적도 밀쳐내 속박 — 보스는 패턴이 끊긴다', color: '#ff6af0', upF: 'u_snare', upE: 'u_rifle',
       sk2: { id: 'rifleshot', name: '라이플 사격', icon: 'i_crit', cd: 6, desc: '[기폭] 열화우라늄 관통탄(최대 3명) — 속박/표식된 적은 피해 x2 + 상태 폭발, 아니면 6.5초 표식(다음 사격이 처형). 35% 치명타 x1.8' },
       stats: { atk: 5, def: 2, mob: 4 }, desc: '관통하는 고위력 정밀 사격. 한 발 한 발이 치명적이다.',
     },
