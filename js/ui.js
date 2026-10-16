@@ -161,6 +161,7 @@
     $('#optTbSize').onclick = () => { const i = TBS.findIndex((x) => Math.abs(x[0] - G.opt.tbSize) < 0.01); G.opt.tbSize = TBS[(i + 1) % TBS.length][0]; touchApply(); GAME.saveOpt(); SFX.play('uiPick', 0.6); };
     $('#optTbAlpha').onclick = () => { const i = TBA.findIndex((x) => Math.abs(x[0] - G.opt.tbAlpha) < 0.01); G.opt.tbAlpha = TBA[(i + 1) % TBA.length][0]; touchApply(); GAME.saveOpt(); SFX.play('uiPick', 0.6); };
     tog('#optLefty', 'lefty', (v) => document.body.classList.toggle('lefty', !!v));
+    { const lb = $('#optLayout'); if (lb) lb.onclick = () => { if (window.LAYOUT) { SFX.play('uiPick', 0.6); LAYOUT.edit(true); } }; } // drag / resize the touch controls and HUD panels
     const fsB = $('#optFull');
     if (!document.documentElement.requestFullscreen) fsB.hidden = true;
     fsB.onclick = () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); } catch (e) { /* not allowed */ } };
@@ -434,6 +435,7 @@
   }
   function startRun() {
     if (settingsOpen()) openSettings(false); /* a run never starts under the title settings panel */
+    if (window.LAYOUT) setTimeout(() => LAYOUT.apply(), 0); // the player's own touch layout (once the HUD is visible)
     if (INPUT.mouse) INPUT.mouse.seen = false;
     el.hud.hidden = false;
     el.result.hidden = true;
