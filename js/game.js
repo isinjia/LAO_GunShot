@@ -455,6 +455,9 @@
       }
     }
     if (P.ultT > 0) P.ultT -= dt;
+    if (P.axeOut > 0) P.axeOut -= dt;
+    if (P.lrlBeam > 0) P.lrlBeam -= dt;
+    if (P.swingT > 0) P.swingT -= dt;
     if (P.hyperT > 0 && !P.hh) P.hyperT -= dt;
     if (P.focusT > 0) {
       P.focusT -= dt;
@@ -591,8 +594,16 @@
       R.t += dt;
       const f = R.t / BAL.rollTime;
       const sp = BAL.rollSpeed * (1 - f * 0.55);
-      LEVEL.move(P, R.dx * sp * dt, R.dy * sp * dt);
-      P.body.pivot.rotation.z = -Math.sign(R.dx || P.face) * f * TAU;
+      if (P.hero.dashDodge) {
+        // 램파리온 boosts instead of rolling: a straight, faster dash that leaves afterimages
+        LEVEL.move(P, R.dx * BAL.rollSpeed * 1.25 * dt, R.dy * BAL.rollSpeed * 1.25 * dt);
+        R.gT = (R.gT || 0) - dt;
+        if (R.gT <= 0) { R.gT = 0.075; dashGhost(P); }
+        if (Math.random() < 0.8) FX.particle({ x: P.x - R.dx * 0.4, y: P.y + 0.6, vx: -R.dx * 3, vy: -R.dy * 2, life: 0.25, size: 0.5, size1: 0.1, color: 0x9fe8ff, tex: FX.tex.glow, alpha: 0.7 });
+      } else {
+        LEVEL.move(P, R.dx * sp * dt, R.dy * sp * dt);
+        P.body.pivot.rotation.z = -Math.sign(R.dx || P.face) * f * TAU;
+      }
       FX.particle({ x: P.x, y: P.y + 0.7, life: 0.22, size: 1.1, size1: 0.6, aspect: 1.3, color: heroHex(P), tex: FX.tex.glow, alpha: 0.28 });
       if (P.mods.ghost) for (let k = G.ebul.length - 1; k >= 0; k--) { const b = G.ebul[k]; if (Math.hypot(b.x - P.x, b.y - P.y - 0.5) < 0.9) { popEB(b); ebRemove(k); } } /* 위상 회피기: the roll eats grazed bullets */
       if (Math.random() < 0.6) FX.particle({ x: P.x + rnd(-0.2, 0.2), y: P.y + 0.05, vx: -R.dx * 2, vy: rnd(0, 0.6), life: 0.4, size: 0.35, size1: 0.8, color: 0x8a96a8, frames: null, tex: FX.tex.dot, alpha: 0.35, normal: true, order: 4 });
@@ -619,7 +630,7 @@
       SFX.play('roll', 0.9);
       if (Math.abs(d[0]) > 0.1) P.face = Math.sign(d[0]);
     } else {
-      const sp = P.hero.speed * P.mods.speed * (P.reloadT > 0 ? 0.92 : 1) * (P.emplaceT > 0 ? 0.5 : 1) * (P.sprayT > 0 ? 0.6 : 1) * (P.hh || P.formAnim > 0 ? 0 : P.lionCharge > 0 ? 0.35 : 1); // 거치 사격: half speed · 난사 slows her · 램파리온 plants for his chant
+      const sp = P.hero.speed * P.mods.speed * (P.reloadT > 0 ? 0.92 : 1) * (P.emplaceT > 0 ? 0.5 : 1) * (P.sprayT > 0 ? 0.6 : 1) * (P.hh || P.formAnim > 0 || P.lrlBeam > 0 ? 0 : P.lionCharge > 0 ? 0.35 : 1); // 거치 사격: half speed · 난사 slows her · 램파리온 plants for his chant
       LEVEL.move(P, mv[0] * sp * dt, mv[1] * sp * dt);
     }
     if (P.formAnim > 0) { /* 램파리온's assembly / break-down clip plays out */ } else if (moving !== P.moving || (moving && P.body.c.clipName !== 'move')) {
@@ -757,6 +768,12 @@
     o.visible = !P.dead;
     g.hand.c.setOrder(ORD(P.ordY != null ? P.ordY : P.y) + 0.0004); // the gun always draws over the body and head
     if (P.roll) o.visible = false;
+    if (g.id === 'lrl_axe' && P.axeOut > 0) o.visible = false; // the axe is in the air; a new one is in her hand a beat later
+    if (P.swingT > 0) { // 액스 오브 다크니스: the axe hand sweeps the same arc as the slash, high to low across the aim
+      const k = 1 - P.swingT / P.swingMax, e = k * k * (3 - 2 * k), off = (1.25 - 2.5 * e) * fl, sa2 = a + off;
+      o.position.set(P.x + Math.cos(sa2) * 0.95, P.y + 0.85 + Math.sin(sa2) * 0.75, 0);
+      o.rotation.z = sa2 + 0.4 * fl; o.visible = !P.dead;
+    }
     P.muzzle = [hx + ca * g.hand.muzzle[0] - sa * g.hand.muzzle[1] * fl, hy + sa * g.hand.muzzle[0] + ca * g.hand.muzzle[1] * fl];
   }
 
@@ -814,6 +831,8 @@
     const [mx, my] = P.muzzle || [P.x, P.y + 0.6];
     const a = P.aim;
     FX.muzzleFlash(mx, my, a, d.color, d.kind === 'fireball' || d.kind === 'rail' ? 1.6 : 1);
+    if (g.id === 'lrl_axe') P.axeOut = 0.22;
+    if (g.id === 'ramp_blast') { FX.particle({ x: mx, y: my, life: 0.12, size: 0.5, size1: 1.1, color: 0xc8f4ff, tex: FX.tex.glow, alpha: 0.9 }); FX.ring(mx, my, 0.1, 0.55, 0x9fe8ff, 0.12); } // the repulsor flares in the palm
     SFX.play(d.sfx, d.sfx === 'mg' ? 0.8 : 1);
     if (G.opt.shake) FX.shake(d.recoil * 0.6);
     G.stats.shots++;
@@ -846,8 +865,10 @@
   function spawnPBullet(P, g, x, y, ang, v) {
     const d = g.d;
     const big = d.kind === 'grenade' || d.kind === 'fireball';
-    const s = FX.sprite({ x, y, size: d.size * (big ? 0.7 : 0.55), aspect: big ? 1 : 2.6, color: d.color, alpha: 1, tex: FX.tex.glow, order: L.PROJ, rot: ang - Math.PI / 2 });
-    const core = FX.sprite({ x, y, size: d.size * (big ? 0.38 : 0.22), aspect: big ? 1 : 3, color: 0xffffff, alpha: 1, tex: FX.tex.glow, order: L.PROJ + 0.1, rot: ang - Math.PI / 2 });
+    const own = d.tex && FX.tex[d.tex];
+    const s = own ? FX.sprite({ x, y, size: d.size, color: 0xffffff, alpha: 1, tex: own, normal: true, order: L.PROJ, rot: ang })
+      : FX.sprite({ x, y, size: d.size * (big ? 0.7 : 0.55), aspect: big ? 1 : 2.6, color: d.color, alpha: 1, tex: FX.tex.glow, order: L.PROJ, rot: ang - Math.PI / 2 });
+    const core = FX.sprite({ x, y, size: own ? d.size * 0.9 : d.size * (big ? 0.38 : 0.22), aspect: own ? 1 : big ? 1 : 3, color: own ? d.color : 0xffffff, alpha: own ? 0.25 : 1, tex: FX.tex.glow, order: own ? L.PROJ - 0.1 : L.PROJ + 0.1, rot: ang - Math.PI / 2 });
     const crit = critRoll(P, g);
     const nb = {
       x, y, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, life: d.life * (P.mods.velo > 1 ? 1.2 : 1), g: d, dmg: d.dmg * P.mods.dmg * masteryDmg(P, g) * (crit ? P.mods.critMul || 2 : 1), crit,
@@ -988,7 +1009,7 @@
         if (b.kind === 'grenade' || b.kind === 'fireball') explodeP(b);
         FX.kill(b.s); FX.kill(b.core);
         G.pbul.splice(i, 1);
-      } else { b.s.x = b.core.x = b.x; b.s.y = b.core.y = b.y; }
+      } else { b.s.x = b.core.x = b.x; b.s.y = b.core.y = b.y; if (b.g.spin) b.s.rot -= b.g.spin * dt * (b.vx >= 0 ? 1 : -1); } // a thrown axe tumbles
     }
   }
   // 폭발 탄두: a small blast where a bullet lands (the struck enemy already took the bullet)
@@ -2084,35 +2105,49 @@
         castPillar(P, 0xc070ff); blankWave(P.x, P.y + 0.5, 3.6, false); escortRing(P);
         break;
       case 'eyebeam': {
-        // LRL · 사이클롭스 이터널 빔: the eye-patch comes off — a long beam that blinds (적중 감소) and slows (AP 감소)
-        const ca = Math.cos(a), sa = Math.sin(a), ex = P.x + ca * 0.25, ey = P.y + 1.3, len = 22, wid = 1.6 * (1 + 0.3 * upF(P)), dur = 5 + upF(P);
-        SFX.play('charge'); P.iframe = Math.max(P.iframe, 0.8); // the seal breaks: she is untouchable while the beam fires
-        FX.particle({ x: ex, y: ey, life: 0.32, size: 0.3, size1: 2.4, color: 0xff5a8a, tex: FX.tex.glow, alpha: 0.9 }); // the eye glares open
-        FX.particle({ x: ex, y: ey, life: 0.32, size: 0.1, size1: 3.2, aspect: 0.12, color: 0xffd0e0, tex: FX.tex.glow, alpha: 0.9 });
-        FX.later(0.3, () => {
-          FX.orbital(ex, ey, ex + ca * len, ey + sa * len, 0xff5a8a, 1.1);
-          SFX.play('laserBig');
-          for (const e of G.enemies) {
-            if (!e.alive || e.spawnT > 0) continue;
-            const px = e.x - ex, py = e.y + e.h * 0.42 - ey, t = px * ca + py * sa;
-            if (t > 0 && t < len && Math.abs(-px * sa + py * ca) < wid + e.r) {
-              e.blindT = Math.max(e.blindT || 0, dur); e.supT = Math.max(e.supT || 0, dur);
-              if (e.boss) { e.seq.length = 0; e.tele = null; }
-              hurtEnemy(e, 150 * P.mods.dmg, true, ca * 4, sa * 4);
+        // LRL · 사이클롭스 이터널 빔 (2_LAO_MINI_ACTION's bomb): the patch comes off, a red four-point star glints and grows
+        // in her eye while light gathers in (0.95 s), then a huge red beam fires down the aim for 1.5 s in 12 ticks —
+        // everything in it is blinded (적중 감소) and slowed to act, and enemy rounds in it are erased
+        const ca = Math.cos(a), sa = Math.sin(a), ex = P.x + ca * 0.25, ey = P.y + 1.3, len = 24, wid = 2.4 * (1 + 0.2 * upF(P)), dur = 5 + upF(P);
+        const CH = 0.95, BEAM = 1.5, TICKS = 12;
+        P.ultT = CH + BEAM + 0.2; P.iframe = Math.max(P.iframe, CH + BEAM + 0.2); P.lrlBeam = CH + BEAM; // she holds the pose
+        SFX.play('charge'); UI.shout('봉인 해제…!', false, '#ff5a6a');
+        const star = (sz, al, rot) => { for (const [L2, w, c] of [[1, 0.09, 0xff3c32], [0.75, 0.05, 0xffe6c8]]) for (let q = 0; q < 2; q++) FX.particle({ x: ex, y: ey, life: 0.05, size: sz * w * 2, size1: sz * w * 2, aspect: L2 / w, rot: rot + q * Math.PI / 2, color: c, tex: FX.tex.beam, alpha: al }); };
+        let t = 0, tick = 0, hitBoss = false;
+        FX.tickers.push((dt) => {
+          t += dt;
+          if (!G.P || G.phase !== 'play') return false;
+          if (t < CH) { // the eye flash: a growing red star glint and light rushing in
+            const k = t / CH;
+            star(1 + k * 2.6, 0.5 + k * 0.5, t * 3);
+            FX.particle({ x: ex, y: ey, life: 0.05, size: 0.5 + k * 1.6, size1: 0.5 + k * 1.6, color: 0xff4a4a, tex: FX.tex.glow, alpha: 0.6 });
+            if (Math.random() < dt * 40) { const aa = Math.random() * TAU, r = rnd(1.6, 3); FX.particle({ x: ex + Math.cos(aa) * r, y: ey + Math.sin(aa) * r, vx: -Math.cos(aa) * r / 0.3, vy: -Math.sin(aa) * r / 0.3, life: 0.3, size: 0.25, size1: 0.05, color: 0xff6a6a, tex: FX.tex.glow, alpha: 0.95 }); }
+            return true;
+          }
+          const bt = t - CH;
+          if (bt === dt || (bt > 0 && bt <= dt)) { SFX.play('laserBig'); FX.flash(0xff3040, 0.12); if (G.opt.shake) FX.shake(0.5); UI.shout('사이클롭스 이터널 빔!!', true, '#ff4050'); }
+          if (bt >= BEAM) return false;
+          const amp = Math.min(1, bt / 0.12) * (bt > BEAM - 0.2 ? (BEAM - bt) / 0.2 : 1), W2 = wid * (0.9 + 0.08 * Math.sin(t * 60)) * amp;
+          // the beam body: layered red to white-hot, with speed streaks racing down it
+          FX.beam(ex, ey, ex + ca * len, ey + sa * len, W2 * 1.7, 0x7a0610, 0.022);
+          FX.beam(ex, ey, ex + ca * len, ey + sa * len, W2 * 0.95, 0xc8202c, 0.022);
+          FX.beam(ex, ey, ex + ca * len, ey + sa * len, W2 * 0.32, 0xffc0b0, 0.022);
+          for (let q = 0; q < 3; q++) { const lane = rnd(-0.85, 0.85) * W2, d0 = rnd(1, len - 3); FX.particle({ x: ex + ca * d0 - sa * lane, y: ey + sa * d0 + ca * lane, vx: ca * 40, vy: sa * 40, life: 0.12, size: 0.12, size1: 0.12, aspect: 12, rot: a - Math.PI / 2, color: 0xffebe1, tex: FX.tex.beam, alpha: 0.55 * amp }); }
+          star(2.2 * amp, 0.9 * amp, t * 3);
+          if (Math.random() < 0.4 && G.opt.shake) FX.shake(0.08);
+          if (bt >= tick * BEAM / TICKS) {
+            tick++;
+            for (const e of G.enemies) {
+              if (!e.alive || e.spawnT > 0) continue;
+              const px = e.x - ex, py = e.y + e.h * 0.42 - ey, tt = px * ca + py * sa;
+              if (tt <= 0 || tt > len || Math.abs(-px * sa + py * ca) > wid + e.r) continue;
+              prime(e, 'blind', dur); e.supT = Math.max(e.supT || 0, dur);
+              if (e.boss && !hitBoss) { hitBoss = true; e.seq.length = 0; e.tele = null; }
+              hurtEnemy(e, 24 * (1 + 0.15 * upF(P)) * P.mods.dmg, tick === 1, ca * 2, sa * 2, 'hitF');
             }
+            for (let q = G.ebul.length - 1; q >= 0; q--) { const b = G.ebul[q], px = b.x - ex, py = b.y - ey, tt = px * ca + py * sa; if (tt > 0 && tt < len && Math.abs(-px * sa + py * ca) < wid + 0.3) { popEB(b); ebRemove(q); } }
           }
-          for (let k = G.ebul.length - 1; k >= 0; k--) { const b = G.ebul[k], px = b.x - ex, py = b.y - ey, t = px * ca + py * sa; if (t > 0 && t < len && Math.abs(-px * sa + py * ca) < wid) { popEB(b); ebRemove(k); } }
-          FX.flash(0xff5a8a, 0.14); if (G.opt.shake) FX.shake(0.3);
-        });
-        // the after-glow burns down the same line twice more
-        for (const tt of [0.75, 1.15]) FX.later(tt, () => {
-          FX.orbital(ex, ey, ex + ca * len, ey + sa * len, 0xff5a8a, 0.5);
-          for (const e of G.enemies) {
-            if (!e.alive || e.spawnT > 0) continue;
-            const px = e.x - ex, py = e.y + e.h * 0.42 - ey, t = px * ca + py * sa;
-            if (t > 0 && t < len && Math.abs(-px * sa + py * ca) < wid + e.r) hurtEnemy(e, 55 * P.mods.dmg, false, 0, 0);
-          }
-          for (let k = G.ebul.length - 1; k >= 0; k--) { const b = G.ebul[k], px = b.x - ex, py = b.y - ey, t = px * ca + py * sa; if (t > 0 && t < len && Math.abs(-px * sa + py * ca) < wid) { popEB(b); ebRemove(k); } }
+          return true;
         });
         break;
       }
@@ -2241,6 +2276,61 @@
     spawnStatic('FX_hit_bori', e.x, e.y + e.h * 0.4, 0.22);
     SFX.play('hitB', 0.5);
   }
+  // an afterimage: a frozen copy of the body in its current pose, washed cyan, fading out
+  function dashGhost(P) {
+    const id = P.body.c.tpl && P.body.c.tpl.id;
+    if (!id || (G.ghosts || 0) > 6) return;
+    const flip = id === 'e_Rampart_N';
+    const gb = makeBody(id, HERO_H, RIGS[id] && RIGS[id].hide, flip);
+    if (!gb) return;
+    G.ghosts = (G.ghosts || 0) + 1;
+    gb.root.position.copy(P.body.root.position); setFace(gb, P.face); scene.add(gb.root);
+    gb.c.play(P.body.c.clipName || 'idle'); gb.c.time = P.body.c.time; gb.c.apply(); gb.c.render();
+    gb.c.setTint(0.6, 1.6, 2.2); gb.c.setOrder(ORD(P.y) + 0.001);
+    let t = 0;
+    FX.tickers.push((dt) => {
+      t += dt;
+      const k = 1 - t / 0.28;
+      if (k <= 0) { gb.c.dispose(); scene.remove(gb.root); G.ghosts--; return false; }
+      gb.c.setOpacity(0.55 * k);
+      return true;
+    });
+  }
+  // ── LRL ──
+  // 액스 오브 다크니스's wave: a crescent that flies down the aim through everything (each enemy once), eats rounds, and
+  // finds a blinded target's weak point for sure (x2.45, pops the blind, halves the cooldown)
+  function slashWave(P, a, pw, luck) {
+    const ca = Math.cos(a), sa = Math.sin(a), x0 = P.x + ca * 0.9, y0 = P.y + 0.8 + sa * 0.9, len = 11, dur = 0.55, W = 1.6;
+    const s1 = FX.sprite({ x: x0, y: y0, size: 3.2, size1: 3.2, color: 0xff5a8a, alpha: 0.95, tex: FX.tex.slash, order: L.PROJ + 1, rot: a - Math.PI / 2 });
+    const s2 = FX.sprite({ x: x0, y: y0, size: 2.4, size1: 2.4, color: 0xffffff, alpha: 0.85, tex: FX.tex.slash, order: L.PROJ + 1.1, rot: a - Math.PI / 2 });
+    const hit = new Set(); let t = 0, weak = false, sure = false;
+    FX.tickers.push((dt) => {
+      t += dt;
+      const f = Math.min(1, t / dur), x = x0 + ca * len * f, y = y0 + sa * len * f, k = 1 + f * 0.5;
+      s1.x = s2.x = x; s1.y = s2.y = y; s1.size = s1.size1 = 3.2 * k; s2.size = s2.size1 = 2.4 * k; s1.alpha = 0.95 * (1 - f * 0.6); s2.alpha = 0.85 * (1 - f * 0.6);
+      if (Math.random() < dt * 40) FX.particle({ x: x - ca * 0.3 + rnd(-0.6, 0.6) * sa, y: y - sa * 0.3 + rnd(-0.6, 0.6) * ca, vx: -ca * 2, vy: -sa * 2, life: 0.3, size: 0.4, size1: 0.05, color: Math.random() < 0.5 ? 0xff5a8a : 0xffd0e0, tex: FX.tex.glow, alpha: 0.9 });
+      for (const e of G.enemies) {
+        if (!e.alive || e.spawnT > 0 || hit.has(e)) continue;
+        const px = e.x - x0, py = e.y + e.h * 0.42 - y0, tt = px * ca + py * sa;
+        if (tt < -0.5 || tt > len * f + 0.6 || Math.abs(-px * sa + py * ca) > W + e.r) continue;
+        hit.add(e);
+        const blind = e.blindT > 0 && !((e.popT || 0) > G.t), crit = blind || Math.random() < luck; if (crit) weak = true; if (blind) sure = true;
+        const dmg = 85 * pw * (crit ? 2.45 : 1) * P.mods.dmg;
+        hurtEnemy(e, dmg, crit, ca * 9, sa * 9, 'hitB');
+        if (blind) { popStatus(e, dmg, 'blind'); FX.slash(e.x, e.y + e.h * 0.45, 0xffffff, 2.4); }
+        if (!e.boss) e.stun = Math.max(e.stun, 0.35);
+        FX.sparks(e.x, e.y + e.h * 0.42, crit ? 0xffffff : 0xff5a8a, crit ? 16 : 8, 6, 0.12, 0.35); FX.slash(e.x, e.y + e.h * 0.45, 0xff5a8a, crit ? 2 : 1.3);
+        if (weak && !sure && crit) { /* luck crit */ }
+      }
+      for (let q = G.ebul.length - 1; q >= 0; q--) { const b = G.ebul[q]; if (Math.hypot(b.x - x, b.y - y) < W + 0.4) { popEB(b); ebRemove(q); } }
+      if (f >= 1) {
+        FX.kill(s1); FX.kill(s2);
+        if (weak) { UI.toast(sure ? '약점 간파 — 실명한 적의 약점을 베었다!' : '약점 적중!', 'gem'); SFX.play('hitB', 0.8); if (G.opt.shake) FX.shake(0.25); G.slowT = Math.max(G.slowT, sure ? 0.12 : 0.08); P.sk2Cd *= 0.5; FX.flash(sure ? 0xffffff : 0xff5a8a, sure ? 0.16 : 0.1); }
+        return false;
+      }
+      return true;
+    });
+  }
   // ── 램파리온 ⇄ 램파트 ──
   // Wrecked (HP 0), 램파리온 sheds its armour — its own battle-in assembly (battle_in, Rampart -> Rampalion) played backwards —
   // and the bare Rampart frame (e_Rampart_N) fights on, very weak and without skills. Survive 120 s and it assembles again.
@@ -2253,6 +2343,16 @@
     P.body = nb; setFace(nb, P.face);
     return true;
   }
+  // the hero's own (bottomless) gun swapped in place: 램파리온's repulsor <-> Rampart's shoulder cannon
+  function swapBaseGun(P, id) {
+    const i = P.guns.findIndex((g) => g.infinite);
+    if (i < 0 || P.guns[i].id === id) return;
+    const old = P.guns[i];
+    if (old.hand) { old.hand.c.dispose(); P.handRoot.remove(old.hand.outer); old.hand = null; }
+    const g = gunState(id, true); g.mag = magSize(g, P);
+    P.guns[i] = g;
+    if (P.gi === i) equip(P, i);
+  }
   function rampBreak(P) {
     P.form = 'rampart'; P.formAnim = 2.4; P.iframe = Math.max(P.iframe, 3); P.hh = null; P.lionCharge = 0; P.hyperT = 0;
     P.saved = { maxHp: P.maxHp, armor: P.armor, dmg: P.mods.dmg, speed: P.mods.speed };
@@ -2264,8 +2364,8 @@
     for (let k = 0; k < 18; k++) { const aa = Math.random() * TAU; FX.particle({ x: P.x, y: P.y + 1, vx: Math.cos(aa) * rnd(2, 6), vy: rnd(2, 6), grav: 9, life: 0.9, size: 0.3, size1: 0.2, color: 0xd8c8a0, tex: FX.tex.dot, alpha: 0.9, normal: true, spin: 6 }); } // armour plates fly off
     UI.shout('램파리온 대파 — 램파트로 버텨라!', false, '#ff6a4a');
     UI.toast(`${RAMP_HOLD}초 동안 버티면 램파리온으로 복귀합니다 (램파트: 체력 75 · 공격력 40% · 스킬 불가)`, 'warn');
-    if (P.body.c.has('trans')) P.body.c.playReverse('trans', () => { if (G.P === P && P.form === 'rampart') swapBody(P, 'e_Rampart_N', true); });
-    else swapBody(P, 'e_Rampart_N', true);
+    const toRampart = () => { if (G.P === P && P.form === 'rampart') { swapBody(P, 'e_Rampart_N', true); swapBaseGun(P, 'ramp_cannon'); } };
+    if (P.body.c.has('trans')) P.body.c.playReverse('trans', toRampart); else toRampart();
   }
   function rampRestore(P) {
     P.form = 'ramparion'; P.formAnim = 2.4; P.iframe = Math.max(P.iframe, 2.6);
@@ -2273,6 +2373,7 @@
     P.maxHp = sv.maxHp || P.maxHp; P.hp = P.maxHp; P.armor = Math.max(P.armor, sv.armor || 0); P.mods.dmg = sv.dmg || P.mods.dmg; P.mods.speed = sv.speed || P.mods.speed;
     P.sk2Cd = 0; P.sk2Max = sk2Cool(P); P.saved = null;
     if (swapBody(P, 'AGS_Rampart_NS1', false) && P.body.c.has('trans')) P.body.c.play('trans'); // the original assembly, forward
+    swapBaseGun(P, 'ramp_blast');
     SFX.play('ramp_charge', 0.9); FX.later(1.2, () => { SFX.play('ramp_light', 0.9); SFX.play('reinforce'); });
     castPillar(P, 0xffd27a);
     FX.later(2.2, () => { // fully assembled: a shock ring throws everything back
@@ -2674,27 +2775,15 @@
       // LRL · 액스 오브 다크니스: a swing of the dragon-slayer axe in front of her — sometimes it finds a weak point (x2.45)
       const pw = 1 + 0.2 * upE(P), R = 3.8, luck = 0.2 + 0.08 * upE(P);
       P.iframe = Math.max(P.iframe, 0.6); // she steps into the swing
-      FX.ring(P.x + ca * 1.2, P.y + 0.6 + sa * 1.2, 0.4, R, 0xff5a8a, 0.35); SFX.play('swing', 0.9); SFX.play('expS', 0.4);
+      P.swingT = P.swingMax = 0.18;
+      slashWave(P, a, pw, luck); // a gun game: the swing throws a crescent of darkness down the aim
+       SFX.play('swing', 0.9); SFX.play('expS', 0.4);
       // the crescent sweeps across the arc in order, so it reads as one swing rather than a burst
-      for (let i = 0; i < 14; i++) { const aa = a + (i / 13 - 0.5) * 2.3; FX.later(i * 0.008, () => { for (const rr of [2.0, 2.9, 3.7]) FX.particle({ x: P.x + Math.cos(aa) * rr, y: P.y + 0.6 + Math.sin(aa) * rr, life: 0.28, size: rr === 2.9 ? 1 : 0.55, size1: 0.1, color: rr === 2.9 ? 0xffd0e0 : 0xff5a8a, tex: FX.tex.glow, alpha: 0.85 }); }); }
+      for (let i = 0; i < 14; i++) { const aa = a + (i / 13 - 0.5) * 2.3; FX.later(i * 0.008, () => { for (const rr of [0.8, 1.15, 1.5]) FX.particle({ x: P.x + Math.cos(aa) * rr, y: P.y + 0.85 + Math.sin(aa) * rr * 0.8, life: 0.28, size: rr === 1.15 ? 1 : 0.55, size1: 0.1, color: rr === 1.15 ? 0xffd0e0 : 0xff5a8a, tex: FX.tex.glow, alpha: 0.85 }); }); }
       // the blade itself: a broad slash streak across the arc, white core over pink
-      for (const [k, c, al] of [[1, 0xff5a8a, 0.95], [0.75, 0xffffff, 0.85]]) FX.particle({ x: P.x + ca * 2.4, y: P.y + 0.6 + sa * 2.4, life: 0.24, size: 4.2 * k, size1: 5 * k, color: c, tex: FX.tex.slash, rot: a - Math.PI / 2, alpha: al });
+      for (const [k, c, al] of [[1, 0xff5a8a, 0.95], [0.75, 0xffffff, 0.85]]) FX.particle({ x: P.x + ca * 1.1, y: P.y + 0.85 + sa * 0.9, life: 0.22, size: 2.6 * k, size1: 3.2 * k, color: c, tex: FX.tex.slash, rot: a - Math.PI / 2, alpha: al });
       if (G.opt.shake) FX.shake(0.12);
-      let weak = false, sure = false;
-      for (const e of G.enemies) {
-        if (!e.alive || e.spawnT > 0) continue;
-        const px = e.x - P.x, py = e.y + e.h * 0.4 - P.y - 0.6, d = Math.hypot(px, py) || 1;
-        if (d > R + e.r || Math.abs(angDiff(a, Math.atan2(py, px))) > 1.15) continue;
-        // blinded targets can't guard their weak point: a guaranteed x2.45 that pops the blind
-        const blind = e.blindT > 0 && !((e.popT || 0) > G.t), crit = blind || Math.random() < luck; if (crit) weak = true; if (blind) sure = true;
-        const dmg = 75 * pw * (crit ? 2.45 : 1) * P.mods.dmg;
-        hurtEnemy(e, dmg, crit, px / d * 13, py / d * 13, 'hitB'); // the heavy blade throws them clear of her
-        if (blind) { popStatus(e, dmg, 'blind'); FX.slash(e.x, e.y + e.h * 0.45, 0xffffff, 2.4); }
-        if (!e.boss) e.stun = Math.max(e.stun, 0.35);
-        FX.sparks(e.x, e.y + e.h * 0.42, crit ? 0xffffff : 0xff5a8a, crit ? 16 : 8, 6, 0.12, 0.35); FX.slash(e.x, e.y + e.h * 0.45, 0xff5a8a, crit ? 2 : 1.3);
-      }
-      for (let k = G.ebul.length - 1; k >= 0; k--) { const b = G.ebul[k], px = b.x - P.x, py = b.y - P.y - 0.6; if (Math.hypot(px, py) < R && Math.abs(angDiff(a, Math.atan2(py, px))) < 1.15) { popEB(b); ebRemove(k); } }
-      if (weak) { UI.toast(sure ? '약점 간파 — 실명한 적의 약점을 베었다!' : '약점 적중!', 'gem'); SFX.play('hitB', 0.8); if (G.opt.shake) FX.shake(0.25); G.slowT = Math.max(G.slowT, sure ? 0.12 : 0.08); P.sk2Cd *= 0.5; FX.flash(sure ? 0xffffff : 0xff5a8a, sure ? 0.16 : 0.1); }
+      // (the blow itself is the wave: slashWave)
     }
   }
   // Leprechaun's frontal shield: a glowing arc that eats enemy bullets in front of the aim (and reflects them)
@@ -3616,7 +3705,7 @@
     Object.assign(G, { enemies: [], corpses: [], pbul: [], ebul: [], pickups: [], props: [], objs: [], hazards: [], vents: [], bossE: null, room: null });
     G.fi = fi;
     if (SD.evict && SD.loaded) { /* any rig outside this floor and the next is released, including a finished run's last floor */
-      const keep = new Set([...HEROES.map((h) => h.id), ...(G.P ? [rigOf(G.P.hero)] : []), ...Object.values(GUNS).filter((x) => !x.noLoot || (G.P && G.P.hero.gun === x.id)).map((x) => x.donor), 'labiata', ...floorRigs(fi), ...(fi + 1 < DATA.FLOORS.length ? floorRigs(fi + 1) : [])]);
+      const keep = new Set([...HEROES.map((h) => h.id), ...(G.P ? [rigOf(G.P.hero)] : []), ...(G.P && G.P.hero.id === 'ramparion' ? ['e_Rampart_N', 'AGS_Rampart_NS1'] : []), ...Object.values(GUNS).filter((x) => !x.noLoot || (G.P && G.P.hero.gun === x.id)).map((x) => x.donor), 'labiata', ...floorRigs(fi), ...(fi + 1 < DATA.FLOORS.length ? floorRigs(fi + 1) : [])]);
       SD.loaded().forEach((id) => { if (!keep.has(id)) SD.evict(id); });
     }
     // progress: the deepest floor ever reached unlocks heroes
@@ -3789,7 +3878,7 @@
     { const t = document.getElementById('title'); if (t) t.hidden = true; }
     UI.loading(0, '작전 지역 데이터 수신 중');
     const hero = ALLH[heroIdx];
-    const need = [rigOf(hero), GUNS[hero.gun].donor, 'labiata'];
+    const need = [rigOf(hero), GUNS[hero.gun].donor, 'labiata', ...(hero.id === 'ramparion' ? ['e_Rampart_N'] : [])]; // 램파리온 breaks down into the Rampart rig
     const F = FLOORS[0];
     G.bossKeys = [];
     {
@@ -3931,15 +4020,17 @@
   function showcase(i) {
     if (!scene) return;
     if (i < 0) { clearShow(); showDeco(); G.showDeco.q.visible = true; FX.ring(SHOW.x, SHOW.y + 0.2, 0.4, 3.2, 0xd8dee8, 0.5, 0.9); return; } // the random card: an empty stage
-    const h = HEROES[i];
-    if (!SD.ready(h.id) || !SD.ready(GUNS[h.gun].donor)) { SD.prepare(h.id).then(() => SD.prepare(GUNS[h.gun].donor)).then(() => { if (G.phase === 'title' && UI.sel === i) showcase(i); }); return; }
+    const hid = i >= HEROES.length, h = hid ? (DATA.HIDDEN || [])[i - HEROES.length] : HEROES[i];
+    if (!h) return;
+    const rid = h.rig || h.id;
+    if (!SD.ready(rid) || !SD.ready(GUNS[h.gun].donor)) { SD.prepare(rid).then(() => SD.prepare(GUNS[h.gun].donor)).then(() => { if (G.phase === 'title' && (UI.sel === i || (hid && UI.sel === -1))) showcase(i); }); return; }
     clearShow();
     const H = 3.6;
-    const body = makeBody(h.id, H, RIGS[h.id].hide, false);
+    const body = makeBody(rid, H, RIGS[rid].hide, !!h.rigFlip);
     body.root.position.set(SHOW.x, SHOW.y, 0);
     scene.add(body.root);
     body.c.setOrder(20);
-    const hand = makeGunHand(h.gun, h.id);
+    const hand = makeGunHand(h.gun, rid);
     if (hand) { hand.outer.scale.setScalar(H / HERO_H); scene.add(hand.outer); hand.c.setOrder(20.01); }
     show = { body, hand, t: 0, i, H };
     showDeco();

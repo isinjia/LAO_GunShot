@@ -176,6 +176,7 @@
     sheets.borirun = images.fx_borirun ? splitSheet(images.fx_borirun, 8, 3).slice(0, 17) : [];
     sheets.borirunM = mirror(sheets.borirun);
     if (images.fx_dogaim) tex.dogaim = t(images.fx_dogaim);
+    if (images.fx_lrlaxe) tex.lrlaxe = t(images.fx_lrlaxe);
     // 램파리온 (2_LAO_MINI_ACTION's originals): the lion (faces left; mirrored copy faces right), its aura, Rampart fire /
     // crescent ring / bolts / sparks, and the LO shock ring and air burst
     const sh = (k, c, r) => (images[k] ? splitSheet(images[k], c, r) : []);
@@ -192,7 +193,7 @@
     tex.white = canvasTex(wc); // solid quads (HP bars) in the particle batches
 
     buildAtlas([...['glow', 'cross', 'ring', 'spark', 'elec', 'beam', 'dot', 'slash', 'snow', 'white'].map((k) => tex[k]),
-      ...sheets.smoke, ...sheets.fire, ...sheets.aura, ...sheets.bolt, ...sheets.kdust1, ...sheets.kdust2, ...sheets.kdust1m, ...sheets.kdust2m, ...sheets.borifang, ...sheets.borirun, ...sheets.borirunM, ...sheets.rlion, ...sheets.rlionM, ...sheets.rlionc, ...sheets.rfire, ...sheets.rring, ...sheets.rbolts, ...sheets.rsparks, ...sheets.shockring, ...sheets.airboom, ...[tex.dogaim].filter(Boolean), ...(tex.kpuff ? [tex.kpuff] : [])]);
+      ...sheets.smoke, ...sheets.fire, ...sheets.aura, ...sheets.bolt, ...sheets.kdust1, ...sheets.kdust2, ...sheets.kdust1m, ...sheets.kdust2m, ...sheets.borifang, ...sheets.borirun, ...sheets.borirunM, ...sheets.rlion, ...sheets.rlionM, ...sheets.rlionc, ...sheets.rfire, ...sheets.rring, ...sheets.rbolts, ...sheets.rsparks, ...sheets.shockring, ...sheets.airboom, ...[tex.dogaim, tex.lrlaxe].filter(Boolean), ...(tex.kpuff ? [tex.kpuff] : [])]);
 
     flashMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(200, 200),

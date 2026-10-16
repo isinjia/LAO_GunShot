@@ -316,8 +316,11 @@
     if (k < 0) return;
     forcedHidden = HEROES.length + k;
     const h = HID[k];
-    SFX.play('rankUpSS', 0.8); toast(`히든 대원 선택 — ${h.name}`, 'gem');
-    setTimeout(() => { if (forcedHidden != null) { $('#btnStart').disabled = false; $('#btnStart').textContent = `출격 개시 — ${h.name}`; } }, 0); // after this key's own card move
+    SFX.play('rankUpSS', 0.8); toast(`무작위 칸에 히든 대원 등장 — ${h.name}`, 'gem');
+    // the random card turns into the hidden hero's card: choose it to deploy them
+    const rc = el.heroSel.querySelector('.hcard.rand');
+    if (rc) { rc.style.setProperty('--c', h.color); rc.classList.add('hid'); rc.innerHTML = `<i style="background-image:${portrait(h)}"></i><b>${h.name}</b><small>히든 대원</small>`; }
+    if (selHero === -1) setTimeout(() => selectHero(-1, true), 0); // already on that card: show them
   }
   function trackCheat(e) {
     if (e.repeat || e.altKey || e.ctrlKey || e.metaKey || !e.code) return;
@@ -340,7 +343,7 @@
   }
   // the random card: any unlocked hero, decided when the run starts
   function pickHero() {
-    if (forcedHidden != null) { const k = forcedHidden; forcedHidden = null; return k; }
+    if (selHero === -1 && forcedHidden != null) return forcedHidden; // the random card, dressed as the cheat's hidden hero
     if (selHero >= 0) return selHero;
     // hidden heroes: 2% each on the random card (indices after the card heroes)
     const HID = DATA.HIDDEN || [];
@@ -364,7 +367,7 @@
         <div class="hi-r"><div class="hi-row"><span class="sk2i" style="background-image:var(--s-i_random)"></span><div><small>후보</small><b>${HEROES.filter(unlocked).map((h) => h.name).join(' · ')}</b><em>각 대원의 기본 무기와 스킬로 시작 · 아주 드물게 히든 대원이 나타납니다</em></div></div>
         <div class="hi-cands">${HEROES.filter(unlocked).map((h) => `<i style="background-image:${portrait(h)};--c:${h.color}" title="${h.name}"></i>`).join('')}</div></div>`;
     }
-    const h = HEROES[i], g = GUNS[h.gun];
+    const h = i >= HEROES.length ? DATA.HIDDEN[i - HEROES.length] : HEROES[i], g = GUNS[h.gun];
     const bar = (n) => '<i class="on"></i>'.repeat(n) + '<i></i>'.repeat(5 - n);
     return `<div class="hi-l"><div class="hi-name" style="--c:${h.color}"><b>${h.name}</b><small>${h.title}</small></div><p>${h.desc}</p>
       <div class="hi-st"><span>화력</span><em>${bar(h.stats.atk)}</em><span>내구</span><em>${bar(h.stats.def)}</em><span>기동</span><em>${bar(h.stats.mob)}</em></div></div>
@@ -410,8 +413,17 @@
   }
   function selectHero(i, quiet) {
     selHero = i;
-    if (!quiet && forcedHidden != null && !(performance.now() - cheatAt < 50)) forcedHidden = null; // picking a card yourself drops the cheat pick
     const cards = el.heroSel.querySelectorAll('.hcard');
+    if (i < 0 && forcedHidden != null) { // the random card is the cheat's hidden hero now
+      const h = DATA.HIDDEN[forcedHidden - HEROES.length];
+      $('#btnStart').disabled = false; $('#btnStart').textContent = `출격 개시 — ${h.name}`;
+      cards.forEach((b) => { const k = +b.dataset.i; b.classList.toggle('on', k === -1); if (k < 0) return; b.classList.toggle('locked', !unlocked(HEROES[k])); });
+      el.heroInfo.innerHTML = infoHtml(forcedHidden);
+      lockInfoHeight(); heroMini(h); plate(h);
+      if (!quiet) SFX.play('uiPick', 0.6);
+      if (GAME.showcase) GAME.showcase(forcedHidden);
+      return;
+    }
     if (i < 0) {
       $('#btnStart').disabled = false; $('#btnStart').textContent = '출격 개시';
       cards.forEach((b) => { const k = +b.dataset.i; b.classList.toggle('on', k === -1); if (k < 0) return; b.classList.toggle('locked', !unlocked(HEROES[k])); b.dataset.lock = !unlocked(HEROES[k]) ? DATA.UNLOCK[HEROES[k].id].text : ''; });
