@@ -291,7 +291,7 @@
     if (b.clears) parts.push(`작전 성공 <b>${b.clears}</b>회`);
     if (b.best) parts.push(`최고 도달 <b>${b.best}</b>`);
     if (b.kills) parts.push(`누적 처치 <b>${b.kills}</b>`);
-    el.bestRec.innerHTML = parts.length ? parts.join(' · ') : '첫 출격을 기다리고 있습니다, 사령관님.';
+    el.bestRec.innerHTML = parts.length ? parts.join(' · ') : '아직 출격 기록이 없습니다.';
   }
   function unlocked(h) {
     const u = DATA.UNLOCK[h.id];
