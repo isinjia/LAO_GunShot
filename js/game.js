@@ -297,7 +297,8 @@
         };
         const dk=donorK(g.donor)*(g.scale||1);
         const right=center(g.donor,dk,'R'), left=center(g.donor,dk,'L'), palm=center(heroId,hk,'R');
-        hold={r:[right[0]-palm[0],right[1]-palm[1]],l:left,centers:true};
+        const gripOffset=g.gripOffset||[0,0];
+        hold={r:[right[0]-palm[0]+gripOffset[0],right[1]-palm[1]+gripOffset[1]],l:left,centers:true};
       }
       if (!hold) {
         outlineOf('R'); outlineOf('L');
