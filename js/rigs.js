@@ -23,9 +23,9 @@
     kheshig: { hide: /^(Bone_UpperArm_R|Bone_UpperArm_L|bone_gun_die)$/, hand: 'Bone_Hand_R', handL: 'Bone_Hand_L', ang: 0 },
     // hidden heroes
     blacklilith: { hide: /^(arm|shield|die_gun)$/, hand: 'hand_r', handL: 'hand_l', ang: 0 },
-    PECS_LRL: { hide: /^(Arm_up_R|Arm_up_L|FK_Arm_up_R_01|FK_Arm_up_L_01)$/, hand: 'hand_R', handL: 'hand_L', ang: 0 },
+    PECS_LRL: { hide: /^(Arm_up_R|Arm_up_L|FK_Arm_up_R_01|FK_Arm_up_L_01)$/, hand: 'hand_R', handL: 'hand_L', ang: 0, clip: 'atk', t: 0.5 }, // the axe is only out in her attack clip (frames 6-83): the hand is cut from there
     e_Rampart_N: { hide: /^(bone_Arm_F_1|bone_Arm_B_1)$/, hand: 'bone_Arm_B_3', ang: 0 },
-    AGS_Rampart_NS1: { hide: /^(bone_Arm_F_1|bone_Arm_B_1)$/, hand: 'bone_Arm_B_2', ang: 0 }, // the repulsor: its own forearm + fist floats and points // 램파리온 (Skin_AGS_Rampart_1); breaks down into e_Rampart_N
+    AGS_Rampart_NS1: { hide: /^(bone_Arm_F_1|bone_Arm_B_1)$/, hand: 'bone_Arm_F_2', skip: /wing|Blade/, ang: 0 }, // the repulsor: its front forearm and gold-clawed fist float and point (the wing blades parked on that arm stay off) // 램파리온 (Skin_AGS_Rampart_1); breaks down into e_Rampart_N
   };
 
   // the floating hand: a second instance of the rig showing only the hand subtree, frozen in its idle pose,

@@ -286,6 +286,7 @@
     // the last pick is saved by id ('random' for the random card), so adding heroes never shifts it
     try { const v = localStorage.getItem('lao_rogue_hero'); selHero = v === 'random' ? -1 : Math.max(0, HEROES.findIndex((h) => h.id === v)); } catch (e) { selHero = 0; }
     if (selHero >= 0 && !unlocked(HEROES[selHero])) selHero = 0;
+    dressRandomCard();
     selectHero(selHero, true);
     const b = bests();
     const parts = [];
@@ -317,9 +318,7 @@
     forcedHidden = HEROES.length + k;
     const h = HID[k];
     SFX.play('rankUpSS', 0.8); toast(`무작위 칸에 히든 대원 등장 — ${h.name}`, 'gem');
-    // the random card turns into the hidden hero's card: choose it to deploy them
-    const rc = el.heroSel.querySelector('.hcard.rand');
-    if (rc) { rc.style.setProperty('--c', h.color); rc.classList.add('hid'); rc.innerHTML = `<i style="background-image:${portrait(h)}"></i><b>${h.name}</b><small>히든 대원</small>`; }
+    dressRandomCard();
     if (selHero === -1) setTimeout(() => selectHero(-1, true), 0); // already on that card: show them
   }
   function trackCheat(e) {
@@ -337,9 +336,17 @@
     if (cheatsOn && RAMP_CODES.some((q) => ends(cheatBuf, q))) { cheatBuf = []; forceHidden('ramparion'); return true; }
     // mid-code letters (2+ keys into a code) don't fire the title shortcuts (H 위험 등급 · O 설정 · U 연구소 · A / D)
     if (!/^Key/.test(e.code)) return false;
-    const codes = cheatsOn ? RAMP_CODES : [CHEAT_ON];
+    const codes = [CHEAT_ON, ...RAMP_CODES]; // either code, cheats on or not (치트활성화 typed again must not start a sortie)
     for (let n = Math.min(cheatBuf.length, 20); n >= 2; n--) { const tail = cheatBuf.slice(-n); if (codes.some((q) => n <= q.length && tail.every((c, i) => c === q[i]))) return true; }
     return false;
+  }
+  // the random card turns into the cheat's hidden hero card (kept whenever the title is shown again): choose it to deploy them
+  function dressRandomCard() {
+    if (forcedHidden == null) return;
+    const h = DATA.HIDDEN[forcedHidden - HEROES.length], rc = el.heroSel && el.heroSel.querySelector('.hcard.rand');
+    if (!h || !rc) return;
+    rc.style.setProperty('--c', h.color); rc.classList.add('hid');
+    rc.innerHTML = `<i style="background-image:${portrait(h)}"></i><b>${h.name}</b><small>히든 대원</small>`;
   }
   // the random card: any unlocked hero, decided when the run starts
   function pickHero() {
@@ -422,6 +429,7 @@
       lockInfoHeight(); heroMini(h); plate(h);
       if (!quiet) SFX.play('uiPick', 0.6);
       if (GAME.showcase) GAME.showcase(forcedHidden);
+      try { localStorage.setItem('lao_rogue_hero', 'random'); } catch (e) { /* ignore */ }
       return;
     }
     if (i < 0) {

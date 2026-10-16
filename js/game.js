@@ -263,12 +263,14 @@
   function makeGunHand(gunId, heroId) {
     const g = GUNS[gunId];
     const h = RIGS.makeHand(g.donor, donorK(g.donor) * (g.scale || 1), null, 'gun');
+    // the hero's own hands: scaled with the weapon when it comes from the hero's own rig (LRL's axe, 램파리온's arm)
+    const hk = heroId ? donorK(heroId) * (g.donor === heroId ? g.scale || 1 : 1) : 1;
     if (!h) return null;
     const outer = new THREE.Group(); outer.add(h.group);
     const parts = [h.c];
     const outlines = [];
     const outlineOf = (side, dx = 0, dy = 0, piv = null) => {
-      const o = RIGS.makeHand(heroId, donorK(heroId), null, 'handAll', side);
+      const o = RIGS.makeHand(heroId, hk, null, 'handAll', side);
       if (!o) return;
       const [x0, y0, x1, y1] = o.box, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, f = 1.13;
       o.c.setTint(0.07, 0.05, 0.05);
@@ -283,13 +285,13 @@
       const hold = g.hold;
       if (!hold) {
         outlineOf('R'); outlineOf('L');
-        const back = RIGS.makeHand(heroId, donorK(heroId), null, 'handB');
-        const front = RIGS.makeHand(heroId, donorK(heroId), null, 'handF');
+        const back = RIGS.makeHand(heroId, hk, null, 'handB');
+        const front = RIGS.makeHand(heroId, hk, null, 'handF');
         if (back) { outer.add(back.group); parts.unshift(back.c); }
         if (front) { outer.add(front.group); parts.push(front.c); }
       } else {
         // a gun with its own grip spots (e.g. a thick barrel): the support hand moves there and sits wholly in front
-        const k = donorK(heroId);
+        const k = hk;
         const rb = RIGS.makeHand(heroId, k, null, 'handB', 'R'), rf = RIGS.makeHand(heroId, k, null, 'handF', 'R');
         const lh = RIGS.makeHand(heroId, k, null, 'handAll', 'L');
         // the grip hand can move to the gun's own grip too (r: [dx, dy, tilt°])
@@ -596,7 +598,7 @@
       const sp = BAL.rollSpeed * (1 - f * 0.55);
       if (P.hero.dashDodge) {
         // 램파리온 boosts instead of rolling: a straight, faster dash that leaves afterimages
-        LEVEL.move(P, R.dx * BAL.rollSpeed * 1.25 * dt, R.dy * BAL.rollSpeed * 1.25 * dt);
+        const ds = BAL.rollSpeed * 0.8 * (1 - f * 0.5); LEVEL.move(P, R.dx * ds * dt, R.dy * ds * dt); // a short boost that eases off
         R.gT = (R.gT || 0) - dt;
         if (R.gT <= 0) { R.gT = 0.075; dashGhost(P); }
         if (Math.random() < 0.8) FX.particle({ x: P.x - R.dx * 0.4, y: P.y + 0.6, vx: -R.dx * 3, vy: -R.dy * 2, life: 0.25, size: 0.5, size1: 0.1, color: 0x9fe8ff, tex: FX.tex.glow, alpha: 0.7 });
@@ -2407,7 +2409,7 @@
   // a lion of fire off the chest (big: the HEAVEN AND HELL lion down the tornado)
   function fireLion(P, big, a = P.aim) {
     const ca = Math.cos(a), sa = Math.sin(a), [cx0, cy0] = chestOf(P), cx = cx0, cy = cy0;
-    const right = ca >= 0, F = right ? FX.sheets.rlionM : FX.sheets.rlion, C = FX.sheets.rlionc;
+    const right = ca >= 0, F = right ? FX.sheets.rlion : FX.sheets.rlionM, C = FX.sheets.rlionc; // the source lion runs to the right
     if (!F || !F.length) return;
     const len = big ? 14 : 11, dur = big ? 0.9 : 0.8, S = big ? 5.2 : 2.9, W = big ? 2 : 1.25;
     const dmg = (big ? 230 * (P.hh ? P.hh.k : 1) : 130 * (1 + 0.15 * (P.up.u_rush || 0))) * P.mods.dmg;
