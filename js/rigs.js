@@ -23,9 +23,9 @@
     kheshig: { hide: /^(Bone_UpperArm_R|Bone_UpperArm_L|bone_gun_die)$/, hand: 'Bone_Hand_R', handL: 'Bone_Hand_L', ang: 0 },
     // hidden heroes
     blacklilith: { hide: /^(arm|shield|die_gun)$/, hand: 'hand_r', handL: 'hand_l', ang: 0 },
-    PECS_LRL: { hide: /^(Arm_up_R|Arm_up_L|FK_Arm_up_R_01|FK_Arm_up_L_01)$/, hand: 'hand_R', handL: 'hand_L', ang: 0, clip: 'atk', t: 0.5 }, // the axe is only out in her attack clip (frames 6-83): the hand is cut from there
+    PECS_LRL: { hide: /^(Arm_up_R|Arm_up_L|FK_Arm_up_R_01|FK_Arm_up_L_01)$/, hand: 'hand_L', handL: 'hand_R', front: /_hand_L_01$|_hand_R_02$/, ang: 0 }, // her idle pose: the axe in the left fist (palm behind the haft, fingers over it), the right hand open beside it
     e_Rampart_N: { hide: /^(bone_Arm_F_1|bone_Arm_B_1)$/, hand: 'bone_Arm_B_3', ang: 0 },
-    AGS_Rampart_NS1: { hide: /^(bone_Arm_F_1|bone_Arm_B_1)$/, hand: 'bone_Arm_F_2', skip: /wing|Blade/, ang: 0 }, // the repulsor: its front forearm and gold-clawed fist float and point (the wing blades parked on that arm stay off) // 램파리온 (Skin_AGS_Rampart_1); breaks down into e_Rampart_N
+    AGS_Rampart_NS1: { hide: /^(bone_Arm_F_1|bone_Arm_B_1)$/, hand: 'bone_Arm_F_2', aimNode: 'bone_Arm_F_3', skip: /wing|Blade/, ang: 0 }, // the repulsor: its front forearm and gold-clawed fist float and point (the wing blades parked on that arm stay off) // 램파리온 (Skin_AGS_Rampart_1); breaks down into e_Rampart_N
   };
 
   // the floating hand: a second instance of the rig showing only the hand subtree, frozen in its idle pose,
@@ -53,7 +53,7 @@
     // (spec.front names the pieces that wrap over the weapon, e.g. the Steel Line fist: knuckles in front, back of the hand behind)
     const isBack = (ri) => { const n = tp.data.nodes[tp.rends[ri].node].n || ''; return spec.front ? !spec.front.test(n) : /(^|_)[LR]B_|_B(_|$)/.test(n); };
     const skipArt = (ri) => spec.skip && spec.skip.test(tp.data.nodes[tp.rends[ri].node].n || '');
-    const keepPart = (ri) => !part || (part === 'gun' ? !isHandArt(ri) && !skipArt(ri) : isHandArt(ri) && inSide(ri) && (part === 'hand' || part === 'handAll' || (part === 'handB') === isBack(ri)));
+    const keepPart = (ri) => !part || (part === 'grip' ? !skipArt(ri) && (inMain(tp.rends[ri].node) || isHandArt(ri)) : part === 'gun' ? !isHandArt(ri) && !skipArt(ri) : isHandArt(ri) && inSide(ri) && (part === 'hand' || part === 'handAll' || (part === 'handB') === isBack(ri)));
     const rawPart = [];
     // visible art corners in rig space, relative to the wrist
     const hx = W[o + 9], hy = W[o + 10];
@@ -86,6 +86,9 @@
     });
     let dir = axis ? Math.atan2(axis[1], axis[0]) : Math.atan2(far[1], far[0]);
     if (Math.cos(dir) * far[0] + Math.sin(dir) * far[1] < 0) dir += Math.PI;
+    /* Arm weapons aim from the elbow toward the wrist, independent of armor sprite axes. */
+    const aimNode = spec.aimNode ? c.nodeIndex(spec.aimNode) : -1;
+    if (aimNode >= 0) dir = Math.atan2(W[aimNode * 12 + 10] - hy, W[aimNode * 12 + 9] - hx);
     const rot = -dir + (spec.ang || 0) * Math.PI / 180;
     const cs = Math.cos(rot), sn = Math.sin(rot);
     const inner = c.root;

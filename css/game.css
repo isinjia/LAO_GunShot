@@ -1353,3 +1353,24 @@ body.touchui .tb.act:not(.avail) { background: rgba(60, 64, 70, 0.6) !important;
 #title #heroSel { grid-template-columns: repeat(7, minmax(0, 1fr)) !important; }
 @media (max-aspect-ratio: 1/1) { #heroSel, #title #heroSel { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; } }
 #heroSel .hcard b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+
+/* Hidden portraits use the same crop as roster portraits; only the random icon is inset. */
+#heroSel .hcard.rand.hid i { background-size: cover; }
+/* Keep the launch label inside the decorative button edges at narrow desktop widths. */
+#title .trow #btnStart { min-width: 140px; padding: 0 12px; border-width: 0 20px; border-image-width: 0 20px; white-space: nowrap; letter-spacing: 1px; font-size: 22px; }
+
+/* The pause run tab always explains the current hero's two skills. */
+.pi-skills { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+.pi-skills article { min-width: 0; padding: 12px; background: rgba(255,255,255,.045); border: 1px solid #414650; border-left: 3px solid var(--c); }
+.pi-skills header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pi-skills header div { flex: 1; min-width: 100px; }
+.pi-skills header small, .pi-skills header b { display: block; }
+.pi-skills header small, .pi-skills header em { color: #d1d8e2; font-size: 12px; font-style: normal; }
+.pi-skills header b { font-size: 16px; color: #fff; line-height: 1.5; }
+.pi-skills p { margin: 8px 0 0; color: #edf0f5; font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+.pi-skills .ps-up { color: #ffe39a; }
+.pi-skills .ps-help { grid-column: 1 / -1; font-size: 12px; color: #c5cfdd; line-height: 1.6; }
+@media (max-width: 600px) { .pi-skills { grid-template-columns: minmax(0, 1fr); } }
+
+#gunBox.no-reload #gunAmmo small, #gunBox.no-reload #magBar i { display: none; }
+#gunBox.no-reload #magBar::after { content: '장전 없음'; font-size: 13px; color: #ffdba2; white-space: nowrap; }

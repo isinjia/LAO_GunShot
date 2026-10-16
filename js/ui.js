@@ -423,7 +423,7 @@
     const cards = el.heroSel.querySelectorAll('.hcard');
     if (i < 0 && forcedHidden != null) { // the random card is the cheat's hidden hero now
       const h = DATA.HIDDEN[forcedHidden - HEROES.length];
-      $('#btnStart').disabled = false; $('#btnStart').textContent = `출격 개시 — ${h.name}`;
+      $('#btnStart').disabled = false; $('#btnStart').textContent = '출격 개시';
       cards.forEach((b) => { const k = +b.dataset.i; b.classList.toggle('on', k === -1); if (k < 0) return; b.classList.toggle('locked', !unlocked(HEROES[k])); });
       el.heroInfo.innerHTML = infoHtml(forcedHidden);
       lockInfoHeight(); heroMini(h); plate(h);
@@ -599,12 +599,12 @@
     set('gold', P.gold, (v) => { el.goldN.textContent = v; el.goldN.parentNode.classList.remove('pop'); void el.goldN.offsetWidth; el.goldN.parentNode.classList.add('pop'); });
     // ability bar: secondary cooldown sweep, ultimate charge ring / active timer
     const sk2 = P.hero.sk2, cdf = Math.min(1, (P.sk2Cd || 0) / (P.sk2Max || sk2.cd)); // the actual (upgraded) cooldown
-    set('ab2', Math.ceil((P.sk2Cd || 0) * 10), () => {
+    set('ab2', Math.ceil((P.sk2Cd || 0) * 10) + ':' + (P.lionHolding ? Math.floor(P.lionCharge / P.lionChargeMax * 100) : ''), () => {
       const n = document.getElementById('abSk2');
       n.querySelector('.fg').style.strokeDashoffset = String(276.5 * cdf);
-      n.querySelector('.cd').textContent = P.sk2Cd > 0 ? (P.sk2Cd >= 1 ? Math.ceil(P.sk2Cd) : P.sk2Cd.toFixed(1)) : '';
+      n.querySelector('.cd').textContent = P.lionHolding ? `${Math.floor(P.lionCharge / P.lionChargeMax * 100)}%` : P.sk2Cd > 0 ? (P.sk2Cd >= 1 ? Math.ceil(P.sk2Cd) : P.sk2Cd.toFixed(1)) : '';
       n.classList.toggle('cool', P.sk2Cd > 0);
-      const tb = document.querySelector('.tb.sk2'); if (tb) { tb.classList.toggle('cool', P.sk2Cd > 0); tb.style.setProperty('--cd', cdf.toFixed(3)); tb.querySelector('.cdv').textContent = P.sk2Cd > 0 ? Math.ceil(P.sk2Cd) : ''; }
+      const tb = document.querySelector('.tb.sk2'); if (tb) { tb.classList.toggle('cool', P.sk2Cd > 0); tb.style.setProperty('--cd', cdf.toFixed(3)); tb.querySelector('.cdv').textContent = P.lionHolding ? `${Math.floor(P.lionCharge / P.lionChargeMax * 100)}%` : P.sk2Cd > 0 ? Math.ceil(P.sk2Cd) : ''; }
     });
     const odMax = P.odMax || 5, act = P.overdrive > 0 ? P.overdrive / odMax : P.blossomT > 0 ? P.blossomT / (P.blossomMax || 3) : P.shieldT > 0 ? -1 : 0;
     set('abU', Math.floor(P.skill) + ':' + Math.ceil(act * 50), () => {
@@ -631,8 +631,9 @@
     const g = GAME.curGun();
     const ms = GAME.magSize(g);
     set('mag', g.id + ':' + g.mag + '/' + ms, () => {
-      el.magN.textContent = g.mag;
-      el.magN.classList.toggle('low', g.mag <= Math.max(1, ms * 0.2));
+      el.gunBox.classList.toggle('no-reload', !!g.d.noReload);
+      el.magN.textContent = g.d.noReload ? '∞' : g.mag;
+      el.magN.classList.toggle('low', !g.d.noReload && g.mag <= Math.max(1, ms * 0.2));
       const n = Math.min(ms, 30);
       const filled = Math.ceil(g.mag / ms * n);
       // pips are rebuilt only when the magazine size changes; a shot just flips classes
@@ -645,9 +646,9 @@
       const b = document.querySelector('#touch .tb.swap'); if (!b) return;
       let c = b.querySelector('.chip'); if (!c) { c = document.createElement('div'); c.className = 'chip'; c.innerHTML = '<em></em><b></b>'; b.appendChild(c); }
       c.querySelector('em').textContent = g.d.name.split(' ')[0];
-      c.querySelector('b').innerHTML = `${g.mag}<small>/${g.infinite ? '∞' : g.ammo}</small>`;
+      c.querySelector('b').innerHTML = g.d.noReload ? '장전 없음' : `${g.mag}<small>/${g.infinite ? '∞' : g.ammo}</small>`;
       c.style.setProperty('--c', RANKS[g.d.rank].color);
-      b.classList.toggle('multi', P.guns.length > 1); b.classList.toggle('low', g.mag <= Math.max(1, ms * 0.2));
+      b.classList.toggle('multi', P.guns.length > 1); b.classList.toggle('low', !g.d.noReload && g.mag <= Math.max(1, ms * 0.2));
     });
     const rl = P.reloadT > 0 ? 1 - P.reloadT / (P.reloadMax || 1) : -1;
     set('reload', rl < 0 ? -1 : Math.round(rl * 40), () => {
@@ -1131,6 +1132,20 @@
     const gc = (label, v) => `<span class="cur"><i></i>${label}<b class="num">${v}</b></span>`; // in progress
     return `<small>작전 목표 · 별 3개</small>${gc('철혈 사령부(B6) 제압', `현재 ${DATA.FLOORS[G.fi].key} / B6`)}${g(hitsOk, `피격 ${GOAL.hits}회 이하`, `${s.hits}회`)}${g(timeOk, `${GOAL.time / 60}분 이내`, `${Math.floor(tm / 60)}:${String(tm % 60).padStart(2, '0')}`)}`;
   }
+  function pauseSkillsHtml(P) {
+    const h = P.hero;
+    const upgrade = (id) => {
+      const lv = (P.up || {})[id] || 0, perk = DATA.PERKS.find(p => p.id === id);
+      return lv && perk ? `<p class="ps-up"><b>${perk.name} Lv.${lv}</b> · ${perk.desc}</p>` : '';
+    };
+    const cool = GAME.sk2Cool(P), cd = Math.max(0, P.sk2Cd || 0);
+    return `<section class="pi-skills" aria-label="현재 대원 스킬" style="--c:${h.color}">
+      <article><header><kbd>${K('skill2')}</kbd><div><small>보조 스킬 · 재사용 ${cool.toFixed(1)}초</small><b>${h.sk2.name}</b></div><em>${cd > 0 ? `남은 ${cd.toFixed(1)}초` : '사용 가능'}</em></header><p>${h.sk2.desc}</p>${upgrade(h.upE || (h.perks || [])[1])}</article>
+      <article><header><kbd>${K('skill')}</kbd><div><small>궁극기 · 피해를 주면 충전</small><b>${h.skillName}</b></div><em>${Math.floor(P.skill)}% 충전</em></header><p>${h.skillDesc}</p>${upgrade(h.upF || (h.perks || [])[0])}</article>
+      ${/실명/.test(h.skillDesc + h.sk2.desc) ? '<small class="ps-help">실명: 적의 조준 오차 증가. LRL의 검기는 실명한 적에게 확정 약점 피해를 줍니다.</small>' : ''}
+      ${P.form === 'rampart' ? '<small class="ps-help">대파 상태: 램파리온으로 복귀할 때까지 스킬을 사용할 수 없습니다.</small>' : ''}
+    </section>`;
+  }
   function togglePause(on) {
     const G = GAME.G;
     if (G.phase !== 'play') return;
@@ -1163,7 +1178,7 @@
         const a = P.items.includes(sy.a), b = P.items.includes(sy.b), on = P.syn.has(sy.name);
         return `<span class="${on ? 'on' : a || b ? 'half' : ''}" title="${sy.desc}"><b>${sy.name}</b><em>${a ? '✔' : '·'} ${itName(sy.a)} + ${b ? '✔' : '·'} ${itName(sy.b)}</em><i>${sy.desc}</i></span>`;
       }).join('')}</div></details>`;
-      $('#pauseInfo').innerHTML = run + syn + `<div class="pi-items">${P.guns.map((g) => `<span><i style="background-image:${rankImg(g.d.rank)}"></i><b>${g.d.name}</b><small>${g.d.desc}</small></span>`).join('')}${P.items.length ? P.items.map((id) => { const it = ITEMS.find((x) => x.id === id); return `<span><i style="background-image:var(--s-${it.icon})"></i><b>${it.name}</b><small>${it.desc}</small></span>`; }).join('') : '<em>획득한 아이템이 없습니다</em>'}</div>`;
+      $('#pauseInfo').innerHTML = run + pauseSkillsHtml(P) + syn + `<div class="pi-items">${P.guns.map((g) => `<span><i style="background-image:${rankImg(g.d.rank)}"></i><b>${g.d.name}</b><small>${g.d.desc}</small></span>`).join('')}${P.items.length ? P.items.map((id) => { const it = ITEMS.find((x) => x.id === id); return `<span><i style="background-image:var(--s-${it.icon})"></i><b>${it.name}</b><small>${it.desc}</small></span>`; }).join('') : '<em>획득한 아이템이 없습니다</em>'}</div>`;
       SFX.play('uiPick', 0.6);
     } else {
       INPUT.capture = null;

@@ -1,0 +1,12 @@
+{
+  "sourceProject": "E:\\LAO_MINI_GAME\\2_LAO_MINI_ACTION",
+  "renderer": "js/rampalion-skill.js RAMPALION_X.drawUnder/drawOver",
+  "files": {
+    "ramp-fx-lion.png": "c77f509802f7b6039c75b13f5129545ba21de2d82a536d77a321d9b5ba91e19c",
+    "ramp-fx-lioncenter.png": "f1b1e2bc0b9bf27fc6c823c53cb6a1eb92c666511ba10c6f2ee8361fb656c478",
+    "js/rampalion-skill.js": "78b6b04333d17a6f141669fff701081af66e9d33dcfd27db66cc432eab7fdfd3",
+    "js/run-fx.js": "5b78ac572f572c626f684536b3454a095607ef217ff87d631c7ecddd033f8599",
+    "dash-pose.png": "2fc6ba8b72f723d08e7ad4b9db9c9a655162fc8d5b392a8db67cf43092c5b843"
+  },
+  "dashPoseSource": "E:\\LAO_MINI_GAME\\2_LAO_MINI_ACTION\\assets\\sd_baked\\fx_ramp_dashpose\\native\\idle_000.png"
+}

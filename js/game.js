@@ -262,9 +262,9 @@
   // floated onto it Gungeon-style: one on the grip, one under the barrel. Without heroId (pickups) it's the bare gun.
   function makeGunHand(gunId, heroId) {
     const g = GUNS[gunId];
-    const h = RIGS.makeHand(g.donor, donorK(g.donor) * (g.scale || 1), null, 'gun');
+    const h = RIGS.makeHand(g.donor, donorK(g.donor) * (g.scale || 1), null, g.nativeGrip && heroId === g.donor ? 'grip' : 'gun');
     // the hero's own hands: scaled with the weapon when it comes from the hero's own rig (LRL's axe, 램파리온's arm)
-    const hk = heroId ? donorK(heroId) * (g.donor === heroId ? g.scale || 1 : 1) : 1;
+    const hk = heroId ? donorK(heroId) * (g.donor === heroId ? (g.scale || 1) * (g.handK || 1) : 1) : 1;
     if (!h) return null;
     const outer = new THREE.Group(); outer.add(h.group);
     const parts = [h.c];
@@ -272,14 +272,18 @@
     const outlineOf = (side, dx = 0, dy = 0, piv = null) => {
       const o = RIGS.makeHand(heroId, hk, null, 'handAll', side);
       if (!o) return;
-      const [x0, y0, x1, y1] = o.box, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, f = 1.13;
+      const [x0, y0, x1, y1] = o.box, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, f = g.outline || 1.13;
       o.c.setTint(0.07, 0.05, 0.05);
       o.group.scale.setScalar(f);
       o.group.position.x += cx * (1 - f) + dx; o.group.position.y += cy * (1 - f) + dy;
       if (piv) { const pv = new THREE.Group(); pv.position.copy(piv.position); pv.rotation.z = piv.rotation.z; pv.add(o.group); outer.add(pv); } else outer.add(o.group);
       outlines.push(o.c);
     };
-    if (heroId && SD.ready(heroId)) {
+    /* Preserve the source grip while outlining both hands behind the combined artwork. */
+    if (g.nativeGrip && g.handOutline && heroId === g.donor && SD.ready(heroId)) {
+      outlineOf('R'); outlineOf('L');
+    }
+    if (heroId && SD.ready(heroId) && !(g.nativeGrip && heroId === g.donor)) {
       // right hand on the grip, left hand where the hero's own idle pose rests it (under the barrel);
       // the palm pieces draw behind the weapon, the fingers in front, as in the source art
       const hold = g.hold;
@@ -306,7 +310,8 @@
           const ldx = hold.l[0] - (x0 + x1) / 2, ldy = hold.l[1];
           lh.group.position.x += ldx; lh.group.position.y += ldy;
           outlineOf('L', ldx, ldy);
-          outer.add(lh.group); parts.push(lh.c);
+          outer.add(lh.group);
+          if (hold.lb) parts.unshift(lh.c); else parts.push(lh.c); // lb: the support hand sits behind the haft (the haft cuts across it)
         }
       }
     }
@@ -399,9 +404,9 @@
     P.gi = (i + P.guns.length) % P.guns.length;
     const g = P.guns[P.gi];
     if (!g.hand) {
-      g.hand = makeGunHand(g.id, P.hero.id);
+      g.hand = makeGunHand(g.id, P.hero.rig || P.hero.id);
       if (g.hand) P.handRoot.add(g.hand.outer);
-      else SD.prepare(GUNS[g.id].donor).then(() => { if (!g.hand && P.guns.includes(g)) { g.hand = makeGunHand(g.id, P.hero.id); if (g.hand) { P.handRoot.add(g.hand.outer); g.hand.outer.visible = P.guns[P.gi] === g; } } });
+      else SD.prepare(GUNS[g.id].donor).then(() => { if (!g.hand && P.guns.includes(g)) { g.hand = makeGunHand(g.id, P.hero.rig || P.hero.id); if (g.hand) { P.handRoot.add(g.hand.outer); g.hand.outer.visible = P.guns[P.gi] === g; } } });
     }
     if (g.hand) g.hand.outer.visible = true;
     P.reloadT = 0;
@@ -530,8 +535,9 @@
       }
     }
     if (P.hero.id === 'ramparion') updateRampForm(P, dt);
-    if (P.lionCharge > 0) updateLionCharge(P, dt);
+    if (P.lionHolding) updateLionCharge(P, dt);
     if (P.hh) updateHeavenHell(P, dt);
+    if (P.lrlCast) updateLrlBomb(P, dt);
     // 방벽 생성: a concrete wall arc in front of her that stops enemy rounds
     if (P.wallT > 0) {
       P.wallT -= dt;
@@ -580,7 +586,7 @@
     if (P.idleT > 18) { P.idleT = -30; SFX.voice(P.hero.id, 'Idle'); }
 
     // dodge input buffer: a press up to 0.2 s before the roll / dash / cooldown ends still rolls
-    if (INPUT.take('dodge')) P.dodgeBuf = 0.2; else P.dodgeBuf = Math.max(0, (P.dodgeBuf || 0) - dt);
+    if (INPUT.take('dodge') && !P.hh && !P.lrlCast) P.dodgeBuf = 0.2; else P.dodgeBuf = Math.max(0, (P.dodgeBuf || 0) - dt);
     // Nymph's rush: a short invulnerable dash that ends in a point-blank shotgun blast
     if (P.dash) {
       const D = P.dash;
@@ -618,7 +624,7 @@
           for (let k = G.ebul.length - 1; k >= 0; k--) { const b = G.ebul[k]; if (Math.hypot(b.x - P.x, b.y - P.y - 0.5) < 1.7) { popEB(b); ebRemove(k); } }
         }
       }
-    } else if (P.dodgeBuf > 0 && P.rollCd <= 0) {
+    } else if (!P.hh && !P.lrlCast && P.dodgeBuf > 0 && P.rollCd <= 0) {
       P.dodgeBuf = 0;
       const d = moving ? mv : P.lastDir;
       const l = Math.hypot(d[0], d[1]) || 1;
@@ -632,10 +638,10 @@
       SFX.play('roll', 0.9);
       if (Math.abs(d[0]) > 0.1) P.face = Math.sign(d[0]);
     } else {
-      const sp = P.hero.speed * P.mods.speed * (P.reloadT > 0 ? 0.92 : 1) * (P.emplaceT > 0 ? 0.5 : 1) * (P.sprayT > 0 ? 0.6 : 1) * (P.hh || P.formAnim > 0 || P.lrlBeam > 0 ? 0 : P.lionCharge > 0 ? 0.35 : 1); // 거치 사격: half speed · 난사 slows her · 램파리온 plants for his chant
+      const sp = P.hero.speed * P.mods.speed * (P.reloadT > 0 ? 0.92 : 1) * (P.emplaceT > 0 ? 0.5 : 1) * (P.sprayT > 0 ? 0.6 : 1) * (P.hh || P.formAnim > 0 || P.lrlBeam > 0 ? 0 : P.lionHolding ? 0.5 : 1); // 거치 사격: half speed · 난사 slows her · 램파리온 plants for his chant
       LEVEL.move(P, mv[0] * sp * dt, mv[1] * sp * dt);
     }
-    if (P.formAnim > 0) { /* 램파리온's assembly / break-down clip plays out */ } else if (moving !== P.moving || (moving && P.body.c.clipName !== 'move')) {
+    if (P.hh || P.lrlCast || P.formAnim > 0) { /* 램파리온's assembly / break-down clip plays out */ } else if (moving !== P.moving || (moving && P.body.c.clipName !== 'move')) {
       P.moving = moving;
       if (!P.roll) P.body.c.play(moving ? 'move' : 'idle', null, true);
     }
@@ -664,6 +670,8 @@
     } else if (INPUT.isTouch && moving && !INPUT.held('fire')) {
       want = Math.atan2(mv[1], mv[0]); snap = 10; // touch: face the walking direction until the aim pad is used
     }
+    if (P.hh) want = P.hh.a;
+    if (P.lrlCast) want = P.lrlCast.a;
     P.aim += angDiff(P.aim, want) * Math.min(1, dt * snap);
     if (!P.roll) {
       const c = Math.cos(P.aim);
@@ -701,25 +709,25 @@
       }
     } else if (P.shieldFx) { P.shieldFx.forEach((s) => { s.hidden = true; }); }
     if (P.chargeT > 0) { P.chargeT -= dt; if (Math.random() < dt * 10) FX.particle({ x: P.x + rnd(-0.4, 0.4), y: P.y + rnd(0.2, 1.3), vy: 1.4, life: 0.4, size: 0.14, size1: 0, color: 0x9dff7a, tex: FX.tex.dot }); }
-    if (INPUT.take('skill2')) useSkill2();
-    if (INPUT.held('fire') && !P.roll && P.reloadT <= 0 && P.fireCd <= 0) {
-      if (g.mag > 0) fire(P, g);
+    if (INPUT.take('skill2') && !P.hh && !P.lrlCast) useSkill2();
+    if (INPUT.held('fire') && !P.hh && !P.lrlCast && !P.roll && P.reloadT <= 0 && P.fireCd <= 0) {
+      if (g.d.noReload || g.mag > 0) fire(P, g);
       else if (g.ammo > 0) startReload(P, g);
       else { P.fireCd = 0.3; SFX.synth('empty'); if (!P.emptyWarned) { P.emptyWarned = true; UI.toast('탄약이 없습니다 — 무기를 교체하세요', 'warn'); UI.gunEmpty(); tip('ammo', '탄약 소진', INPUT.isTouch ? '교체 버튼으로 다른 무기로 바꾸세요. 기본 무기는 탄약이 무한합니다. 탄약 상자(초록)로 보충' : `1~9 / ${UI.K('swap')} / 휠로 다른 무기로 바꾸세요. 기본 무기는 탄약이 무한합니다. 빈 무기는 ${UI.K('interact')}로 버릴 수 있습니다(무기는 최대 3개)`); } }
     } else if (!INPUT.held('fire') && g.mag === 0 && g.ammo > 0 && P.reloadT <= 0) startReload(P, g);
   }
 
   function startReload(P, g) {
-    if (P.reloadT > 0 || g.mag >= magSize(g) || (!g.infinite && g.ammo <= 0)) return;
+    if (g.d.noReload || P.reloadT > 0 || g.mag >= magSize(g) || (!g.infinite && g.ammo <= 0)) return;
     P.reloadT = g.d.reload / P.mods.reload / (P.hero.id === 'brownie' ? 1 + mastery(P, g) * 0.15 : 1);
     P.reloadMax = P.reloadT; P.reloadGun = g;
     SFX.play('reloadIn');
   }
 
   const REACH = -0.095 * HERO_H / 1.5, ARM = 0, SHOULDER_Y = 0.74 * HERO_H / 1.5; // ARM 0: the gun turns about its grip
-  function armPos(x, y, ca, sa, k, face) {
+  function armPos(x, y, ca, sa, k, face, mount) {
     const f = face || (ca < 0 ? -1 : 1);
-    return [x + (f * (REACH - ARM) + ARM * ca) * k, y + (SHOULDER_Y + ARM * 0.85 * sa) * k];
+    return [x + (f * (REACH - ARM + (mount ? mount[0] : 0)) + ARM * ca) * k, y + (SHOULDER_Y + (mount ? mount[1] : 0) + ARM * 0.85 * sa) * k];
   }
   // a thin cooldown arc (dark track + coloured sweep filling clockwise from the top); squash < 1 makes an ellipse
   function arcGauge(R, w, color, squash, order) {
@@ -755,7 +763,7 @@
     // the hand swings on an arc around a shoulder pivot (an invisible arm of length ARM): aiming straight
     // ahead the grip sits where it was tuned (REACH from the body centre); aiming up / down it rises / drops
     // and pulls back toward the shoulder, the way a held gun moves when the arm turns
-    const [hx0, hy0] = armPos(P.x, P.y, ca, sa, 1, P.face);
+    const [hx0, hy0] = armPos(P.x, P.y, ca, sa, 1, P.face, GUNS[g.id].mount);
     // the hand glides to its new spot when the hero turns around (the gun changes hands)
     const tx = hx0 - ca * rk - P.x, ty = hy0 - sa * rk * 0.4 + bob - P.y;
     if (!P.hoff) P.hoff = [tx, ty];
@@ -770,7 +778,7 @@
     o.visible = !P.dead;
     g.hand.c.setOrder(ORD(P.ordY != null ? P.ordY : P.y) + 0.0004); // the gun always draws over the body and head
     if (P.roll) o.visible = false;
-    if (g.id === 'lrl_axe' && P.axeOut > 0) o.visible = false; // the axe is in the air; a new one is in her hand a beat later
+    if (P.hh || P.lrlCast) o.visible = false;
     if (P.swingT > 0) { // 액스 오브 다크니스: the axe hand sweeps the same arc as the slash, high to low across the aim
       const k = 1 - P.swingT / P.swingMax, e = k * k * (3 - 2 * k), off = (1.25 - 2.5 * e) * fl, sa2 = a + off;
       o.position.set(P.x + Math.cos(sa2) * 0.95, P.y + 0.85 + Math.sin(sa2) * 0.75, 0);
@@ -827,13 +835,12 @@
     const d = g.d;
     const rof = P.mods.rof * (P.overdrive > 0 ? P.odRof || 2 : 1) * (P.adrT > 0 && P.mods.adrenRof ? 1.3 : 1) * (P.ocT > 0 ? 1.25 : 1);
     P.fireCd = d.rate / rof;
-    if (!(P.overdrive > 0 && g.infinite) && !(P.focusT > 0 && g.infinite)) g.mag--; // ultimates (and 기관총 사격) make the hero's own gun bottomless, not picked-up ones
+    if (!d.noReload && !(P.overdrive > 0 && g.infinite) && !(P.focusT > 0 && g.infinite)) g.mag--; // ultimates (and 기관총 사격) make the hero's own gun bottomless, not picked-up ones
     P.recoil = 1;
     poseHand(P);
     const [mx, my] = P.muzzle || [P.x, P.y + 0.6];
     const a = P.aim;
     FX.muzzleFlash(mx, my, a, d.color, d.kind === 'fireball' || d.kind === 'rail' ? 1.6 : 1);
-    if (g.id === 'lrl_axe') P.axeOut = 0.22;
     if (g.id === 'ramp_blast') { FX.particle({ x: mx, y: my, life: 0.12, size: 0.5, size1: 1.1, color: 0xc8f4ff, tex: FX.tex.glow, alpha: 0.9 }); FX.ring(mx, my, 0.1, 0.55, 0x9fe8ff, 0.12); } // the repulsor flares in the palm
     SFX.play(d.sfx, d.sfx === 'mg' ? 0.8 : 1);
     if (G.opt.shake) FX.shake(d.recoil * 0.6);
@@ -886,11 +893,13 @@
     const d = g.d, ca = Math.cos(a), sa = Math.sin(a);
     let L2 = 0;
     for (; L2 < d.range; L2 += 0.2) { const t = LEVEL.tile(x + ca * L2, y - 0.3 + sa * L2); if (t === LEVEL.WALL || t === LEVEL.VOID) break; }
+    L2 = Math.min(L2, d.range);
     const ex = x + ca * L2, ey = y + sa * L2;
-    FX.beam(x, y, ex, ey, 0.32, d.color, 0.35);
-    FX.ring(ex, ey, 0.2, 1.2, d.color, 0.3);
+    FX.beam(x, y, ex, ey, d.beamWidth || 0.32, d.color, d.beamLife || 0.35);
+    if (d.shortLaser) FX.particle({ x: ex, y: ey, size: 0.22, size1: 0, life: 0.12, color: 0xffffff, tex: FX.tex.glow });
+    else FX.ring(ex, ey, 0.2, 1.2, d.color, 0.3);
     spawnStatic(d.hit, ex, ey, 0.16);
-    if (G.opt.shake) FX.shake(0.2);
+    if (G.opt.shake && !d.shortLaser) FX.shake(0.2);
     const crit = critRoll(P, g), dmg = d.dmg * P.mods.dmg * masteryDmg(P, g) * (crit ? P.mods.critMul || 2 : 1);
     for (const e of G.enemies) {
       if (!e.alive || e.spawnT > 0) continue;
@@ -1921,6 +1930,7 @@
   }
   function useSkill() {
     const P = G.P;
+    if (P.hh || P.lrlCast) return;
     if (P.skill < 100) { SFX.synth('empty'); UI.toast(`스킬 충전 중 — ${Math.floor(P.skill)}%`, 'warn'); return; }
     P.skill = 0; UI.clearToasts();
     P.ultT = 1.2; // the ultimate's own effects play out over about a second (timed ones extend it below)
@@ -1947,10 +1957,12 @@
         // 램파리온 · HEAVEN AND HELL (2_LAO_MINI_ACTION's X): the hand thrusts out and an electromagnetic tornado shoots down the
         // lane, catching and rooting what is in it; the giant lion flies off the hand down it; then Hyper gold, two lights
         // (gold = hell, green = heaven) circle in and merge, and it bursts forward through everything like a flash and flies back
-        P.hh = { t: 0, a: P.aim, x0: P.x, y0: P.y, len: 13, tick: 0, lion: false, lights: null, burst: false, back: false, k: 1 + 0.2 * (P.up.u_od || 0) };
-        P.ultT = 3.3; P.iframe = Math.max(P.iframe, 3.3);
-        SFX.play('ramp_skill2', 1); SFX.play('ramp_elec', 0.8);
-        UI.shout('천국과 지옥의 힘이여…!', false, '#9dffb8');
+        P.hh = { t: 0, a: P.aim, x0: P.x, y0: P.y, len: 13, caught: new Set(), hit: new Set(), k: 1 + 0.2 * (P.up.u_od || 0) };
+        P.lionHolding = false; P.lionCharge = 0;
+        P.hh.castBody = makeBody(rigOf(P.hero), HERO_H, null, !!P.hero.rigFlip);
+        scene.add(P.hh.castBody.root); P.body.root.visible = false; P.roll = null; P.dodgeBuf = 0;
+        P.ultT = RAMP_BOMB.timing.end; P.iframe = Math.max(P.iframe, P.ultT);
+        SFX.play('ramp_charge', 0.9);
         if (G.opt.shake) FX.shake(0.3);
         break;
       }
@@ -2107,50 +2119,10 @@
         castPillar(P, 0xc070ff); blankWave(P.x, P.y + 0.5, 3.6, false); escortRing(P);
         break;
       case 'eyebeam': {
-        // LRL · 사이클롭스 이터널 빔 (2_LAO_MINI_ACTION's bomb): the patch comes off, a red four-point star glints and grows
-        // in her eye while light gathers in (0.95 s), then a huge red beam fires down the aim for 1.5 s in 12 ticks —
-        // everything in it is blinded (적중 감소) and slowed to act, and enemy rounds in it are erased
-        const ca = Math.cos(a), sa = Math.sin(a), ex = P.x + ca * 0.25, ey = P.y + 1.3, len = 24, wid = 2.4 * (1 + 0.2 * upF(P)), dur = 5 + upF(P);
-        const CH = 0.95, BEAM = 1.5, TICKS = 12;
-        P.ultT = CH + BEAM + 0.2; P.iframe = Math.max(P.iframe, CH + BEAM + 0.2); P.lrlBeam = CH + BEAM; // she holds the pose
-        SFX.play('charge'); UI.shout('봉인 해제…!', false, '#ff5a6a');
-        const star = (sz, al, rot) => { for (const [L2, w, c] of [[1, 0.09, 0xff3c32], [0.75, 0.05, 0xffe6c8]]) for (let q = 0; q < 2; q++) FX.particle({ x: ex, y: ey, life: 0.05, size: sz * w * 2, size1: sz * w * 2, aspect: L2 / w, rot: rot + q * Math.PI / 2, color: c, tex: FX.tex.beam, alpha: al }); };
-        let t = 0, tick = 0, hitBoss = false;
-        FX.tickers.push((dt) => {
-          t += dt;
-          if (!G.P || G.phase !== 'play') return false;
-          if (t < CH) { // the eye flash: a growing red star glint and light rushing in
-            const k = t / CH;
-            star(1 + k * 2.6, 0.5 + k * 0.5, t * 3);
-            FX.particle({ x: ex, y: ey, life: 0.05, size: 0.5 + k * 1.6, size1: 0.5 + k * 1.6, color: 0xff4a4a, tex: FX.tex.glow, alpha: 0.6 });
-            if (Math.random() < dt * 40) { const aa = Math.random() * TAU, r = rnd(1.6, 3); FX.particle({ x: ex + Math.cos(aa) * r, y: ey + Math.sin(aa) * r, vx: -Math.cos(aa) * r / 0.3, vy: -Math.sin(aa) * r / 0.3, life: 0.3, size: 0.25, size1: 0.05, color: 0xff6a6a, tex: FX.tex.glow, alpha: 0.95 }); }
-            return true;
-          }
-          const bt = t - CH;
-          if (bt === dt || (bt > 0 && bt <= dt)) { SFX.play('laserBig'); FX.flash(0xff3040, 0.12); if (G.opt.shake) FX.shake(0.5); UI.shout('사이클롭스 이터널 빔!!', true, '#ff4050'); }
-          if (bt >= BEAM) return false;
-          const amp = Math.min(1, bt / 0.12) * (bt > BEAM - 0.2 ? (BEAM - bt) / 0.2 : 1), W2 = wid * (0.9 + 0.08 * Math.sin(t * 60)) * amp;
-          // the beam body: layered red to white-hot, with speed streaks racing down it
-          FX.beam(ex, ey, ex + ca * len, ey + sa * len, W2 * 1.7, 0x7a0610, 0.022);
-          FX.beam(ex, ey, ex + ca * len, ey + sa * len, W2 * 0.95, 0xc8202c, 0.022);
-          FX.beam(ex, ey, ex + ca * len, ey + sa * len, W2 * 0.32, 0xffc0b0, 0.022);
-          for (let q = 0; q < 3; q++) { const lane = rnd(-0.85, 0.85) * W2, d0 = rnd(1, len - 3); FX.particle({ x: ex + ca * d0 - sa * lane, y: ey + sa * d0 + ca * lane, vx: ca * 40, vy: sa * 40, life: 0.12, size: 0.12, size1: 0.12, aspect: 12, rot: a - Math.PI / 2, color: 0xffebe1, tex: FX.tex.beam, alpha: 0.55 * amp }); }
-          star(2.2 * amp, 0.9 * amp, t * 3);
-          if (Math.random() < 0.4 && G.opt.shake) FX.shake(0.08);
-          if (bt >= tick * BEAM / TICKS) {
-            tick++;
-            for (const e of G.enemies) {
-              if (!e.alive || e.spawnT > 0) continue;
-              const px = e.x - ex, py = e.y + e.h * 0.42 - ey, tt = px * ca + py * sa;
-              if (tt <= 0 || tt > len || Math.abs(-px * sa + py * ca) > wid + e.r) continue;
-              prime(e, 'blind', dur); e.supT = Math.max(e.supT || 0, dur);
-              if (e.boss && !hitBoss) { hitBoss = true; e.seq.length = 0; e.tele = null; }
-              hurtEnemy(e, 24 * (1 + 0.15 * upF(P)) * P.mods.dmg, tick === 1, ca * 2, sa * 2, 'hitF');
-            }
-            for (let q = G.ebul.length - 1; q >= 0; q--) { const b = G.ebul[q], px = b.x - ex, py = b.y - ey, tt = px * ca + py * sa; if (tt > 0 && tt < len && Math.abs(-px * sa + py * ca) < wid + 0.3) { popEB(b); ebRemove(q); } }
-          }
-          return true;
-        });
+        P.lrlCast = LRL_BOMB.start(P);
+        P.lionHolding = false; P.roll = null; P.dodgeBuf = 0;
+        P.ultT = P.lrlBeam = LRL_BOMB.timing.duration / LRL_BOMB.timing.speed;
+        P.iframe = Math.max(P.iframe, P.ultT); P.body.root.visible = false;
         break;
       }
       case 'orbital': {
@@ -2298,10 +2270,32 @@
       return true;
     });
   }
+  function updateLrlBomb(P, dt) {
+    const c=P.lrlCast,result=LRL_BOMB.tick(c,dt);
+    P.aim=c.a; P.face=Math.cos(c.a)<0?-1:1; P.dodgeBuf=0;
+    for(const ev of result.events){
+      if(ev.type==='sfx') SFX.play(ev.stem,0.9);
+      else if(ev.type==='camera') c.zoom=ev.zoom;
+      else if(ev.type==='shake' && G.opt.shake) FX.shake(ev.mag*0.22);
+      else if(ev.type==='blast') {
+        c.ticks++; const [ex,ey]=LRL_BOMB.eyeWorld(c),ca=Math.cos(c.a),sa=Math.sin(c.a),width=5.5*(1+0.2*upF(P)),dur=5+upF(P);
+        for(const e of G.enemies){
+          if(!e.alive||e.spawnT>0)continue;
+          const dx=e.x-ex,dy=e.y+e.h*0.42-ey,along=dx*ca+dy*sa;
+          if(along<0||along>24||Math.abs(-dx*sa+dy*ca)>width+e.r)continue;
+          prime(e,'blind',dur);e.supT=Math.max(e.supT||0,dur);
+          if(e.boss&&!c.hitBoss){c.hitBoss=true;e.seq.length=0;e.tele=null;}
+          hurtEnemy(e,24*(1+0.15*upF(P))*P.mods.dmg,c.ticks===1,ca*2,sa*2,'hitF');
+        }
+        for(let k=G.ebul.length-1;k>=0;k--){const b=G.ebul[k],dx=b.x-ex,dy=b.y-ey,along=dx*ca+dy*sa;if(along>0&&along<24&&Math.abs(-dx*sa+dy*ca)<width){popEB(b);ebRemove(k);}}
+      }
+    }
+    if(result.done){P.lrlCast=null;P.lrlBeam=0;P.body.root.visible=true;LRL_BOMB.clear();}
+  }
   // ── LRL ──
   // 액스 오브 다크니스's wave: a crescent that flies down the aim through everything (each enemy once), eats rounds, and
   // finds a blinded target's weak point for sure (x2.45, pops the blind, halves the cooldown)
-  function slashWave(P, a, pw, luck) {
+  function slashWave(P, a, pw, luck, cast) {
     const ca = Math.cos(a), sa = Math.sin(a), x0 = P.x + ca * 0.9, y0 = P.y + 0.8 + sa * 0.9, len = 11, dur = 0.55, W = 1.6;
     const s1 = FX.sprite({ x: x0, y: y0, size: 3.2, size1: 3.2, color: 0xff5a8a, alpha: 0.95, tex: FX.tex.slash, order: L.PROJ + 1, rot: a - Math.PI / 2 });
     const s2 = FX.sprite({ x: x0, y: y0, size: 2.4, size1: 2.4, color: 0xffffff, alpha: 0.85, tex: FX.tex.slash, order: L.PROJ + 1.1, rot: a - Math.PI / 2 });
@@ -2327,7 +2321,7 @@
       for (let q = G.ebul.length - 1; q >= 0; q--) { const b = G.ebul[q]; if (Math.hypot(b.x - x, b.y - y) < W + 0.4) { popEB(b); ebRemove(q); } }
       if (f >= 1) {
         FX.kill(s1); FX.kill(s2);
-        if (weak) { UI.toast(sure ? '약점 간파 — 실명한 적의 약점을 베었다!' : '약점 적중!', 'gem'); SFX.play('hitB', 0.8); if (G.opt.shake) FX.shake(0.25); G.slowT = Math.max(G.slowT, sure ? 0.12 : 0.08); P.sk2Cd *= 0.5; FX.flash(sure ? 0xffffff : 0xff5a8a, sure ? 0.16 : 0.1); }
+        if (weak && !(cast && cast.refunded)) { if (cast) cast.refunded = true; UI.toast(sure ? '약점 간파 — 실명한 적의 약점을 베었다!' : '약점 적중!', 'gem'); SFX.play('hitB', 0.8); if (G.opt.shake) FX.shake(0.25); G.slowT = Math.max(G.slowT, sure ? 0.12 : 0.08); P.sk2Cd *= 0.5; FX.flash(sure ? 0xffffff : 0xff5a8a, sure ? 0.16 : 0.1); }
         return false;
       }
       return true;
@@ -2356,7 +2350,7 @@
     if (P.gi === i) equip(P, i);
   }
   function rampBreak(P) {
-    P.form = 'rampart'; P.formAnim = 2.4; P.iframe = Math.max(P.iframe, 3); P.hh = null; P.lionCharge = 0; P.hyperT = 0;
+    P.form = 'rampart'; P.formAnim = 2.4; P.iframe = Math.max(P.iframe, 3); P.hh = null; P.lionHolding = false; P.lionCharge = 0; P.hyperT = 0;
     P.saved = { maxHp: P.maxHp, armor: P.armor, dmg: P.mods.dmg, speed: P.mods.speed };
     P.maxHp = 3; P.hp = 3; P.armor = 0; P.mods.dmg = P.saved.dmg * 0.4; P.mods.speed = P.saved.speed * 0.8;
     P.skill = 0; P.formT = RAMP_HOLD; P.formTold = RAMP_HOLD; P.sk2Cd = P.sk2Max = RAMP_HOLD; // the E slot counts the 120 s down
@@ -2398,21 +2392,24 @@
   const chestOf = (P) => [P.x + Math.cos(P.aim) * 0.75, P.y + 1.05 + Math.sin(P.aim) * 0.45];
   // 브레스트 라이언's charge: light rays and motes rush in on a point in front of the chest, the ball grows, squeezes white, fires
   function updateLionCharge(P, dt) {
-    P.lionCharge -= dt;
-    const [cx, cy] = chestOf(P), k = 1 - P.lionCharge / P.lionChargeMax;
+    P.lionCharge = Math.min(P.lionChargeMax, P.lionCharge + dt);
+    const [cx, cy] = chestOf(P), k = P.lionCharge / P.lionChargeMax;
     if (Math.random() < dt * 40) { const aa = Math.random() * TAU, r = rnd(1.4, 2.4); FX.particle({ x: cx + Math.cos(aa) * r, y: cy + Math.sin(aa) * r, vx: -Math.cos(aa) * r / 0.3, vy: -Math.sin(aa) * r / 0.3, life: 0.3, size: 0.22, size1: 0.05, color: Math.random() < 0.5 ? 0xffd27a : 0xffffff, tex: FX.tex.glow, alpha: 0.95 }); }
     if (Math.random() < dt * 10) { const aa = Math.random() * TAU; FX.beam(cx + Math.cos(aa) * 2.2, cy + Math.sin(aa) * 2.2, cx, cy, 0.03, 0xffe0a0, 0.12); } // rays
-    const squeeze = P.lionCharge < 0.2;
+    const squeeze = k >= 0.95;
     FX.particle({ x: cx, y: cy, life: dt * 1.5, size: squeeze ? 0.5 : 0.3 + k * 0.9, size1: squeeze ? 0.4 : 0.3 + k * 0.9, color: squeeze ? 0xffffff : 0xffb040, tex: FX.tex.glow, alpha: 0.9 });
-    if (P.lionCharge <= 0) { P.lionCharge = 0; fireLion(P, false); }
+    if (!INPUT.held('skill2')) {
+      P.lionHolding = false; P.lionPower = k; P.lionCharge = 0;
+      P.sk2Cd = P.sk2Max = sk2Cool(P); fireLion(P, false, P.aim, k);
+    }
   }
   // a lion of fire off the chest (big: the HEAVEN AND HELL lion down the tornado)
-  function fireLion(P, big, a = P.aim) {
+  function fireLion(P, big, a = P.aim, charge = 0) {
     const ca = Math.cos(a), sa = Math.sin(a), [cx0, cy0] = chestOf(P), cx = cx0, cy = cy0;
     const right = ca >= 0, F = right ? FX.sheets.rlion : FX.sheets.rlionM, C = FX.sheets.rlionc; // the source lion runs to the right
     if (!F || !F.length) return;
-    const len = big ? 14 : 11, dur = big ? 0.9 : 0.8, S = big ? 5.2 : 2.9, W = big ? 2 : 1.25;
-    const dmg = (big ? 230 * (P.hh ? P.hh.k : 1) : 130 * (1 + 0.15 * (P.up.u_rush || 0))) * P.mods.dmg;
+    const len = big ? 14 : 11, dur = big ? 0.9 : 0.8, S = big ? 5.2 : 2.9 * (1 + 1.4 * charge), W = big ? 2 : 1.25 * (1 + charge);
+    const dmg = (big ? 230 * (P.hh ? P.hh.k : 1) : 130 * (1 + 0.15 * (P.up.u_rush || 0)) * (1 + 1.5 * charge)) * P.mods.dmg;
     const rot = right ? a : a - Math.PI;
     const sp = FX.sprite({ x: cx, y: cy, size: S, tex: F[0], color: 0xff8a3a, alpha: 0.95, order: L.PROJ + 1, rot });
     const au = FX.sprite({ x: cx, y: cy, size: S * 1.15, tex: C[0], color: 0xffc070, alpha: 0.7, order: L.PROJ + 0.9, rot });
@@ -2444,75 +2441,76 @@
       return true;
     });
   }
-  // HEAVEN AND HELL, driven per frame: 0-1.6 tornado (roots + pulls), 0.45 the giant lion, 1.25-2.3 Hyper gold and the two
-  // lights merging, 2.3 the flash burst down the lane, 2.6-3.1 flying back
+  /* Timings and visuals come directly from 2_LAO_MINI_ACTION RAMPALION_X.
+   * World collision/damage is adapted to this dungeon; the original FX draw code is shared. */
   function updateHeavenHell(P, dt) {
-    const h = P.hh; h.t += dt;
-    const ca = Math.cos(h.a), sa = Math.sin(h.a), ox = h.x0, oy = h.y0 + 0.9;
-    if (h.t < 1.6) {
-      P.aim = h.a;
-      const reach = h.len * Math.min(1, h.t / 0.35);
-      h.tick -= dt;
-      if (h.tick <= 0) {
-        h.tick = 0.08;
-        // the electromagnetic tornado: crescent rings spinning down the lane, bolts crackling along it
-        for (let d = 0.8; d < reach; d += 1.6) {
-          const jx = ox + ca * d, jy = oy + sa * d;
-          FX.particle({ x: jx, y: jy, life: 0.3, size: 1.6, size1: 2.2, frames: FX.sheets.rring, color: 0x9fe6ff, alpha: 0.75, rot: h.a + Math.PI / 2 + h.t * 9 + d });
-          if (Math.random() < 0.5) FX.particle({ x: jx + rnd(-0.5, 0.5), y: jy + rnd(-0.5, 0.5), life: 0.25, size: 1.1, size1: 1.4, frames: FX.sheets.rbolts, color: 0xc8f4ff, alpha: 0.9 });
-        }
-        for (const e of G.enemies) {
-          if (!e.alive || e.spawnT > 0) continue;
-          const px = e.x - ox, py = e.y + e.h * 0.42 - oy, tt = px * ca + py * sa, off = -px * sa + py * ca;
-          if (tt < 0 || tt > reach || Math.abs(off) > 1.8 + e.r) continue;
-          prime(e, 'root', 3 + 0.5 * (P.up.u_od || 0));
-          if (!e.boss) { e.x += sa * off * 0.18; e.y -= ca * off * 0.18; } // drawn in to the eye of the storm
-          hurtEnemy(e, 8 * h.k * P.mods.dmg, false, 0, 0, 'hitE');
-        }
-        for (let k = G.ebul.length - 1; k >= 0; k--) { const b = G.ebul[k], px = b.x - ox, py = b.y - oy, tt = px * ca + py * sa; if (tt > 0 && tt < reach && Math.abs(-px * sa + py * ca) < 1.8) { popEB(b); ebRemove(k); } }
-        if (Math.random() < 0.4) SFX.play('elec', 0.4);
-      }
-    }
-    if (!h.lion && h.t >= 0.45) { h.lion = true; fireLion(P, true, h.a); }
-    if (h.t >= 1.25 && h.t < 2.3) {
-      // Hyper: gold body, a white glow, gold (hell) and green (heaven) lights circling in and merging
-      P.hyperT = 2.2;
-      if (!h.lights) { h.lights = [0xffc030, 0x6dff9a].map((c) => FX.sprite({ x: P.x, y: P.y + 1, size: 0.9, color: c, alpha: 0.95, tex: FX.tex.glow, order: L.PROJ + 2 })); SFX.play('ramp_light', 0.9); UI.shout('HEAVEN…', false, '#6dff9a'); }
-      const k = (h.t - 1.25) / 1.05, r = 2.3 * (1 - k), sp0 = h.t * 7;
-      h.lights.forEach((s, i) => { const aa = sp0 + i * Math.PI; s.x = P.x + Math.cos(aa) * r; s.y = P.y + 1 + Math.sin(aa) * r * 0.7; s.size = s.size1 = 0.7 + k * 0.6; });
-      if (Math.random() < dt * 30) FX.particle({ x: P.x + rnd(-0.6, 0.6), y: P.y + rnd(0.2, 1.8), vy: rnd(1, 2.4), life: 0.4, size: 0.18, size1: 0, color: Math.random() < 0.5 ? 0xffd040 : 0x9dffb8, tex: FX.tex.glow });
-      FX.particle({ x: P.x, y: P.y + 1, life: dt * 1.5, size: 1 + k * 2.4, size1: 1 + k * 2.4, color: 0xffffff, tex: FX.tex.glow, alpha: 0.25 + k * 0.4 });
-    }
-    if (!h.burst && h.t >= 2.3) {
-      // the burst: a flash of light straight down the lane, through everything
-      h.burst = true;
-      if (h.lights) h.lights.forEach((s) => FX.kill(s));
-      UI.shout('HEAVEN AND HELL!!', true, '#ffd040');
-      SFX.play('ramp_launch', 1); SFX.play('expM', 0.8); FX.flash(0xffffff, 0.28); G.slowT = Math.max(G.slowT, 0.08); if (G.opt.shake) FX.shake(0.7);
-      const x0 = P.x, y0 = P.y; let dist = 0;
-      for (let d = 0; d < 11; d += 0.25) { if (LEVEL.hitCircle(x0 + ca * d, y0 + sa * d, 0.4)) break; dist = d; }
-      h.bx = x0 + ca * dist; h.by = y0 + sa * dist;
-      FX.orbital(x0, y0 + 0.9, h.bx, h.by + 0.9, 0xffd040, 0.9);
-      FX.beam(x0, y0 + 0.9, h.bx, h.by + 0.9, 0.5, 0xffffff, 0.35);
+    const h = P.hh, T = RAMP_BOMB.timing; h.t += dt;
+    const ca = Math.cos(h.a), sa = Math.sin(h.a), oy = h.y0 + 0.9;
+    P.aim = h.a; P.face = ca < 0 ? -1 : 1; P.dodgeBuf = 0;
+    if (h.t >= T.tornado && h.t < T.dash + T.dashTime) {
+      if (!h.tornado) { h.tornado = true; SFX.play('ramp_skill2', 1); SFX.play('ramp_elec', 0.8); }
+      const reach = h.len * Math.min(1, (h.t - T.tornado) / 0.35);
+      const vx = h.x0 + ca * h.len * 0.72, vy = oy + sa * h.len * 0.72;
       for (const e of G.enemies) {
         if (!e.alive || e.spawnT > 0) continue;
-        const px = e.x - x0, py = e.y + e.h * 0.42 - y0 - 0.9, tt = px * ca + py * sa;
-        if (tt < -0.5 || tt > dist + 1 || Math.abs(-px * sa + py * ca) > 1.7 + e.r) continue;
-        hurtEnemy(e, 380 * h.k * P.mods.dmg, true, ca * 14, sa * 14, 'hitB');
-        FX.particle({ x: e.x, y: e.y + e.h * 0.45, life: 0.4, size: 1, size1: 3, frames: FX.sheets.shockring, color: 0xffe080, alpha: 0.9 });
-        FX.particle({ x: e.x, y: e.y + e.h * 0.45, life: 0.3, size: 0.8, size1: 2.2, frames: FX.sheets.rsparks, color: 0xffffff, alpha: 0.9 });
+        const dx = e.x-h.x0, dy = e.y+e.h*0.42-oy, along = dx*ca+dy*sa;
+        if (along < 0 || along > reach || Math.abs(-dx*sa+dy*ca) > 2.6+e.r) continue;
+        h.caught.add(e); prime(e, 'root', 0.6);
+        if (!e.boss) {
+          const dx=vx-e.x,dy=vy-e.h*0.42-e.y,f=Math.min(1,dt*3.2);
+          LEVEL.move(e, dx*f-dy*f*0.35, dy*f+dx*f*0.14);
+        }
       }
-      blankWave((x0 + h.bx) / 2, (y0 + h.by) / 2 + 0.5, dist / 2 + 1.5, false);
-      FX.particle({ x: h.bx, y: h.by + 0.9, life: 0.5, size: 2, size1: 6, frames: FX.sheets.airboom, color: 0xffd080, alpha: 0.9 });
-      P.x = h.bx; P.y = h.by;
+      for (let k=G.ebul.length-1;k>=0;k--) {
+        const b=G.ebul[k],dx=b.x-h.x0,dy=b.y-oy,along=dx*ca+dy*sa;
+        if (along>0 && along<reach && Math.abs(-dx*sa+dy*ca)<2.6) { popEB(b); ebRemove(k); }
+      }
     }
-    if (h.burst && !h.back && h.t >= 2.6) { h.back = true; SFX.play('ramp_swing', 0.8); }
-    if (h.back) { // flies back in
-      const k = Math.min(1, (h.t - 2.6) / 0.45), e2 = k * k * (3 - 2 * k);
-      P.x = h.bx + (h.x0 - h.bx) * e2; P.y = h.by + (h.y0 - h.by) * e2;
-      if (Math.random() < dt * 40) FX.particle({ x: P.x, y: P.y + 0.9, life: 0.3, size: 0.6, size1: 0.1, color: 0xffd040, tex: FX.tex.glow, alpha: 0.7 });
+    if (!h.lion && h.t >= T.lion) { h.lion=true; SFX.play('ramp_launch',1); if (G.opt.shake) FX.shake(0.4); }
+    if (h.t >= T.lion && h.t < T.lion + 0.9) {
+      const k=Math.min(1,(h.t-T.lion)/0.9),front=h.len*(k*k*0.6+k*0.4),width=1.2+2*Math.min(1,k*2.2);
+      for (const e of G.enemies) {
+        if (!e.alive || e.spawnT>0) continue;
+        const dx=e.x-h.x0,dy=e.y+e.h*0.42-oy,along=dx*ca+dy*sa;
+        if (along>=0 && along<=front+1 && Math.abs(-dx*sa+dy*ca)<width+e.r) {
+          h.caught.add(e); prime(e,'root',Math.max(0.5,T.dash+T.dashTime-h.t));
+          e.stun=Math.max(e.stun||0,T.dash+T.dashTime-h.t);
+        }
+      }
     }
-    if (h.t >= 3.15) { P.x = h.x0; P.y = h.y0; P.hh = null; P.hyperT = 0; }
+    if (h.t >= T.glow && h.t < T.end) P.hyperT=0.2;
+    if (!h.glow && h.t >= T.glow) { h.glow=true; SFX.play('ramp_light',0.9); }
+    if (!h.merge && h.t >= T.merge) { h.merge=true; if (G.opt.flash) FX.flash(0xfff2c0,0.12); }
+    if (!h.burst && h.t >= T.dash) {
+      h.burst=true; SFX.play('ramp_launch',1); SFX.play('expM',0.8);
+      if (G.opt.flash) FX.flash(0xffffff,0.22); if (G.opt.shake) FX.shake(0.7);
+      let dist=0;
+      for (let d=0;d<h.len;d+=0.2) { if (LEVEL.hitCircle(h.x0+ca*d,h.y0+sa*d,0.4)) break; dist=d; }
+      h.dist=dist; h.bx=h.x0+ca*dist; h.by=h.y0+sa*dist;
+      clearEBullets(true);
+    }
+    if (h.burst && h.t < T.back) {
+      const k=Math.min(1,(h.t-T.dash)/T.dashTime);
+      P.x=h.x0+(h.bx-h.x0)*k*k; P.y=h.y0+(h.by-h.y0)*k*k;
+      const front=h.len*k*k+1;
+      for (const e of G.enemies) {
+        if (!e.alive || e.spawnT>0 || h.hit.has(e)) continue;
+        const dx=e.x-h.x0,dy=e.y+e.h*0.42-oy,along=dx*ca+dy*sa;
+        if (along < -0.5 || along > front || (!h.caught.has(e) && Math.abs(-dx*sa+dy*ca)>2.0+e.r)) continue;
+        h.hit.add(e); e.stun=0; hurtEnemy(e,610*h.k*P.mods.dmg,true,ca*14,sa*14,'hitB');
+        FX.particle({x:e.x,y:e.y+e.h*0.45,life:0.4,size:2,size1:3.5,frames:FX.sheets.shockring,color:0xffe080,alpha:0.9});
+        FX.particle({x:e.x,y:e.y+e.h*0.45,life:0.45,size:2,size1:3.2,frames:FX.sheets.airboom,color:0xffffff,alpha:0.85});
+      }
+    }
+    if (h.burst && h.t >= T.back) {
+      if (!h.back) { h.back=true; SFX.play('ramp_swing',0.8); }
+      const k=Math.min(1,(h.t-T.back)/T.backTime),f=1-(1-k)**3;
+      P.x=h.bx+(h.x0-h.bx)*f; P.y=h.by+(h.y0-h.by)*f;
+    }
+    if (h.t >= T.end) {
+      P.x=h.x0; P.y=h.y0; h.castBody.c.dispose(); scene.remove(h.castBody.root);
+      P.body.root.visible=true; P.body.pivot.rotation.z=0; P.hh=null; P.hyperT=0; RAMP_BOMB.clear();
+    }
   }
   // where a placed skill lands: the mouse cursor (clamped), else the locked target, else a fixed distance down the aim
   function aimPoint(P, d0, lo = 2.5, hi = 9) {
@@ -2578,8 +2576,8 @@
   const TURRET_SHOT = { kind: 'bullet', color: 0x9fffd8, size: 0.28, life: 0.8, hit: 'skill_hit_simple', hitSnd: 'hitS', dmg: 7, speed: 20, splash: 0 };
   function useSkill2() {
     const P = G.P, sk = P.hero.sk2;
-    if (P.sk2Cd > 0) { SFX.synth('empty'); return; }
-    P.sk2Cd = P.sk2Max = sk2Cool(P);
+    if (P.sk2Cd > 0 || P.lionHolding) { SFX.synth('empty'); return; }
+    if (sk.id !== 'breastlion') P.sk2Cd = P.sk2Max = sk2Cool(P);
     G.stats.skills2 = (G.stats.skills2 || 0) + 1;
     UI.sk2Used();
     const a = P.aim, ca = Math.cos(a), sa = Math.sin(a);
@@ -2665,7 +2663,7 @@
     } else if (sk.id === 'breastlion') {
       // 램파리온 · 브레스트 라이언 (2_LAO_MINI_ACTION's special Lv2, a Mazinger "Breast Fire" parody): the chest gathers light
       // while he chants, squeezes white, then a fire lion leaps off it and runs down the aim through everything in its lane
-      P.lionCharge = P.lionChargeMax = 0.85; P.iframe = Math.max(P.iframe, 0.4);
+      P.lionHolding = true; P.lionCharge = 0; P.lionChargeMax = 2;
       SFX.play('ramp_charge', 0.9); FX.later(0.38, () => SFX.play('ramp_elec', 0.6));
       UI.shout('가슴의 사자여 불타올라라!', false, '#ffb040');
     } else if (sk.id === 'mgfocus') {
@@ -2778,7 +2776,8 @@
       const pw = 1 + 0.2 * upE(P), R = 3.8, luck = 0.2 + 0.08 * upE(P);
       P.iframe = Math.max(P.iframe, 0.6); // she steps into the swing
       P.swingT = P.swingMax = 0.18;
-      slashWave(P, a, pw, luck); // a gun game: the swing throws a crescent of darkness down the aim
+      const cast = { refunded: false };
+      for (const off of [-0.22, 0, 0.22]) slashWave(P, a + off, pw, luck, cast);
        SFX.play('swing', 0.9); SFX.play('expS', 0.4);
       // the crescent sweeps across the arc in order, so it reads as one swing rather than a burst
       for (let i = 0; i < 14; i++) { const aa = a + (i / 13 - 0.5) * 2.3; FX.later(i * 0.008, () => { for (const rr of [0.8, 1.15, 1.5]) FX.particle({ x: P.x + Math.cos(aa) * rr, y: P.y + 0.85 + Math.sin(aa) * rr * 0.8, life: 0.28, size: rr === 1.15 ? 1 : 0.55, size1: 0.1, color: rr === 1.15 ? 0xffd0e0 : 0xff5a8a, tex: FX.tex.glow, alpha: 0.85 }); }); }
@@ -3901,6 +3900,8 @@
     bgAfter = Math.max(bgAfter, performance.now() + 60000); // hold the title-time queue while the run loads
     let done = 0;
     const jobs = [...all.map((id) => SD.prepare(id)), ...COMMON_FX.slice(0, 2).map((n) => FXB.prepare(n)), ...(hero.skill === 'snare' ? [FXB.prepare('FX_hit_bori')] : [])];
+    if (hero.skill === 'heavenhell') jobs.push(RAMP_BOMB.prepare());
+    if (hero.skill === 'eyebeam') jobs.push(LRL_BOMB.prepare());
     if (hero.skill === 'heavenhell') ['ramp_charge', 'ramp_elec', 'ramp_skill2', 'ramp_light', 'ramp_launch', 'ramp_swing'].forEach((k) => SFX.play(k, 0)); // warm the decoder
     await Promise.all(jobs.map((p) => Promise.resolve(p).then(() => UI.loading(++done / (jobs.length + 1)))));
     bgAfter = performance.now() + 8000; // and resume it once the first room is under way
@@ -3917,7 +3918,7 @@
     G.lateRigs = [...new Set(Object.values(GUNS).filter((x) => !x.noLoot).map((x) => x.donor)), ...F.elites.map((k) => ELITES[k].rig)];
     // reset
     if (G.deadGun) { G.deadGun.h.c.dispose(); scene.remove(G.deadGun.h.outer); G.deadGun = null; }
-    if (G.P) { G.P.body.c.dispose(); scene.remove(G.P.body.root); G.P.guns.forEach((g) => g.hand && g.hand.c.dispose()); scene.remove(G.P.handRoot); FX.kill(G.P.shadow); if (G.P.odAura) FX.kill(G.P.odAura); if (G.P.shieldFx) G.P.shieldFx.forEach((s) => FX.kill(s)); killDrone(G.P); }
+    if (G.P) { if (G.P.hh && G.P.hh.castBody) { G.P.hh.castBody.c.dispose(); scene.remove(G.P.hh.castBody.root); } G.P.body.c.dispose(); scene.remove(G.P.body.root); G.P.guns.forEach((g) => g.hand && g.hand.c.dispose()); scene.remove(G.P.handRoot); FX.kill(G.P.shadow); if (G.P.odAura) FX.kill(G.P.odAura); if (G.P.shieldFx) G.P.shieldFx.forEach((s) => FX.kill(s)); killDrone(G.P); }
     // a retry straight from the result screen: drop the last run's floor and any pending FX.later callbacks
     FX.clear(); // (buildFloor below disposes the old floor itself)
     G.seed = (Math.random() * 1e9) >>> 0;
@@ -3984,7 +3985,7 @@
     clearMines();
     if (G.P && G.P.shieldFx) G.P.shieldFx.forEach((s) => FX.kill(s));
     if (G.deadGun) { G.deadGun.h.c.dispose(); scene.remove(G.deadGun.h.outer); G.deadGun = null; }
-    if (G.P) { G.P.body.c.dispose(); scene.remove(G.P.body.root); G.P.guns.forEach((g) => g.hand && g.hand.c.dispose()); scene.remove(G.P.handRoot); FX.kill(G.P.shadow); if (G.P.odAura) FX.kill(G.P.odAura); killDrone(G.P); G.P = null; }
+    if (G.P) { if (G.P.hh && G.P.hh.castBody) { G.P.hh.castBody.c.dispose(); scene.remove(G.P.hh.castBody.root); } G.P.body.c.dispose(); scene.remove(G.P.body.root); G.P.guns.forEach((g) => g.hand && g.hand.c.dispose()); scene.remove(G.P.handRoot); FX.kill(G.P.shadow); if (G.P.odAura) FX.kill(G.P.odAura); killDrone(G.P); G.P = null; }
     (G.lights || []).forEach((l) => FX.kill(l)); G.lights = [];
     if (G.ret) { FX.kill(G.ret); G.ret = null; }
     if (G.propRim) { killObj(G.propRim); G.propRim = null; }
@@ -4062,7 +4063,7 @@
     if (show.hand) {
       const k = show.H / HERO_H;
       const o = show.hand.outer;
-      const [ax, ay] = armPos(0, 0, Math.cos(a), Math.sin(a), k);
+      const [ax, ay] = armPos(0, 0, Math.cos(a), Math.sin(a), k, 1, GUNS[ALLH[show.i].gun].mount);
       o.position.set(SHOW.x + ax, SHOW.y + ay + Math.sin(show.t * 3) * 0.03, 0);
       o.rotation.z = a;
     }
@@ -4222,6 +4223,19 @@
       const b = P.body;
       b.root.position.set(P.x, P.y, 0);
       b.c.update(dt);
+      if (P.lrlCast) b.root.visible=false;
+      if (P.hh) {
+        const h=P.hh,T=RAMP_BOMB.timing,cb=h.castBody,c=cb.c;
+        b.root.visible=false; cb.root.visible=h.t<T.dash;
+        cb.root.position.set(P.x,P.y,0); setFace(cb,Math.cos(h.a)<0?-1:1);
+        const clip=h.t>=T.glow?'atk':'skill';
+        if (c.clipName!==clip) { c.clip=null; c.play(clip,null,true); }
+        c.fadeD=0; c.pinFade=null; c.reset();
+        c.time=h.t<T.glow?Math.min(0.75,h.t):1.92+(7/12)*Math.min(1,(h.t-T.glow)/(T.merge-T.glow));
+        c.apply(); c.render(); c.setOrder(ORD(P.y));
+        const glow=h.t>=T.glow?Math.min(1,(h.t-T.glow)/(T.merge-T.glow)):0;
+        c.setTint(1+2.2*glow,1+1.65*glow,1+0.25*glow);
+      }
       // skating heroes (케시크's wheel boots): the source move clip is a glide, so the body leans into the push,
       // sways side to side with each stride and kicks up sparks from the wheels
       if (P.hero.skate && !P.roll && !P.dash) {
@@ -4232,7 +4246,7 @@
         if (P.moving && Math.random() < dt * 6) FX.particle({ x: P.x + rnd(-0.25, 0.25), y: P.y + 0.04, vx: -(P.lastDir ? P.lastDir[0] : 0) * 2.5 + rnd(-0.6, 0.6), vy: rnd(0.3, 1.2), grav: 6, life: 0.3, size: 0.1, size1: 0.02, color: 0xffc070, tex: FX.tex.dot, alpha: 0.9 });
         skateDust(P, dt);
       }
-      const blink = P.iframe > 0 && !P.roll && Math.floor(G.t * 20) % 2 === 0;
+      const blink = P.iframe > 0 && !P.hh && !P.roll && Math.floor(G.t * 20) % 2 === 0;
       b.c.setOpacity(blink ? 0.6 : 1); // a gentle blink: she stays readable in boss rooms
       if (P.hurtFlash > 0) { const on = Math.sin(G.t * 50) > 0; b.c.setTint(on ? 1.7 : 1, on ? 0.55 : 1, on ? 0.55 : 1); } /* a red blink, never a white-out that hides her under explosion FX */ else if (P.hyperT > 0) { const g = 1 + 0.25 * Math.sin(G.t * 20); b.c.setTint(1.7 * g, 1.35 * g, 0.55); } /* 램파리온 Hyper: gold */ else if (P.overdrive > 0) b.c.setTint(1.1, 1.35, 1.0); else b.c.setTint(1, 1, 1);
       // standing "behind" a tall boss / elite would hide her under its sprite: draw her in front instead
@@ -4243,7 +4257,7 @@
       P.shadow.x = P.x; P.shadow.y = P.y + 0.02;
       poseHand(P);
       { const g = P.guns[P.gi], ms = g ? magSize(g) : 1;
-        const st = !g || P.dead || P.reloadT > 0 ? 0 : g.mag <= 0 ? (!g.infinite && g.ammo <= 0 ? 3 : 2) : g.mag <= Math.max(1, Math.floor(ms * 0.25)) ? 1 : 0;
+        const st = !g || g.d.noReload || P.dead || P.reloadT > 0 ? 0 : g.mag <= 0 ? (!g.infinite && g.ammo <= 0 ? 3 : 2) : g.mag <= Math.max(1, Math.floor(ms * 0.25)) ? 1 : 0;
         UI.ammoWarn(st, P.x, P.y + HERO_H + (P.sk2Cd > 0 ? 0.75 : 0.5), g ? g.mag : 0); /* clear of her head */ }
       UI.reloadGauge(P.reloadT > 0 && !P.dead ? clamp(1 - P.reloadT / (P.reloadMax || 1), 0, 1) : -1, P.x, P.y + HERO_H + (P.sk2Cd > 0 ? 0.48 : 0.22));
       if (!G.hbox) G.hbox = FX.sprite({ x: 0, y: 0, size: 0.16, color: 0xffffff, alpha: 0, tex: FX.tex.dot, order: L.PROJ + 2 });
@@ -4334,6 +4348,7 @@
       const need = Math.max((Math.abs(G.bossE.x - P.x) + 5) / view.vw, (Math.abs(G.bossE.y + G.bossE.h * 0.5 - P.y) + G.bossE.h * 0.5 + 6) / view.vh);
       zt = clamp(Math.max(zt, need), 1, 2.15);
     }
+    if (P && P.lrlCast) zt = P.lrlCast.zoom > 1 ? 1 / P.lrlCast.zoom : 1;
     if (P && P.dead) zt = 0.62; // the camera closes in on a fallen hero
     G.zoom = (G.zoom || 1) + (zt - (G.zoom || 1)) * Math.min(1, rdt * 2.5);
     if (Math.abs(G.zoom - (G.zoomApplied || 1)) > 0.002) {
@@ -4414,6 +4429,8 @@
     FX.draw();
     if (G.P) { render(0, 0.016); UI.hud(G); }
     composer.render();
+    RAMP_BOMB.draw(G.P, worldToScreen, stageEl, G.phase === 'play');
+    LRL_BOMB.draw(G.P, worldToScreen, stageEl, G.phase === 'play');
     return { phase: G.phase, fi: G.fi, t: Math.round(G.stats ? G.stats.time : 0) };
   }
 
@@ -4463,6 +4480,8 @@
     if (frozen && frozenDrawn) return;
     frozenDrawn = frozen;
     if (G.lv || G.phase === 'play' || G.phase === 'title') { FX.draw(); composer.render(); }
+    RAMP_BOMB.draw(G.P, worldToScreen, stageEl, G.phase === 'play');
+    LRL_BOMB.draw(G.P, worldToScreen, stageEl, G.phase === 'play');
   }
 
   function resize() {
@@ -4562,7 +4581,7 @@
   window.GAME = {
     G, boot, startRun, showcase, screenToWorld, toTitle, endRun, worldToScreen, saveOpt, images, uiImg, MOBILE, HERO_H, makeBody, setFace,
     get scene() { return scene; }, get renderer() { return renderer; }, get camera() { return camera; },
-    curGun, magSize, maxAmmo, applyItem, giveGun, spawnPedestal, hurtPlayer, refreshHints: () => refreshHints(), canvasRect: () => rectOf(), redraw: () => { frozenDrawn = false; }, recolorBullets: () => recolorBullets(), skipTutorial: () => tutorialEnd(true), rebuildGuide: () => rebuildGuide(),
+    curGun, magSize, maxAmmo, sk2Cool, applyItem, giveGun, spawnPedestal, hurtPlayer, refreshHints: () => refreshHints(), canvasRect: () => rectOf(), redraw: () => { frozenDrawn = false; }, recolorBullets: () => recolorBullets(), skipTutorial: () => tutorialEnd(true), rebuildGuide: () => rebuildGuide(),
     choosePerk, xpNeed, teleportTo,
     debug: { sim, xp: (n) => gainXp(n), spawnEnemy, killAll: () => G.enemies.forEach((e) => { if (e.alive) { e.hp = 0; killEnemy(e); } }), give: (id) => giveGun(G.P, id), item: (id) => applyItem(G.P, id), next: nextFloor, tp: (type) => { const r = G.lv.rooms.find((x) => x.type === type); if (r) { G.P.x = r.cx; G.P.y = r.y0 + 1.2; } } },
   };

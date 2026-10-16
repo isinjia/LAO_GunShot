@@ -1,0 +1,11 @@
+{
+  "sourceProject": "E:\\LAO_MINI_GAME\\2_LAO_MINI_ACTION",
+  "renderer": "js/lrl-skill.js LRL_X",
+  "files": {
+    "lrl-skill2-clean.png": "d1cdd7b476a2dd4a75e228ae83eeed884a218793f56655d0fa266d50d5d00a5a",
+    "common_bling.ogg": "8fbfd0478f106dc67d6d1397d5ca7b6adb6d297e46d905376065f562ea4aa139",
+    "common_energy_in_aura.ogg": "e5e976dcf8f3d57f75a02cf9ec99c2eb003fb7e6a875820e583cb15b7ae1c67a",
+    "lrl_beam.ogg": "d48943bc878726e520fe701c245492b4ba017b30ea8db0d7216416055b117062",
+    "js/lrl-skill.js": "525b0d6ce88693c1677fcd73a79c245786018c871dcf5096e40d6032b869b46d"
+  }
+}

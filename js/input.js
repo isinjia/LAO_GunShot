@@ -42,6 +42,7 @@
   const MOVE = { KeyW: [0, 1], ArrowUp: [0, 1], KeyS: [0, -1], ArrowDown: [0, -1], KeyA: [-1, 0], ArrowLeft: [-1, 0], KeyD: [1, 0], ArrowRight: [1, 0] };
   try { applyBinds(JSON.parse(localStorage.getItem('lao_rogue_keys') || '{}')); } catch (e) { /* damaged save: defaults */ } // (after MOVE / RESERVED exist)
   const down = new Set();
+  const touchHeld = new Set();
   const pressed = new Set(); // edge-triggered actions since the last frame
   const touch = { mx: 0, my: 0, active: false, fire: false, ax: 0, ay: 0, aiming: false };
   // mouse aim (desktop): cursor position in client pixels, left button fires, right button dodges
@@ -88,7 +89,7 @@
     // focus went elsewhere (another window / monitor): pause instead of standing still under fire
     const G = window.GAME && GAME.G;
     if (G && G.phase === 'play' && !G.paused && !G.transit && !/[?&](bot|sim)=1/.test(location.search) && window.UI) UI.togglePause(true);
-    down.clear(); mouse.down = false; latch = false; touch.fire = false; touch.aiming = false; touch.active = false; touch.mx = touch.my = 0;
+    down.clear(); touchHeld.clear(); mouse.down = false; latch = false; touch.fire = false; touch.aiming = false; touch.active = false; touch.mx = touch.my = 0;
     if (touchReset) touchReset(); /* an app switch can swallow touchend: free the stick / aim pad so new touches register */ });
   let touchReset = null;
 
@@ -101,6 +102,7 @@
     return l > 1 ? [x / l, y / l] : [x, y];
   }
   function held(a) {
+    if (touchHeld.has(a) || (a === 'skill2' && pad.active && pad.prev[4])) return true;
     if (a === 'fire' && toggleFire) return latch; // toggle mode: every source (mouse, J, RT, touch pad) flips the latch
     if (a === 'fire' && pad.fire) return true;
     if (a === 'fire' && (touch.fire || mouse.down)) return true;
@@ -181,10 +183,10 @@
       b.addEventListener('touchstart', (e) => {
         e.preventDefault();
         b.classList.add('down');
-        pressed.add(a);
+        pressed.add(a); touchHeld.add(a);
         if (navigator.vibrate) try { navigator.vibrate(8); } catch (er) { /* ignore */ }
       }, { passive: false });
-      const up = (e) => { e.preventDefault(); b.classList.remove('down'); };
+      const up = (e) => { e.preventDefault(); touchHeld.delete(a); b.classList.remove('down'); };
       b.addEventListener('touchend', up); b.addEventListener('touchcancel', up);
     });
   }

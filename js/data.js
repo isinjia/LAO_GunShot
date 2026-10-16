@@ -60,13 +60,13 @@
     {
       id: 'lrl', name: 'LRL', title: '히든 · 자칭 진조의 흑마법사', img: 'c_HID_LRL', rig: 'PECS_LRL', gun: 'lrl_axe', hp: 8, armor: 1, speed: 6.0, hidden: true,
       skill: 'eyebeam', skillName: '사이클롭스 이터널 빔', skillDesc: '[부여] 안대를 벗고 눈에 빛을 모아 거대한 붉은 빔을 1.5초간 발사(12회 타격) — 5초 실명 · 제압, 경로의 적탄 소거, 보스 패턴 차단', color: '#ff5a8a', upF: 'u_beam', upE: 'u_axe',
-      sk2: { id: 'axe', name: '액스 오브 다크니스', icon: 'i_target', cd: 5, desc: '[기폭] 드래곤 슬레이어를 휘둘러 검기를 날린다(관통 · 적탄 소거) — 실명한 적은 반드시 약점(x2.45 · 1초 기절), 약점 시 쿨타임 절반' },
+      sk2: { id: 'axe', name: '액스 오브 다크니스', icon: 'i_target', cd: 5, desc: '[기폭] 드래곤 슬레이어를 휘둘러 검기 3개를 날린다(관통 · 적탄 소거) — 실명한 적은 반드시 약점(x2.45 · 1초 기절), 약점 시 쿨타임 절반' },
       stats: { atk: 5, def: 2, mob: 3 }, desc: '자칭 흑마법사. 도끼와 봉인된 눈의 빔으로 싸운다.',
     },
     {
       id: 'ramparion', name: '램파리온', title: '히든 · 강철의 수호자', img: 'c_HID_Ramparion', rig: 'AGS_Rampart_NS1', rigFlip: false, gun: 'ramp_blast', dashDodge: true, hp: 14, armor: 3, speed: 5.1, hidden: true,
       skill: 'heavenhell', skillName: 'HEAVEN AND HELL', skillDesc: '전자기 토네이도가 조준 방향의 적을 붙잡고, 거대 사자가 그 길을 달린다 — 황금빛 하이퍼로 빛을 모아 섬광처럼 관통 돌진 후 귀환 (시전 중 무적)', color: '#ffd27a',
-      sk2: { id: 'breastlion', name: '브레스트 라이언', icon: 'i_power', cd: 7, desc: '가슴에 빛을 모았다가 불꽃 사자를 발사 — 조준 방향 일직선의 모든 적을 관통하며 불태우고 밀쳐낸다' },
+      sk2: { id: 'breastlion', name: '브레스트 라이언', icon: 'i_power', cd: 7, desc: 'E를 누르는 동안 충전 · 이동속도 50%. 놓으면 불꽃 사자 발사 — 최대 2초 충전 시 크기 2.4배 · 피해 2.5배, 관통 · 넉백. 발사 후 쿨타임 시작' },
       perks: ['u_od', 'u_rush'], stats: { atk: 3, def: 5, mob: 1 }, desc: '거대한 체구와 두꺼운 장갑. 느리지만 무엇이든 버텨낸다.',
     },
   ];
@@ -93,9 +93,9 @@
     mg80: { hitSnd: 'hitS', name: 'MG80 경기관총', donor: 'nymph', scale: 1.18, noLoot: true, rank: 0, kind: 'bullet', auto: true, rate: 0.075, dmg: 3.8, speed: 21, spread: 5, mag: 80, ammo: 640, reload: 2.0, life: 0.65, sfx: 'mg', color: 0x7affd4, size: 0.28, hit: 'skill_hit_simple', recoil: 0.05, desc: '님프의 MG80 — 안정적인 지원 사격' },
     ct11: { hitSnd: 'hitM', name: 'CT-11 자동 산탄총', donor: 'kheshig', scale: 1.1, noLoot: true, rank: 0, kind: 'bullet', auto: true, rate: 0.34, dmg: 3.9, pellets: 6, speed: 19, spread: 24, mag: 10, ammo: 150, reload: 1.6, life: 0.36, sfx: 'gun', color: 0xffb08a, size: 0.32, hit: 'skill_hit_simple', recoil: 0.12, desc: '연사가 되는 자동 산탄총' },
     bl_dual: { hitSnd: 'hitS', name: 'BL 쌍권총', donor: 'blacklilith', noLoot: true, rank: 1, kind: 'bullet', auto: true, rate: 0.085, dmg: 4.4, speed: 23, spread: 5, mag: 36, ammo: 504, reload: 1.15, life: 0.6, sfx: 'rifle', color: 0xb6a0ff, size: 0.28, hit: 'skill_hit_simple', recoil: 0.05, desc: '빠르게 번갈아 쏘는 쌍권총' },
-    lrl_axe: { hitSnd: 'hitB', name: '드래곤 슬레이어', donor: 'PECS_LRL', scale: 1.6, noLoot: true, rank: 1, kind: 'bullet', auto: true, rate: 0.42, dmg: 24, pierce: 2, speed: 15, spread: 1.5, mag: 6, ammo: 120, reload: 1.1, life: 0.75, sfx: 'swing', color: 0xff6a6a, size: 1.05, tex: 'lrlaxe', spin: 22, hit: 'skill_hit_simple', recoil: 0.12, desc: '회전하며 날아가는 도끼 — 2회 관통' },
+    lrl_axe: { hitSnd: 'hitB', name: '드래곤 슬레이어', donor: 'PECS_LRL', scale: 1.1, nativeGrip: true, noReload: true, handOutline: true, outline: 1.10, mount: [0.23, 0.19], noLoot: true, rank: 1, kind: 'bullet', auto: true, rate: 0.42, dmg: 24, pierce: 2, speed: 15, spread: 1.5, mag: 6, ammo: 120, reload: 1.1, life: 0.75, sfx: 'swing', color: 0xff6a6a, size: 1.05, tex: 'lrlaxe', spin: 22, hit: 'skill_hit_simple', recoil: 0.12, desc: '회전하며 날아가는 도끼 — 2회 관통 · 장전 없음' },
     lrl_wand: { hitSnd: 'hitF', name: 'LRL 마도 지팡이', donor: 'PECS_LRL', noLoot: true, rank: 1, kind: 'fireball', auto: false, rate: 0.5, dmg: 22, splash: 1.9, speed: 12, spread: 2, mag: 8, ammo: 120, reload: 1.4, life: 1.0, sfx: 'expS', color: 0x9fe8ff, size: 0.6, hit: 'skill_hit_simple', recoil: 0.12, desc: '폭발하는 마탄' },
-    ramp_blast: { hitSnd: 'hitE', name: 'RP 리펄서', donor: 'AGS_Rampart_NS1', noLoot: true, rank: 1, kind: 'bullet', auto: true, rate: 0.24, dmg: 11, pierce: 1, speed: 26, spread: 2.5, mag: 24, ammo: 240, reload: 1.2, life: 0.7, sfx: 'laser', color: 0x9fe8ff, size: 0.46, hit: 'skill_hit_simple', recoil: 0.1, desc: '손바닥에서 쏘는 에너지 블래스트' },
+    ramp_blast: { hitSnd: 'hitE', name: 'RP 리펄서', donor: 'AGS_Rampart_NS1', nativeGrip: true, noLoot: true, rank: 1, kind: 'rail', range: 7, shortLaser: true, beamWidth: 0.12, beamLife: 0.12, auto: true, rate: 0.24, dmg: 11, pierce: 1, speed: 26, spread: 2.5, mag: 24, ammo: 240, reload: 1.2, life: 0.7, sfx: 'laser', color: 0xffffff, size: 0.46, hit: 'skill_hit_simple', recoil: 0.1, desc: '손바닥에서 발사하는 사거리 7칸의 흰색 레이저' },
     ramp_cannon: { hitSnd: 'hitB', name: 'RP 어깨 포', donor: 'e_Rampart_N', noLoot: true, rank: 1, kind: 'bullet', auto: true, rate: 0.3, dmg: 13, pierce: 1, speed: 18, spread: 3, mag: 16, ammo: 240, reload: 1.6, life: 0.75, sfx: 'rifle', color: 0x9fffd8, size: 0.4, hit: 'skill_hit_simple', recoil: 0.14, desc: '무거운 관통 포탄' },
   };
   Object.entries(GUNS).forEach(([id, g]) => { g.id = id; });
