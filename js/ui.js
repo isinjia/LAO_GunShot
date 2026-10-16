@@ -88,12 +88,21 @@
     $('#btnStart').onclick = start;
     // title settings: the pause menu's option panel on its own (volume, keys, accessibility, touch layout)
     $('#btnSet').onclick = () => openSettings(true);
+    // patch notes (bottom right of the title, as in LAO Defence): the current version's changes
+    function openNotes(on) {
+      const ov = $('#notesOv'); if (!ov) return;
+      if (on) $('#notesList').innerHTML = (window.NOTES || []).map((n) => `<section><b>ver ${n.v}</b><ul>${n.items.map((t) => `<li>${t}</li>`).join('')}</ul></section>`).join('');
+      ov.hidden = !on; SFX.play('uiPick', 0.5);
+      $('#notesClose').onclick = () => openNotes(false);
+      ov.onpointerdown = (e) => { if (e.target === ov) openNotes(false); };
+    }
     el.pauseOv.querySelectorAll('.ptabs [data-tab]').forEach((b) => { b.onclick = () => { pauseTab(b.dataset.tab); SFX.play('uiPick', 0.5); }; });
     $('#btnSetClose').onclick = () => openSettings(false);
     // replay basic training: clear the done flag and deploy (the training runs in the first room again)
     $('#btnTut').onclick = () => { try { localStorage.removeItem('lao_rogue_tut'); } catch (e) { /* ignore */ } start(); };
     $('#btnHeat').onclick = () => { const h = heatState(); if (h.max < 1) { SFX.play('fail', 0.4); toast('위험 등급 — 작전에 한 번 성공하면 개방됩니다 (등급마다 적 강화 · 데이터 칩 +25%)', 'warn'); return; } h.sel = ((h.sel || 0) + 1) % ((h.max || 0) + 1); saveHeat(h); renderHeat(); SFX.play('uiPick', 0.6); };
     $('#btnLab').onclick = () => openLab(true);
+    if ($('#btnNotes')) $('#btnNotes').onclick = () => openNotes(true);
     $('#labClose').onclick = () => openLab(false);
     $('#btnRetry').onclick = () => { el.result.hidden = true; GAME.startRun(pickHero()); };
     $('#btnHome').onclick = () => { el.result.hidden = true; GAME.toTitle(); };
@@ -189,6 +198,7 @@
       if (ph === 'title' && !el.title.hidden && $('#labOv').hidden && !settingsOpen() && trackCheat(e)) { e.preventDefault(); return; }
       if (ph === 'title' && !el.title.hidden && e.code === 'KeyO') { openSettings(true); e.preventDefault(); return; }
       if (ph === 'title' && !el.title.hidden && e.code === 'KeyH') { $('#btnHeat').click(); e.preventDefault(); return; }
+      if (ph === 'title' && !el.title.hidden && $('#notesOv') && !$('#notesOv').hidden) { if (e.code === 'Escape' || e.code === 'Enter' || e.code === 'Space') { openNotes(false); e.preventDefault(); } return; }
       if (ph === 'title' && !el.title.hidden && !$('#labOv').hidden) { if (e.code === 'Escape' || e.code === 'KeyU') { openLab(false); e.preventDefault(); } return; }
       if (ph === 'title' && !el.title.hidden && e.code === 'KeyU') { openLab(true); e.preventDefault(); return; }
       if (ph === 'title' && !el.title.hidden) {
