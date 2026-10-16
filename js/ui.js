@@ -180,6 +180,7 @@
         if (f.length) { const i = f.indexOf(document.activeElement), n = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : (i < 0 || i >= f.length - 1 ? 0 : i + 1); f[n].focus(); e.preventDefault(); return; }
       }
       if (settingsOpen()) { if (e.code === 'Escape' || e.code === 'KeyO') { openSettings(false); e.preventDefault(); } return; }
+      if (ph === 'title' && !el.title.hidden && $('#labOv').hidden && !settingsOpen() && trackCheat(e)) { e.preventDefault(); return; }
       if (ph === 'title' && !el.title.hidden && e.code === 'KeyO') { openSettings(true); e.preventDefault(); return; }
       if (ph === 'title' && !el.title.hidden && e.code === 'KeyH') { $('#btnHeat').click(); e.preventDefault(); return; }
       if (ph === 'title' && !el.title.hidden && !$('#labOv').hidden) { if (e.code === 'Escape' || e.code === 'KeyU') { openLab(false); e.preventDefault(); } return; }
@@ -298,8 +299,48 @@
     if (!u || /[?&]unlock=1/.test(location.search)) return true;
     try { const pr = JSON.parse(localStorage.getItem('lao_rogue_prog') || '{}'); return (pr && typeof pr === 'object' ? Number(pr.maxFi) || 0 : 0) >= u.floor; } catch (e) { return false; }
   }
+  // ── hidden-hero cheats on the select screen ──
+  // LRL: ← → four times. 램파리온: type 치트활성화, then 램파리온 (or ramparion / rampalion). Matched by physical key
+  // (2-beolsik: ㅊㅣㅌㅡㅎㅘㄹㅅㅓㅇㅎㅘ / ㄹㅐㅁㅍㅏㄹㅣㅇㅗㄴ), so the Korean and the English IME both work.
+  let forcedHidden = null;
+  let cheatsOn = false;
+  try { cheatsOn = sessionStorage.getItem('lao_rogue_cheats') === '1'; } catch (e) { /* ignore */ }
+  const K_ = (str) => str.split(' ').map((c) => (c.length === 1 ? 'Key' + c : c));
+  const CHEAT_ON = K_('C L X M G H K F T J D G H K');
+  const RAMP_CODES = [K_('F O A V K F L D H S'), K_('R A M P A R I O N'), K_('R A M P A L I O N')];
+  const LRL_CODE = ['ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight'];
+  let cheatBuf = [], cheatAt = 0;
+  const ends = (buf, seq) => buf.length >= seq.length && seq.every((c, i) => buf[buf.length - seq.length + i] === c);
+  function forceHidden(id) {
+    const HID = DATA.HIDDEN || [], k = HID.findIndex((h) => h.id === id);
+    if (k < 0) return;
+    forcedHidden = HEROES.length + k;
+    const h = HID[k];
+    SFX.play('rankUpSS', 0.8); toast(`히든 대원 선택 — ${h.name}`, 'gem');
+    setTimeout(() => { if (forcedHidden != null) { $('#btnStart').disabled = false; $('#btnStart').textContent = `출격 개시 — ${h.name}`; } }, 0); // after this key's own card move
+  }
+  function trackCheat(e) {
+    if (e.repeat || e.altKey || e.ctrlKey || e.metaKey || !e.code) return;
+    const now = performance.now();
+    if (now - cheatAt > 2500) cheatBuf = [];
+    cheatAt = now;
+    cheatBuf.push(e.code); if (cheatBuf.length > 20) cheatBuf.shift();
+    if (ends(cheatBuf, LRL_CODE)) { cheatBuf = []; forceHidden('lrl'); return false; }
+    if (!cheatsOn && ends(cheatBuf, CHEAT_ON)) {
+      cheatsOn = true; cheatBuf = [];
+      try { sessionStorage.setItem('lao_rogue_cheats', '1'); } catch (er) { /* ignore */ }
+      SFX.play('rankUp', 0.8); toast('치트 활성화', 'gem'); return true;
+    }
+    if (cheatsOn && RAMP_CODES.some((q) => ends(cheatBuf, q))) { cheatBuf = []; forceHidden('ramparion'); return true; }
+    // mid-code letters (2+ keys into a code) don't fire the title shortcuts (H 위험 등급 · O 설정 · U 연구소 · A / D)
+    if (!/^Key/.test(e.code)) return false;
+    const codes = cheatsOn ? RAMP_CODES : [CHEAT_ON];
+    for (let n = Math.min(cheatBuf.length, 20); n >= 2; n--) { const tail = cheatBuf.slice(-n); if (codes.some((q) => n <= q.length && tail.every((c, i) => c === q[i]))) return true; }
+    return false;
+  }
   // the random card: any unlocked hero, decided when the run starts
   function pickHero() {
+    if (forcedHidden != null) { const k = forcedHidden; forcedHidden = null; return k; }
     if (selHero >= 0) return selHero;
     // hidden heroes: 2% each on the random card (indices after the card heroes)
     const HID = DATA.HIDDEN || [];
@@ -369,6 +410,7 @@
   }
   function selectHero(i, quiet) {
     selHero = i;
+    if (!quiet && forcedHidden != null && !(performance.now() - cheatAt < 50)) forcedHidden = null; // picking a card yourself drops the cheat pick
     const cards = el.heroSel.querySelectorAll('.hcard');
     if (i < 0) {
       $('#btnStart').disabled = false; $('#btnStart').textContent = '출격 개시';
