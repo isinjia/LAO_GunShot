@@ -418,6 +418,38 @@
       }
     }
     if (P.ultT > 0) P.ultT -= dt;
+    if (P.focusT > 0) P.focusT -= dt;
+    // 경기관총 난사: a wide fan of light-MG rounds toward the aim
+    if (P.sprayT > 0) {
+      P.sprayT -= dt; P.sprayTick -= dt;
+      if (P.sprayTick <= 0) {
+        P.sprayTick = 0.07;
+        const mg = { d: Object.assign({}, GUNS.mg, { dmg: GUNS.mg.dmg * 1.3 * (1 + 0.2 * upF(P)), life: 0.6 }) };
+        for (let i = 0; i < 3; i++) { const b = spawnPBullet(P, mg, P.x + Math.cos(P.aim) * 0.5, P.y + 0.7, P.aim + rnd(-0.62, 0.62), rnd(19, 23)); if (b) b.pierce += 1; }
+        if (Math.random() < 0.5) SFX.play('mg', 0.5);
+      }
+      if (P.sprayT <= 0) P.sprayT = 0;
+    }
+    // 제압 난사: rounds rain on the target zone; everything caught is suppressed
+    if (P.zone) {
+      const z = P.zone; z.t -= dt; z.tick -= dt;
+      if (z.tick <= 0) {
+        z.tick = 0.14;
+        const r = Math.sqrt(Math.random()) * z.R, an = Math.random() * TAU, x = z.x + Math.cos(an) * r, y = z.y + Math.sin(an) * r;
+        FX.explosion(x, y, 0.45, 0x7affd4, false); if (Math.random() < 0.4) SFX.play('expS', 0.35);
+        for (const e of G.enemies) { if (!e.alive || e.spawnT > 0 || Math.hypot(e.x - x, e.y + e.h * 0.4 - y) > 1.2 + e.r) continue; e.supT = Math.max(e.supT || 0, 4); hurtEnemy(e, 15 * (1 + 0.2 * upF(P)) * P.mods.dmg * (e.markT > 0 ? 1.19 : 1), false, 0, 0, 'hitS'); }
+      }
+      if (z.t <= 0) P.zone = null;
+    }
+    // 방벽 생성: a concrete wall arc in front of her that stops enemy rounds
+    if (P.wallT > 0) {
+      P.wallT -= dt;
+      if (!P.wallFx) P.wallFx = Array.from({ length: 9 }, () => FX.sprite({ x: 0, y: 0, size: 0.72, aspect: 0.85, color: 0x9a9080, alpha: 0.92, tex: FX.tex.white, normal: true, order: L.PROJ + 1.4 }));
+      const cx = P.x, cy = P.y + 0.6, R = 2.2;
+      P.wallFx.forEach((s, i) => { const aa = P.aim + (i / 8 - 0.5) * 3.2; s.hidden = false; s.x = cx + Math.cos(aa) * R; s.y = cy + Math.sin(aa) * R * 0.85; s.rot = aa; s.alpha = P.wallT < 0.8 ? 0.45 + 0.4 * Math.sin(G.t * 30) : 0.92; });
+      for (let k = G.ebul.length - 1; k >= 0; k--) { const b = G.ebul[k]; for (const s of P.wallFx) { if (Math.hypot(b.x - s.x, b.y - s.y) < 0.62) { popEB(b); ebRemove(k); break; } } }
+      if (P.wallT <= 0) { P.wallT = 0; P.wallFx.forEach((s) => { s.hidden = true; }); }
+    }
     if (P.overdrive > 0) {
       if (!P.odAura) P.odAura = FX.sprite({ x: P.x, y: P.y + 0.8, size: 2.6, aspect: 0.45, color: heroHex(P), alpha: 0.3, tex: FX.tex.glow, order: 3.4 }); // a floor glow under her, never a veil over the sprite
       P.odAura.hidden = false; P.odAura.x = P.x; P.odAura.y = P.y + 0.05; P.odAura.alpha = 0.35 + 0.12 * Math.sin(G.t * 14);
@@ -676,7 +708,7 @@
     if (d.kind === 'chain') return chainShot(P, g, mx, my);
     const n = d.pellets || 1;
     for (let i = 0; i < n; i++) {
-      const sp = (d.spread * Math.PI / 180) * (n > 1 ? (i / (n - 1) - 0.5) + rnd(-0.06, 0.06) : rnd(-0.5, 0.5));
+      const sp = (d.spread * Math.PI / 180) * (P.focusT > 0 ? 0.3 : 1) * (n > 1 ? (i / (n - 1) - 0.5) + rnd(-0.06, 0.06) : rnd(-0.5, 0.5)); /* 기관총 사격: focused fire tightens the spread */
       const ang = a + sp;
       const v = d.speed * P.mods.velo * (n > 1 ? rnd(0.85, 1.1) : 1);
       spawnPBullet(P, g, mx, my, ang, v);
@@ -804,6 +836,7 @@
           b.hit.add(e);
           const sp = Math.hypot(b.vx, b.vy) || 1;
           if (b.kind === 'grenade' || b.kind === 'fireball') { dead = true; break; }
+          if (b.sup) { e.supT = Math.max(e.supT || 0, b.sup); } // 견제 / 듀얼 버스트 rounds suppress what they hit
           if (P.mods.frost) { e.slowT = 1.5; FX.particle({ x: b.x, y: b.y, life: 0.3, size: 0.3, size1: 0.7, color: 0x9feaff, tex: FX.tex.snow, spin: 4 }); }
           const crit2 = b.crit || (P.syn.has('취약 노출') && e.slowT > 0 && Math.random() < 0.25);
           hurtEnemy(e, b.dmg * (crit2 && !b.crit ? 2 : 1), crit2, b.vx / sp * 0.7, b.vy / sp * 0.7, b.g.hitSnd || 'hitS');
@@ -1037,6 +1070,7 @@
     if (!e.alive || e.spawnT > 0 || e.intro > 0) return;
     if (G.P && G.P.dead) return; // turrets, burn zones, late shells: nothing scores after the hero has fallen
     if (e.markT > 0) dmg *= 1.5;
+    if (e.supT > 0) dmg *= 1.15 * (G.P && G.P.hero.id === 'leprechaun' ? 1.2 : G.P && G.P.hero.id === 'blacklilith' ? 1.29 : 1); // 제압 / 견제: a suppressed target takes more (레프리콘 +38 %, 블랙 리리스 +48 % in total)
     if (e.room) e.room.lastHitT = G.t;
     if (e.boss && e.body && !(e.hitPulse > 0)) { e.hitPulse = 0.12; const r0 = e.body.root; r0.scale.set(1.04, 0.97, 1); FX.later(0.06, () => r0.scale.set(1, 1, 1)); FX.sparks(e.x + rnd(-0.4, 0.4), e.y + e.h * rnd(0.3, 0.7), 0xffe0a0, 3, 3, 0.1, 0.2); }
     if (e.boss) {
@@ -1261,7 +1295,7 @@
 
   // patterns: e = shooter, a = angle to the player
   // enemies aim at the hero — or at Constantia's hologram decoy while it stands
-  function aimAt(e, ox = 0, oy = 0) { const T = G.P; return Math.atan2(T.y + 0.42 - (e.y + e.h * 0.45 + oy), T.x - (e.x + ox)); }
+  function aimAt(e, ox = 0, oy = 0) { const T = G.P; return Math.atan2(T.y + 0.42 - (e.y + e.h * 0.45 + oy), T.x - (e.x + ox)) + (e.blindT > 0 ? rnd(-0.55, 0.55) : 0); } // 적중 감소: a blinded shooter's aim scatters
   function emitFan(e, n, spread, speed, o = {}) {
     const a0 = o.ang != null ? o.ang : aimAt(e), cy = e.y + e.h * 0.45;
     for (let i = 0; i < n; i++) ebullet(e.x, cy, a0 + (n > 1 ? (i / (n - 1) - 0.5) * spread : 0), speed, o);
@@ -1445,7 +1479,11 @@
       if ((!seeP || e.flowT > 0) && !P.dead && !e.tele && e.state !== 'charge' && e.state !== 'arm' && e.state !== 'wind') { const fd = flowDir(e); if (fd) { mvx = fd[0]; mvy = fd[1]; } }
       if (e.flowT > 0) e.flowT -= dt;
       if (e.slowT > 0) e.slowT -= dt;
-      const sp = def.speed * (e.slowT > 0 ? 0.6 : 1);
+      // original-skill states: 제압 (suppressed: fires slower), 이동 불가 (rooted), 적중 감소 (blinded: scattered aim)
+      if (e.supT > 0) { e.supT -= dt; e.fireT += dt * 0.5; }
+      if (e.rootT > 0) e.rootT -= dt;
+      if (e.blindT > 0) e.blindT -= dt;
+      const sp = def.speed * (e.slowT > 0 ? 0.6 : 1) * (e.rootT > 0 ? 0 : 1);
       if (e.slowT > 0) e.fireT += dt * 0.4; // slowed enemies also shoot less often
       const blocked = e.state === 'arm' ? false : LEVEL.move(e, mvx * sp * dt, mvy * sp * dt);
       e.wasBlocked = blocked && Math.hypot(mvx, mvy) > 0.3;
@@ -1718,6 +1756,17 @@
       if (d < radius) { e.kx += (e.x - x) / d * 3; e.ky += (e.y - y) / d * 3; if (!e.boss) e.stun = Math.max(e.stun, 0.6); }
     }
   }
+  // skill upgrade levels: each hero names the perk that strengthens its ultimate (upF) and its support skill (upE)
+  const upF = (P) => (P.hero.upF ? P.up[P.hero.upF] || 0 : 0);
+  const upE = (P) => (P.hero.upE ? P.up[P.hero.upE] || 0 : 0);
+  // enemies along a ray (nearest first): [{ e, t }]
+  function lineHits(x0, y0, a, len, width) {
+    const ca = Math.cos(a), sa = Math.sin(a);
+    return G.enemies.filter((e) => e.alive && e.spawnT <= 0).map((e) => {
+      const px = e.x - x0, py = e.y + e.h * 0.42 - y0, t = px * ca + py * sa;
+      return { e, t, off: Math.abs(-px * sa + py * ca) };
+    }).filter((o) => o.t > 0 && o.t < len && o.off < o.e.r + width && LEVEL.los(x0, y0 - 0.5, o.e.x, o.e.y + 0.2)).sort((p, q) => p.t - q.t);
+  }
   function useSkill() {
     const P = G.P;
     if (P.skill < 100) { SFX.synth('empty'); UI.toast(`스킬 충전 중 — ${Math.floor(P.skill)}%`, 'warn'); return; }
@@ -1777,6 +1826,89 @@
         }
         break;
       }
+      // ── originals: each hero's 2nd active skill from Last Origin ──
+      case 'aimshot': {
+        // 브라우니 · 조준 사격: three aimed rifle rounds that pierce; +29 % on suppressed / slowed / stunned targets
+        const pw = 1 + 0.25 * upF(P);
+        P.ultT = 1.4;
+        for (let i = 0; i < 3; i++) FX.later(0.15 + i * 0.32, () => {
+          if (G.phase !== 'play' || !G.P) return;
+          const aa = G.P.aim, x0 = G.P.x + Math.cos(aa) * 0.5, y0 = G.P.y + 0.7;
+          const hit = lineHits(x0, y0, aa, 20, 0.45).slice(0, 3);
+          const end = hit.length ? hit[hit.length - 1].t + 0.6 : 16;
+          FX.beam(x0, y0, x0 + Math.cos(aa) * end, y0 + Math.sin(aa) * end, 0.12, 0xfff2a0, 0.25);
+          FX.muzzleFlash(x0, y0, aa, 0xffd34d, 2.2);
+          SFX.play('rifle', 1); SFX.play('hitB', 0.5); if (G.opt.shake) FX.shake(0.12);
+          hit.forEach(({ e }) => { const bonus = e.supT > 0 || e.slowT > 0 || e.stun > 0 ? 1.29 : 1; hurtEnemy(e, 120 * pw * bonus * G.P.mods.dmg, true, Math.cos(aa) * 5, Math.sin(aa) * 5, 'hitB'); });
+          hitPropsOnLine(x0, y0, x0 + Math.cos(aa) * end, y0 + Math.sin(aa) * end, 80);
+        });
+        SFX.play('charge', 0.8);
+        break;
+      }
+      case 'mgspray':
+        // 레프리콘 · 경기관총 난사: 3 s of wide light-MG spray toward the aim — rounds pierce cover troops (보호 무시)
+        P.sprayT = P.sprayMax = 3 + 0.8 * upF(P); P.sprayTick = 0; P.ultT = P.sprayT;
+        SFX.play('reinforce', 0.7); FX.ring(P.x, P.y + 0.6, 0.3, 2.6, 0x9dff7a, 0.5);
+        break;
+      case 'zone': {
+        // 님프 · 제압 난사: a suppressing barrage on the target area — damage, and everything caught fires slower and dodges less
+        const d = 6, tx = P.x + Math.cos(a) * d, ty = P.y + 0.5 + Math.sin(a) * d;
+        P.zone = { x: tx, y: ty, t: 2.6 + 0.6 * upF(P), tick: 0, R: 3 };
+        P.ultT = P.zone.t;
+        FX.ring(tx, ty, 0.4, 3, 0x7affd4, 0.6); SFX.play('warning', 0.4);
+        break;
+      }
+      case 'barrier':
+        // 노움 · 방벽 생성: foam-concrete wall in front of her that stops enemy rounds; one hit on her is nullified
+        P.wallT = 6 + 1.5 * upF(P); P.ultT = 1.2;
+        P.emplaceT = P.wallT; P.emplaceGuard = 1;
+        SFX.play('quake', 0.6); SFX.play('shield', 0.7);
+        FX.ring(P.x, P.y + 0.6, 0.4, 2.4, 0xd8c8a0, 0.6);
+        if (G.opt.shake) FX.shake(0.25);
+        break;
+      case 'snare': {
+        // 콘스탄챠 S2 · 발목 잡기 (with 보리): the target and everything near it is pinned (이동 불가), marked and slowed to act
+        const d = 6.5, tx = P.x + Math.cos(a) * d, ty = P.y + 0.5 + Math.sin(a) * d, R = 3.2, dur = 4 + upF(P);
+        FX.later(0.3, () => {
+          FX.ring(tx, ty, 0.4, R, 0xb08cff, 0.6); FX.particle({ x: tx, y: ty, life: 0.6, size: 1, size1: R * 2, color: 0xb08cff, tex: FX.tex.glow, alpha: 0.45 });
+          SFX.play('ice', 0.8); SFX.play('handgun', 0.6);
+          for (const e of G.enemies) {
+            if (!e.alive || e.spawnT > 0 || Math.hypot(e.x - tx, e.y - ty) > R + e.r) continue;
+            e.rootT = Math.max(e.rootT || 0, dur); e.markT = Math.max(e.markT || 0, dur); e.supT = Math.max(e.supT || 0, dur);
+            if (e.boss) { e.seq.length = 0; e.tele = null; e.patT = (e.patT || 0) + 1.5; }
+            hurtEnemy(e, 25 * P.mods.dmg, false, 0, 0, 'hitM');
+            FX.ring(e.x, e.y + 0.2, e.r * 2.2, e.r * 1.1, 0xb08cff, 0.5);
+          }
+        });
+        break;
+      }
+      case 'escort':
+        // 블랙 리리스 · 요인 경호: two hits nullified, attack +23.5 % and sure aim for 6 s
+        P.overdrive = P.odMax = 6 + 1.5 * upF(P); P.odDmg = 1.235; P.odRof = 1; P.visorT = P.overdrive;
+        P.emplaceT = P.overdrive; P.emplaceGuard = 2;
+        SFX.play('shield'); SFX.play('reinforce', 0.7);
+        FX.ring(P.x, P.y + 0.6, 0.3, 2.6, 0xc070ff, 0.6); FX.flash(0xc070ff, 0.12);
+        break;
+      case 'eyebeam': {
+        // LRL · 사이클롭스 이터널 빔: the eye-patch comes off — a long beam that blinds (적중 감소) and slows (AP 감소)
+        const ca = Math.cos(a), sa = Math.sin(a), len = 22, wid = 1.6 * (1 + 0.3 * upF(P)), dur = 5 + upF(P);
+        SFX.play('charge');
+        FX.later(0.3, () => {
+          FX.orbital(mx, my, mx + ca * len, my + sa * len, 0xff5a8a, 1.1);
+          SFX.play('laserBig');
+          for (const e of G.enemies) {
+            if (!e.alive || e.spawnT > 0) continue;
+            const px = e.x - mx, py = e.y + e.h * 0.42 - my, t = px * ca + py * sa;
+            if (t > 0 && t < len && Math.abs(-px * sa + py * ca) < wid + e.r) {
+              e.blindT = Math.max(e.blindT || 0, dur); e.supT = Math.max(e.supT || 0, dur);
+              if (e.boss) { e.seq.length = 0; e.tele = null; }
+              hurtEnemy(e, 45 * P.mods.dmg, false, ca * 3, sa * 3);
+            }
+          }
+          for (let k = G.ebul.length - 1; k >= 0; k--) { const b = G.ebul[k], px = b.x - mx, py = b.y - my, t = px * ca + py * sa; if (t > 0 && t < len && Math.abs(-px * sa + py * ca) < wid) { popEB(b); ebRemove(k); } }
+        });
+        break;
+      }
       case 'orbital': {
         const ca = Math.cos(a), sa = Math.sin(a), len = 24;
         SFX.play('charge');
@@ -1820,7 +1952,7 @@
     if (hits && P.hp <= P.maxHp / 2 && P.rushHeals < 1) { /* only when she's hurt (half HP or less), once per room */ P.rushHeals++; P.hp = Math.min(P.maxHp, P.hp + 1); FX.ring(P.x, P.y + 0.6, 0.2, 1.2, 0xff4060, 0.35); SFX.play('reinforce', 0.45); }
   }
   // ── secondary skills (cooldown) ──
-  function sk2Cool(P) { return Math.max(1.5, P.hero.sk2.cd * P.mods.sk2cd - (P.up.u_rush || 0) * 1.2); }
+  function sk2Cool(P) { return Math.max(1.5, P.hero.sk2.cd * P.mods.sk2cd - (P.up.u_rush || 0) * 1.2 - upE(P) * 0.6); } // every support-skill upgrade also trims 0.6 s
   const TURRET_SHOT = { kind: 'bullet', color: 0x9fffd8, size: 0.28, life: 0.8, hit: 'skill_hit_simple', hitSnd: 'hitS', dmg: 7, speed: 20, splash: 0 };
   function useSkill2() {
     const P = G.P, sk = P.hero.sk2;
@@ -1892,6 +2024,58 @@
         FX.particle({ x: e.x, y: e.y + e.h + 0.2, life: Math.min(dur, 3), size: 0.5, size1: 0.5, color: 0xb08cff, tex: FX.tex.glow, alpha: 0.7 });
       });
       if (!hit.length) { UI.toast('조준선에 적이 없습니다', 'warn'); P.sk2Cd = 0.5; }
+    } else if (sk.id === 'checkfire') {
+      // 브라우니 · 견제 사격: a three-round burst; whatever it hits is suppressed (fires slower, takes +15 %) for 4 s
+      const pw = 1 + 0.2 * upE(P), rd = { d: Object.assign({}, GUNS.ar, { dmg: 16 * pw, life: 0.8, size: 0.42 }) };
+      for (let i = 0; i < 3; i++) FX.later(i * 0.08, () => { if (!G.P) return; const aa = G.P.aim, b = spawnPBullet(G.P, rd, G.P.x + Math.cos(aa) * 0.5, G.P.y + 0.7, aa + rnd(-0.03, 0.03), 26); if (b) b.sup = 4 + upE(P); SFX.play('rifle', 0.9); });
+      FX.muzzleFlash(P.x + ca * 0.5, P.y + 0.7, a, 0xffd34d, 1.6);
+    } else if (sk.id === 'mgfocus') {
+      // 레프리콘 · 기관총 사격: 2 s of focused fire — double rate, tight spread, +20 % damage (+38 % on suppressed targets)
+      P.overdrive = P.odMax = 2 + 0.5 * upE(P); P.odRof = 2; P.odDmg = 1.2; P.focusT = P.overdrive;
+      SFX.play('reloadOut', 0.8); FX.ring(P.x, P.y + 0.6, 0.3, 1.6, 0x9dff7a, 0.35);
+    } else if (sk.id === 'focusshot') {
+      // 님프 · 집속 사격: one concentrated blast — a tight cone of heavy pellets, +19 % on marked targets
+      const pw = 1 + 0.2 * upE(P), sg = { d: Object.assign({}, GUNS.sg, { dmg: GUNS.sg.dmg * 1.8 * pw, life: 0.36 }) };
+      const mx = P.x + ca * 0.5, my = P.y + 0.6 + sa * 0.5;
+      for (let i = 0; i < 10; i++) spawnPBullet(P, sg, mx, my, a + (i / 9 - 0.5) * 0.32, rnd(20, 24));
+      FX.muzzleFlash(mx, my, a, 0x7affd4, 2.2); SFX.play('gun'); SFX.play('expS', 0.4);
+      if (G.opt.shake) FX.shake(0.15);
+    } else if (sk.id === 'covermark') {
+      // 노움 · 원호 사격: a marking round — everything near the impact is marked (+50 % damage taken, dodges less) for 5 s
+      const d = 6, tx = P.x + ca * d, ty = P.y + 0.5 + sa * d, R = 2.4 * (1 + 0.2 * upE(P));
+      SFX.play('swing', 0.6);
+      lob(P.x + ca * 0.4, P.y + 0.7, tx, ty, 0.32, () => {
+        FX.explosion(tx, ty, 0.9, 0xffa040, false); FX.ring(tx, ty, 0.4, R, 0xff6a4a, 0.4); SFX.play('expS', 0.8);
+        for (const e of G.enemies) { if (!e.alive || e.spawnT > 0 || Math.hypot(e.x - tx, e.y + e.h * 0.4 - ty) > R + e.r) continue; e.markT = Math.max(e.markT || 0, 5); hurtEnemy(e, 30 * P.mods.dmg, false, 0, 0, 'hitB'); }
+        damageProps(tx, ty, R, 30);
+      });
+    } else if (sk.id === 'rifleshot') {
+      // 콘스탄챠 S2 · 라이플 사격: one precise depleted-uranium round — heavy damage, and the target takes +19 % for 4 s (as a mark)
+      const pw = 1 + 0.25 * upE(P), x0 = P.x + ca * 0.5, y0 = P.y + 0.7;
+      const hit = lineHits(x0, y0, a, 20, 0.4).slice(0, 2);
+      const end = hit.length ? hit[hit.length - 1].t + 0.5 : 16;
+      FX.beam(x0, y0, x0 + ca * end, y0 + sa * end, 0.08, 0xff9af0, 0.25); SFX.play('handgun', 1); SFX.play('hitB', 0.5);
+      hit.forEach(({ e }) => { hurtEnemy(e, 70 * pw * P.mods.dmg, Math.random() < 0.35, ca * 4, sa * 4, 'hitB'); e.markT = Math.max(e.markT || 0, 4); });
+      if (!hit.length) hitPropsOnLine(x0, y0, x0 + ca * end, y0 + sa * end, 60);
+    } else if (sk.id === 'dualburst') {
+      // 블랙 리리스 · 듀얼 버스트: an akimbo burst from both guns; hit targets are suppressed (attack down) — +48 % on them
+      const pw = 1 + 0.2 * upE(P), rd = { d: Object.assign({}, GUNS.bl_dual, { dmg: GUNS.bl_dual.dmg * 2 * pw, life: 0.7, size: 0.34 }) };
+      for (let i = 0; i < 10; i++) FX.later(i * 0.04, () => { if (!G.P) return; const aa = G.P.aim, side = i % 2 ? 0.1 : -0.1, b = spawnPBullet(G.P, rd, G.P.x + Math.cos(aa) * 0.5, G.P.y + 0.7, aa + side + rnd(-0.04, 0.04), 24); if (b) b.sup = 4; if (i % 2) SFX.play('gun', 0.6); });
+    } else if (sk.id === 'axe') {
+      // LRL · 액스 오브 다크니스: a swing of the dragon-slayer axe in front of her — sometimes it finds a weak point (x2.45)
+      const pw = 1 + 0.2 * upE(P), R = 2.8, luck = 0.2 + 0.08 * upE(P);
+      FX.ring(P.x + ca * 1.2, P.y + 0.6 + sa * 1.2, 0.4, R, 0xff5a8a, 0.35); SFX.play('swing', 0.9);
+      for (let i = 0; i < 7; i++) { const aa = a + (i / 6 - 0.5) * 2.2; FX.particle({ x: P.x + Math.cos(aa) * 1.9, y: P.y + 0.6 + Math.sin(aa) * 1.9, life: 0.25, size: 0.7, size1: 0.2, color: 0xff5a8a, tex: FX.tex.glow, alpha: 0.8 }); }
+      let weak = false;
+      for (const e of G.enemies) {
+        if (!e.alive || e.spawnT > 0) continue;
+        const px = e.x - P.x, py = e.y + e.h * 0.4 - P.y - 0.6, d = Math.hypot(px, py) || 1;
+        if (d > R + e.r || Math.abs(angDiff(a, Math.atan2(py, px))) > 1.15) continue;
+        const crit = Math.random() < luck; if (crit) weak = true;
+        hurtEnemy(e, 55 * pw * (crit ? 2.45 : 1) * P.mods.dmg, crit, px / d * 7, py / d * 7, 'hitB');
+      }
+      for (let k = G.ebul.length - 1; k >= 0; k--) { const b = G.ebul[k], px = b.x - P.x, py = b.y - P.y - 0.6; if (Math.hypot(px, py) < R && Math.abs(angDiff(a, Math.atan2(py, px))) < 1.15) { popEB(b); ebRemove(k); } }
+      if (weak) { UI.toast('약점 적중!', 'gem'); SFX.play('hitB', 0.8); if (G.opt.shake) FX.shake(0.2); }
     }
   }
   // Leprechaun's frontal shield: a glowing arc that eats enemy bullets in front of the aim (and reflects them)
