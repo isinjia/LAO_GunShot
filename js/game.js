@@ -2074,8 +2074,8 @@
     const ord = 4; // the floor layer, under every character (one shared batch)
     const puff = (n) => { for (let i = 0; i < n; i++) {
       const c = Math.random(), col = (Math.round(0x59 + (0x84 - 0x59) * c) << 16) | (Math.round(0x52 + (0x7e - 0x52) * c) << 8) | Math.round(0x4d + (0x78 - 0x4d) * c);
-      FX.particle({ x: P.x + bx * 0.25 + rnd(-0.3, 0.3), y: P.y + 0.12 + rnd(-0.06, 0.1), vx: bx * rnd(2.2, 3.6) + rnd(-0.4, 0.4), vy: by * rnd(1.2, 2.2) + rnd(0.1, 0.5), drag: 5,
-        life: rnd(0.4, 0.6), size: rnd(0.45, 0.65), size1: rnd(1, 1.35), rot: rnd(0, TAU), spin: rnd(-1, 1), color: col, tex: FX.tex.kpuff || FX.tex.glow, alpha: rnd(0.23, 0.55), normal: true, order: ord });
+      FX.particle({ x: P.x + bx * 0.2 + rnd(-0.18, 0.18), y: P.y + 0.08 + rnd(-0.04, 0.06), vx: bx * rnd(1.1, 1.8) + rnd(-0.2, 0.2), vy: by * rnd(0.6, 1.1) + rnd(0.05, 0.25), drag: 5,
+        life: rnd(0.4, 0.6), size: rnd(0.22, 0.32), size1: rnd(0.5, 0.68), rot: rnd(0, TAU), spin: rnd(-1, 1), color: col, tex: FX.tex.kpuff || FX.tex.glow, alpha: rnd(0.23, 0.55), normal: true, order: ord });
     } };
     if (P.kdStart) { P.kdStart = false; puff(5); } // the push-off: a burst of 5, like the original's opening burst
     P.kdT = (P.kdT || 0) - dt;
@@ -2084,8 +2084,8 @@
     if (P.kkT <= 0 && sh.kdust1 && sh.kdust1.length) {
       P.kkT = 0.18; P.kkN = (P.kkN || 0) + 1;
       // the art sprays up and back for a right-facing skater: mirror it when she rolls left
-      const m = bx > 0, w = rnd(1.9, 2.4), foot = P.kkN % 2 ? 0.18 : -0.18;
-      FX.particle({ x: P.x + bx * 0.55 + foot, y: P.y + w * 0.75 * 0.36, vx: bx * 0.6, life: rnd(0.55, 0.75), size: w, size1: w * 1.05, aspect: 0.75,
+      const m = bx < 0, w = rnd(0.95, 1.2), foot = P.kkN % 2 ? 0.12 : -0.12; // the source art sprays the other way: mirror when she rolls right
+      FX.particle({ x: P.x + bx * 0.35 + foot, y: P.y + w * 0.75 * 0.36, vx: bx * 0.4, life: rnd(0.55, 0.75), size: w, size1: w * 1.05, aspect: 0.75,
         frames: P.kkN % 2 ? (m ? sh.kdust1m : sh.kdust1) : (m ? sh.kdust2m : sh.kdust2), color: 0xffffff, alpha: 0.95, normal: true, order: ord });
     }
   }
