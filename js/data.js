@@ -12,38 +12,38 @@
   const HEROES = [
     {
       id: 'brownie', name: 'T-2 브라우니', title: '스틸라인 돌격병', img: 'c_BR_Brownie_N', gun: 'ar', hp: 10, armor: 2, speed: 6.3,
-      skill: 'aimshot', skillName: '조준 사격', skillDesc: '관통하는 조준 사격 3연발 — 한 발당 큰 피해, 제압 · 둔화 · 기절 상태의 적에게 피해 +29%', color: '#ffd34d', upF: 'u_aim', upE: 'u_check',
-      sk2: { id: 'checkfire', name: '견제 사격', icon: 'i_warning', cd: 5, desc: '돌격소총 3점사 — 맞은 적은 4초간 제압(사격 속도 감소, 받는 피해 +15%)' },
+      skill: 'aimshot', skillName: '조준 사격', skillDesc: '레이저 조준 후 관통 저격 3연발 — 마지막 탄은 착탄 지점 폭발 + 기절, 제압 · 둔화 · 기절 상태의 적에게 피해 +29%', color: '#ffd34d', upF: 'u_aim', upE: 'u_check',
+      sk2: { id: 'frag', name: '전술 수류탄', icon: 'i_warning', cd: 6, desc: '커서 지점에 수류탄 — 폭발 피해 + 넉백 + 0.8초 기절, 폭발 범위의 적탄 소거, 잠시 불길이 남는다' },
       stats: { atk: 3, def: 3, mob: 4 }, desc: '균형 잡힌 돌격소총과 높은 기동력. 처음 출격하는 지휘관에게 추천.',
     },
     {
       id: 'leprechaun', name: 'T-3 레프리콘', title: '스틸라인 기관총 사수', img: 'c_BR_Leprechaun_N', gun: 'mg', hp: 10, armor: 1, speed: 5.7,
-      skill: 'mgspray', skillName: '경기관총 난사', skillDesc: '3초간 조준 방향으로 넓게 기관총을 난사 — 탄환이 적을 관통(보호 무시), 제압된 적에게 피해 증가', color: '#9dff7a', upF: 'u_spray', upE: 'u_mgf',
-      sk2: { id: 'mgfocus', name: '기관총 사격', icon: 'i_research', cd: 8, desc: '2초간 집중 사격 — 연사 2배, 탄 퍼짐 감소, 피해 +20% (제압된 적에게 +38%)' },
+      skill: 'mgspray', skillName: '경기관총 난사', skillDesc: '3초간 조준 방향으로 넓게 기관총을 난사 — 탄환이 적을 관통(보호 무시)하고 제압, 전방의 적탄을 지운다', color: '#9dff7a', upF: 'u_spray', upE: 'u_mgf',
+      sk2: { id: 'mgfocus', name: '기관총 사격', icon: 'i_research', cd: 8, desc: '2초간 집중 사격 — 연사 2.5배, 탄 퍼짐 감소, 피해 +35%, 총구 앞의 적탄 소거' },
       stats: { atk: 4, def: 4, mob: 2 }, desc: '압도적인 연사력과 튼튼한 체력. 탄막으로 적을 짓누른다.',
     },
     {
       id: 'nymph', name: 'T-10 님프', title: '스틸라인 화력 지원병', img: 'c_BR_Nymph_N', gun: 'mg80', hp: 10, armor: 1, speed: 5.9,
-      skill: 'zone', skillName: '제압 난사', skillDesc: '조준 지점 일대에 탄을 퍼부어 피해 — 맞은 적은 제압(사격 속도 감소, 받는 피해 증가), 표식 대상에게 피해 증가', color: '#7affd4', upF: 'u_zone', upE: 'u_focus',
-      sk2: { id: 'focusshot', name: '집속 사격', icon: 'i_power', cd: 5, desc: '탄을 한데 모은 강력한 근거리 일격 — 표식 대상에게 피해 +19%' },
+      skill: 'zone', skillName: '제압 난사', skillDesc: '커서 지점에 탄을 비처럼 퍼붓는다 — 맞은 적은 제압 · 발이 묶이고, 끝에 일제 사격으로 마무리', color: '#7affd4', upF: 'u_zone', upE: 'u_focus',
+      sk2: { id: 'focusshot', name: '집속 사격', icon: 'i_power', cd: 5, desc: 'MG80을 한 줄로 집중 사격 — 점점 굵어지는 관통 중탄 14발, 전방 적탄 소거, 표식 대상에게 피해 +19%' },
       stats: { atk: 4, def: 3, mob: 3 }, desc: 'MG80 경기관총의 화력 지원. 제압 난사로 적의 손발을 묶는다.',
     },
     {
       id: 'kheshig', name: 'T-4 케시크', title: '앵거 오브 호드 의무병', img: 'c_BR_Kheshig_N', gun: 'ct11', hp: 10, armor: 1, speed: 6.1, skate: true,
-      skill: 'deploy', skillName: '전술 배치', skillDesc: '6초간 공격력 +28.5% · 연사 +14% · 피격 1회 무효, 체력이 줄었으면 응급 처치로 25 회복', color: '#ff8a5a', upF: 'u_deploy', upE: 'u_cqb',
-      sk2: { id: 'pointblank', name: '근거리 포격', icon: 'i_power', cd: 5, desc: '지근거리 산탄 일격 — 가까울수록 피해 +28.5%, 맞은 적은 4초간 표식(받는 피해 +50%)' },
+      skill: 'deploy', skillName: '전술 배치', skillDesc: '배치 충격파로 주변 적을 밀쳐내고 — 6초간 공격력 +45% · 연사 +30% · 피격 1회 무효, 체력이 줄었으면 25 회복', color: '#ff8a5a', upF: 'u_deploy', upE: 'u_cqb',
+      sk2: { id: 'pointblank', name: '근거리 포격', icon: 'i_power', cd: 5, desc: 'CT-11을 연속 3회 발사 — 큰 슬러그 산탄, 가까울수록 피해 +28.5%, 맞은 적은 밀려나고 4초간 표식(받는 피해 +50%)' },
       stats: { atk: 4, def: 4, mob: 3 }, desc: 'CT-11 자동 산탄총을 든 의무병. 근접 화력과 응급 처치로 버틴다.',
     },
     {
       id: 'gnome', name: 'T-20S 노움', title: '스틸라인 유탄병', img: 'c_BR_Gnome_N', gun: 'gl', hp: 8, armor: 1, speed: 5.9,
-      skill: 'barrier', skillName: '방벽 생성', skillDesc: '발포 콘크리트 방벽을 세워 전방의 적탄을 막는다(6초) — 그동안 피격 1회 무효', color: '#ffa040', upF: 'u_wall', upE: 'u_cover',
-      sk2: { id: 'covermark', name: '원호 사격', icon: 'i_target', cd: 7, desc: '착탄 지점 주변의 적을 5초간 표식 — 받는 피해 +50%' },
+      skill: 'barrier', skillName: '방벽 생성', skillDesc: '충격파와 함께 방벽을 세워 전방의 적탄을 막는다(6초) · 피격 1회 무효 — 끝날 때 막은 탄만큼 폭발', color: '#ffa040', upF: 'u_wall', upE: 'u_cover',
+      sk2: { id: 'covermark', name: '원호 사격', icon: 'i_target', cd: 7, desc: '커서 지점에 표식탄 — 주변 적 경직 + 5초간 표식(받는 피해 +50%)' },
       stats: { atk: 5, def: 3, mob: 3 }, desc: '유탄의 범위 피해로 무리를 한 번에 정리. 직격 판정에 주의.',
     },
     {
       id: 'constantia', name: '콘스탄챠 S2', title: '정밀 사격 전문가', img: 'c_3P_ConstantiaS2_N', gun: 'dmr', hp: 9, armor: 2, speed: 6.5,
-      skill: 'snare', skillName: '발목 잡기', skillDesc: '보리와 함께 조준 지점 일대의 적을 4초간 이동 불가 · 표식 · 행동 저하 — 보스는 패턴이 끊긴다', color: '#ff6af0', upF: 'u_snare', upE: 'u_rifle',
-      sk2: { id: 'rifleshot', name: '라이플 사격', icon: 'i_crit', cd: 6, desc: '열화우라늄 탄 한 발 — 조준선의 적 최대 2명에게 큰 피해, 4초간 받는 피해 증가' },
+      skill: 'snare', skillName: '발목 잡기', skillDesc: '보리와 함께 커서 지점 일대의 적을 4초간 이동 불가 · 표식 · 행동 저하 — 보스는 패턴이 끊긴다', color: '#ff6af0', upF: 'u_snare', upE: 'u_rifle',
+      sk2: { id: 'rifleshot', name: '라이플 사격', icon: 'i_crit', cd: 6, desc: '열화우라늄 탄 한 발 — 조준선의 적 최대 3명을 꿰뚫고 표식, 35% 확률로 치명타(x1.8)' },
       stats: { atk: 5, def: 2, mob: 4 }, desc: '관통하는 고위력 정밀 사격. 한 발 한 발이 치명적이다.',
     },
   ];
@@ -53,14 +53,14 @@
   const HIDDEN = [
     {
       id: 'blacklilith', name: '블랙 리리스', title: '히든 · 쌍권총 전투 바이오로이드', img: 'c_HID_BlackLilith', gun: 'bl_dual', hp: 10, armor: 1, speed: 6.6, hidden: true,
-      skill: 'escort', skillName: '요인 경호', skillDesc: '6초간 피해 무효 2회 · 공격력 +23.5% · 적중 강화(자동 조준)', color: '#c070ff', upF: 'u_escort', upE: 'u_dual',
-      sk2: { id: 'dualburst', name: '듀얼 버스트', icon: 'i_research', cd: 6, desc: '쌍권총 아킴보 연사 — 맞은 적은 4초간 제압(공격력 감소), 제압된 적에게 피해 +48%' },
+      skill: 'escort', skillName: '요인 경호', skillDesc: '6초간 피해 무효 2회 · 공격력 +35% · 자동 조준 — 시전과 방어 때마다 사방으로 탄환을 뿌린다', color: '#c070ff', upF: 'u_escort', upE: 'u_dual',
+      sk2: { id: 'dualburst', name: '듀얼 버스트', icon: 'i_research', cd: 6, desc: '쌍권총 20연사가 교차하며 쏟아진다 — 맞은 적은 4초간 제압, 마지막에 주변 적탄 소거' },
       stats: { atk: 4, def: 3, mob: 5 }, desc: '쌍권총과 경호의 달인. 탄막 한가운데서 춤추듯 싸운다.',
     },
     {
       id: 'lrl', name: 'LRL', title: '히든 · 자칭 진조의 흑마법사', img: 'c_HID_LRL', rig: 'PECS_LRL', gun: 'lrl_wand', hp: 8, armor: 1, speed: 6.0, hidden: true,
-      skill: 'eyebeam', skillName: '사이클롭스 이터널 빔', skillDesc: '안대의 봉인을 풀고 길게 빔을 발사 — 맞은 적은 5초간 적중 감소(조준 흔들림) · 행동 저하, 경로의 적탄 소거', color: '#ff5a8a', upF: 'u_beam', upE: 'u_axe',
-      sk2: { id: 'axe', name: '액스 오브 다크니스', icon: 'i_target', cd: 5, desc: '드래곤 슬레이어로 전방을 크게 벤다 — 낮은 확률로 약점을 맞혀 피해 x2.45, 베는 범위의 적탄 소거' },
+      skill: 'eyebeam', skillName: '사이클롭스 이터널 빔', skillDesc: '안대의 봉인을 풀고 길게 빔을 발사 + 잔광 2회 — 맞은 적은 5초간 적중 감소 · 행동 저하, 경로의 적탄 소거', color: '#ff5a8a', upF: 'u_beam', upE: 'u_axe',
+      sk2: { id: 'axe', name: '액스 오브 다크니스', icon: 'i_target', cd: 5, desc: '드래곤 슬레이어로 전방을 크게 벤다(순간 무적) — 약점 적중 시 피해 x2.45 + 쿨타임 절반, 적탄 소거' },
       stats: { atk: 5, def: 2, mob: 3 }, desc: '자칭 흑마법사. 도끼와 봉인된 눈의 빔으로 싸운다.',
     },
     {
@@ -259,7 +259,7 @@
     { id: 'p_last', name: '최후의 저항', icon: 'i_skull', max: 1, desc: '체력 50 이하일 때 주는 피해 +40%' },
     // skill upgrades: each hero's ultimate (upF) and support skill (upE) from the original kit
     { id: 'u_aim', hero: 'brownie', name: '정밀 조준', icon: 'i_battle', max: 3, desc: '조준 사격: 피해 +25%' },
-    { id: 'u_check', hero: 'brownie', name: '견제 강화', icon: 'i_warning', max: 3, desc: '견제 사격: 피해 +20%, 제압 +1초, 쿨타임 -0.6초' },
+    { id: 'u_check', hero: 'brownie', name: '고폭 수류탄', icon: 'i_warning', max: 3, desc: '전술 수류탄: 범위 +25%, 기절 +0.4초, 쿨타임 -0.6초' },
     { id: 'u_spray', hero: 'leprechaun', name: '난사 연장', icon: 'i_battle', max: 3, desc: '경기관총 난사: 지속 +0.8초, 피해 +20%' },
     { id: 'u_mgf', hero: 'leprechaun', name: '집중 사격 연장', icon: 'i_power', max: 3, desc: '기관총 사격: 지속 +0.5초, 쿨타임 -0.6초' },
     { id: 'u_zone', hero: 'nymph', name: '제압 강화', icon: 'i_battle', max: 3, desc: '제압 난사: 지속 +0.6초, 피해 +20%' },

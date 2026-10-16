@@ -435,6 +435,27 @@
   }
 
   // ── ultimates ──────────────────────────────────────────
+  // a round falling from high above (suppressing fire rained on an area): a ground marker, a long tracer streak, then the hit
+  function raindrop(x, y, onImpact, color = 0x7affd4, dur = 0.24) {
+    const ang = -Math.PI / 2 + 0.22, sx = x - Math.cos(ang) * 6.5, sy = y - Math.sin(ang) * 6.5;
+    let t = 0;
+    const streak = particle({ x: sx, y: sy, life: dur + 0.04, size: 0.22, size1: 0.22, aspect: 9, rot: ang - Math.PI / 2, color, tex: tex.glow, alpha: 0.95 });
+    const core = particle({ x: sx, y: sy, life: dur + 0.04, size: 0.1, size1: 0.1, aspect: 7, rot: ang - Math.PI / 2, color: 0xffffff, tex: tex.glow });
+    particle({ x, y, life: dur + 0.05, size: 0.7, size1: 0.25, color, tex: tex.ring || tex.glow, alpha: 0.6 });
+    tickers.push((dt) => {
+      t += dt;
+      const f = Math.min(1, t / dur), cx = sx + (x - sx) * f, cy = sy + (y - sy) * f;
+      if (streak) { streak.x = cx; streak.y = cy + 0.6; } if (core) { core.x = cx; core.y = cy + 0.6; }
+      if (f >= 1) {
+        particle({ x, y: y + 0.05, life: 0.22, size: 0.4, size1: 1.5, color, tex: tex.glow, alpha: 0.9 });
+        sparks(x, y + 0.1, color, 5, 3.5, 0.12, 0.3);
+        particle({ x, y, life: 0.45, size: 0.5, size1: 1.3, color: 0x8a96a8, frames: null, tex: tex.dot, alpha: 0.35, normal: true });
+        onImpact && onImpact();
+        return false;
+      }
+      return true;
+    });
+  }
   function meteor(x, y, onImpact, color = 0xff6a2a) {
     const sx = x - 4, sy = y + 7, dur = 0.55;
     let t = 0;
@@ -585,7 +606,7 @@
 
   window.FX = {
     L, tex, init, update, clear, particle, sprite, kill, setTex, setBudget, draw: drawParticles, sparks, hit, explosion, ring, lightning, beam, slash, flame, wave, frost, holy,
-    trail, muzzle, muzzleFlash, summonBurst, mergeFx, deathFx, goldPop, meteor, pillar, orbital, thunderBolt, freezeAll,
+    trail, muzzle, muzzleFlash, summonBurst, mergeFx, deathFx, goldPop, meteor, raindrop, pillar, orbital, thunderBolt, freezeAll,
     shake, flash, follow, later: setTimeout0, state, rnd, tickers, ribbon, jagged,
   };
 })();
