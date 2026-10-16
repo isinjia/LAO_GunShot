@@ -286,7 +286,19 @@
     if (heroId && SD.ready(heroId) && !(g.nativeGrip && heroId === g.donor)) {
       // right hand on the grip, left hand where the hero's own idle pose rests it (under the barrel);
       // the palm pieces draw behind the weapon, the fingers in front, as in the source art
-      const hold = g.hold;
+      let hold = g.hold;
+      if (g.alignGrip) {
+        /* Match the holder's palm centers to this weapon's original grip and support hand. */
+        const center = (id, k, side) => {
+          const hand = RIGS.makeHand(id, k, null, 'handAll', side);
+          if (!hand) return [0, 0];
+          const [x0,y0,x1,y1] = hand.box; hand.c.dispose();
+          return [(x0+x1)/2, (y0+y1)/2];
+        };
+        const dk=donorK(g.donor)*(g.scale||1);
+        const right=center(g.donor,dk,'R'), left=center(g.donor,dk,'L'), palm=center(heroId,hk,'R');
+        hold={r:[right[0]-palm[0],right[1]-palm[1]],l:left,centers:true};
+      }
       if (!hold) {
         outlineOf('R'); outlineOf('L');
         const back = RIGS.makeHand(heroId, hk, null, 'handB');
@@ -306,8 +318,8 @@
         if (rb) { outer.add(rb.group); parts.unshift(rb.c); }
         if (rf) { outer.add(rf.group); parts.push(rf.c); }
         if (lh) {
-          const [x0, , x1] = lh.box;
-          const ldx = hold.l[0] - (x0 + x1) / 2, ldy = hold.l[1];
+          const [x0, y0, x1, y1] = lh.box;
+          const ldx = hold.l[0] - (x0 + x1) / 2, ldy = hold.l[1] - (hold.centers ? (y0 + y1) / 2 : 0);
           lh.group.position.x += ldx; lh.group.position.y += ldy;
           outlineOf('L', ldx, ldy);
           outer.add(lh.group);

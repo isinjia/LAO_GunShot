@@ -10,7 +10,7 @@
     leprechaun: { hide: /^(Arm_up_R|Arm_up_L|FK_Arm_up_R|FK_Arm_up_L)$/, hand: 'hand_R', handL: 'hand_L', front: /(_03|RF_hand)$/, ang: 0 },
     nymph: { hide: /^(Arm_up_R|Arm_up_L|FK_Arm_up_R|FK_Arm_up_L)$/, hand: 'hand_R', handL: 'hand_L', front: /(_03|RF_hand)$/, ang: 0 },
     gnome: { hide: /^(arm_r_up|arm_l_up|arm_l_up_2|gno_gun_die)$/, hand: 'hand_r', handL: 'hand_l', ang: 0 },
-    valkyrie: { hide: /^(arm_r_upper|arm_l_upper|part_gun_main_victory_die)$/, hand: 'hand_r', ang: 0 },
+    valkyrie: { hide: /^(arm_r_upper|arm_l_upper|part_gun_main_victory_die)$/, hand: 'hand_r', handL: 'hand_l', ang: 0 },
     raven: { hide: /^(arm_r_up|arm_l_up)$/, hand: 'hand_l', ang: 0, skip: /base_l|gun_2/ },
     sylphid: { hide: /^(bone_R_arm_up|bone_L_arm_up|bone_weapon_gun_back)$/, hand: 'bone_R_hand', ang: 0 },
     constantia: { hide: /^(Arm_up_L|Arm_up_R)$/, hand: 'hand_R', handL: 'hand_L', ang: 0 },
