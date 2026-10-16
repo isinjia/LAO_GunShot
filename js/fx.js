@@ -172,7 +172,9 @@
     const mirror = (fr) => fr.map((f) => { const cv = document.createElement('canvas'); cv.width = f.image.width; cv.height = f.image.height; const g = cv.getContext('2d'); g.translate(cv.width, 0); g.scale(-1, 1); g.drawImage(f.image, 0, 0); return canvasTex(cv); });
     sheets.kdust1m = mirror(sheets.kdust1); sheets.kdust2m = mirror(sheets.kdust2);
     // 콘스탄챠 S2's 보리: the dog (and a mirrored copy), the original dog-face reticle and the 5 x 2 bite flipbook
-    if (images.fx_bori) { tex.bori = t(images.fx_bori); tex.boriM = mirror([tex.bori])[0]; }
+    // fx_Hit_bori (original bake): gallop 0-4, pounce 5-8, hexagon dissolve 9-16; mirrored for running left
+    sheets.borirun = images.fx_borirun ? splitSheet(images.fx_borirun, 8, 3).slice(0, 17) : [];
+    sheets.borirunM = mirror(sheets.borirun);
     if (images.fx_dogaim) tex.dogaim = t(images.fx_dogaim);
     sheets.borifang = images.fx_borifang ? splitSheet(images.fx_borifang, 5, 2) : [];
     tex.beam = softTex('beam');
@@ -184,7 +186,7 @@
     tex.white = canvasTex(wc); // solid quads (HP bars) in the particle batches
 
     buildAtlas([...['glow', 'cross', 'ring', 'spark', 'elec', 'beam', 'dot', 'slash', 'snow', 'white'].map((k) => tex[k]),
-      ...sheets.smoke, ...sheets.fire, ...sheets.aura, ...sheets.bolt, ...sheets.kdust1, ...sheets.kdust2, ...sheets.kdust1m, ...sheets.kdust2m, ...sheets.borifang, ...[tex.bori, tex.boriM, tex.dogaim].filter(Boolean), ...(tex.kpuff ? [tex.kpuff] : [])]);
+      ...sheets.smoke, ...sheets.fire, ...sheets.aura, ...sheets.bolt, ...sheets.kdust1, ...sheets.kdust2, ...sheets.kdust1m, ...sheets.kdust2m, ...sheets.borifang, ...sheets.borirun, ...sheets.borirunM, ...[tex.dogaim].filter(Boolean), ...(tex.kpuff ? [tex.kpuff] : [])]);
 
     flashMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(200, 200),

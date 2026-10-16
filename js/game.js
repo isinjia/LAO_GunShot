@@ -1990,7 +1990,7 @@
         const [tx, ty] = aimPoint(P, 6.5), R = 3.2, dur = 4 + upF(P);
         { const [x0, y0] = muzzleOf(P); FX.beam(x0, y0, tx, ty, 0.06, 0xd0b8ff, 0.3); FX.muzzleFlash(x0, y0, a, 0xb08cff, 1.6); }
         FX.ring(tx, ty, R, 0.3, 0xb08cff, 0.3); // the target circle closes in before it bites
-        boriRun(P, tx, ty, 0.3, 1.5); // 보리 bounds out to the spot and pins it
+        boriRun(P, tx, ty, 0.3, 0.9); // 보리 gallops out to the spot and pins it
         // 보리 guards her too: anything within 2.2 tiles of Constantia is pinned and shoved off at once
         FX.ring(P.x, P.y + 0.3, 0.3, 2.2, 0xd0b8ff, 0.35);
         for (const e of G.enemies) { if (!e.alive || e.spawnT > 0) continue; const dx = e.x - P.x, dy = e.y - P.y, dd = Math.hypot(dx, dy) || 1; if (dd > 2.2 + e.r) continue; prime(e, 'root', 2.5); hurtEnemy(e, 30 * P.mods.dmg, false, e.boss ? 0 : dx / dd * 8, e.boss ? 0 : dy / dd * 8, 'hitM'); FX.ring(e.x, e.y + 0.2, e.r * 2.2, e.r * 1.1, 0xb08cff, 0.4); }
@@ -2159,26 +2159,29 @@
     }
     return kind;
   }
-  // 콘스탄챠 S2 · 보리: the dog bounds from her side to (tx, ty) in `run` seconds, holds the spot for `stay`, then fades
+  // 콘스탄챠 S2 · 보리 (the original fx_Hit_bori frames): one dog gallops from her side to (tx, ty) in `run` seconds,
+  // pounces over the last stretch, holds the pin for `stay`, then breaks up into the hexagon dissolve
   function boriRun(P, tx, ty, run, stay) {
-    if (!FX.tex.bori) return;
-    const dir = tx >= P.x ? 1 : -1, x0 = P.x + dir * 0.7, y0 = P.y, S = 1.35;
-    const sp = FX.sprite({ x: x0, y: y0 + S / 2, size: S, tex: dir > 0 ? FX.tex.bori : FX.tex.boriM, color: 0xffffff, alpha: 1, normal: true, order: L.FX - 1 });
-    FX.particle({ x: x0, y: y0 + 0.3, life: 0.4, size: 0.6, size1: 1.6, color: 0xd0b8ff, tex: FX.tex.glow, alpha: 0.6 });
+    const fr = FX.sheets && FX.sheets.borirun;
+    if (!fr || fr.length < 17) return;
+    const dir = tx >= P.x ? 1 : -1, F = dir > 0 ? fr : FX.sheets.borirunM, x0 = P.x + dir * 0.8, y0 = P.y, S = 2.1;
+    const sp = FX.sprite({ x: x0, y: y0 + 0.55, size: S, tex: F[0], color: 0xffffff, alpha: 1, normal: true, order: L.FX - 1 });
+    FX.particle({ x: x0, y: y0 + 0.4, life: 0.4, size: 0.6, size1: 1.6, color: 0x9fe6ff, tex: FX.tex.glow, alpha: 0.5 });
     SFX.play('swing', 0.5);
     let t = 0;
     FX.tickers.push((dt) => {
       t += dt;
-      if (t < run) { // a bounding run with a hop and paw dust
+      if (t < run) { // gallop, then the pounce frames over the last 30 %
         const f = t / run, x = x0 + (tx - x0) * f, y = y0 + (ty - y0) * f;
-        sp.x = x; sp.y = y + S / 2 + Math.sin(f * Math.PI) * 0.9;
+        sp.x = x; sp.y = y + 0.55 + Math.sin(f * Math.PI) * 0.5;
+        FX.setTex(sp, f < 0.7 ? F[Math.floor(t * 24) % 5] : F[5 + Math.min(3, Math.floor((f - 0.7) / 0.3 * 4))]);
         if (Math.random() < dt * 30) FX.particle({ x, y: y + 0.05, vy: rnd(0.3, 0.8), life: 0.35, size: 0.25, size1: 0.6, color: 0x9a948c, tex: FX.tex.dot, alpha: 0.4, normal: true, order: 4 });
         return true;
       }
-      if (t < run + stay) { sp.x = tx; sp.y = ty + S / 2 + Math.abs(Math.sin((t - run) * 9)) * 0.08; return true; } // holding the pin
-      const k = 1 - (t - run - stay) / 0.3;
-      if (k <= 0) { FX.kill(sp); FX.particle({ x: tx, y: ty + 0.5, life: 0.35, size: 0.5, size1: 1.4, color: 0xd0b8ff, tex: FX.tex.glow, alpha: 0.5 }); return false; }
-      sp.alpha = k; sp.y = ty + S / 2 + (1 - k) * 0.4;
+      if (t < run + stay) { sp.x = tx; sp.y = ty + 0.55; FX.setTex(sp, F[8]); return true; } // latched on
+      const k = (t - run - stay) / 0.33;
+      if (k >= 1) { FX.kill(sp); return false; }
+      FX.setTex(sp, F[9 + Math.min(7, Math.floor(k * 8))]); // the hexagon dissolve
       return true;
     });
   }
