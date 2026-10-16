@@ -456,6 +456,11 @@
     ab('abUlt').querySelector(':scope > small').textContent = h.skillName;
     ab('abUlt').style.setProperty('--hc', h.color);
     ab('abDodge').querySelector('.ico').style.setProperty('--ic', 'var(--s-ctrl_ff)');
+    // touch buttons carry the same icons as the desktop ability bar (skill art, hero portrait for the ultimate)
+    { const tb = (s) => document.querySelector('#touch .tb.' + s);
+      const ico = (b, bg, mask) => { if (!b) return; let i = b.querySelector('.tic'); if (!i) { i = document.createElement('i'); i.className = 'tic'; b.prepend(i); } i.style.setProperty('--ic', bg); i.classList.toggle('mask', !!mask); };
+      ico(tb('sk2'), `var(--s-${h.sk2.icon})`, h.sk2.icon !== 'i_crit'); ico(tb('skill'), portrait(h), false); ico(tb('dodge'), 'var(--s-ctrl_ff)', true);
+      const sk = tb('skill'); if (sk) sk.style.setProperty('--hc', h.color); }
     el.heroRank.style.backgroundImage = rankImg(h.id === 'constantia' ? 3 : 1);
     lastHud = {};
     mapDirty = true;
@@ -515,6 +520,7 @@
       n.querySelector('.fg').style.strokeDashoffset = String(276.5 * Math.max(0, rollLeft) / rollTotal);
       n.classList.toggle('cool', rollLeft > 0);
       n.querySelector('.cd').textContent = rollLeft > 0 ? rollLeft.toFixed(1) : '';
+      const tb = document.querySelector('#touch .tb.dodge'); if (tb) { tb.style.setProperty('--cd', (Math.max(0, rollLeft) / rollTotal).toFixed(3)); tb.classList.toggle('cool', rollLeft > 0); }
     });
     set('key', P.keys, (v) => { el.keyN.textContent = v; });
     set('gold', P.gold, (v) => { el.goldN.textContent = v; el.goldN.parentNode.classList.remove('pop'); void el.goldN.offsetWidth; el.goldN.parentNode.classList.add('pop'); });
@@ -525,7 +531,7 @@
       n.querySelector('.fg').style.strokeDashoffset = String(276.5 * cdf);
       n.querySelector('.cd').textContent = P.sk2Cd > 0 ? (P.sk2Cd >= 1 ? Math.ceil(P.sk2Cd) : P.sk2Cd.toFixed(1)) : '';
       n.classList.toggle('cool', P.sk2Cd > 0);
-      const tb = document.querySelector('.tb.sk2'); if (tb) { tb.classList.toggle('cool', P.sk2Cd > 0); tb.querySelector('.cdv').textContent = P.sk2Cd > 0 ? Math.ceil(P.sk2Cd) : ''; }
+      const tb = document.querySelector('.tb.sk2'); if (tb) { tb.classList.toggle('cool', P.sk2Cd > 0); tb.style.setProperty('--cd', cdf.toFixed(3)); tb.querySelector('.cdv').textContent = P.sk2Cd > 0 ? Math.ceil(P.sk2Cd) : ''; }
     });
     const odMax = P.odMax || 5, act = P.overdrive > 0 ? P.overdrive / odMax : P.blossomT > 0 ? P.blossomT / (P.blossomMax || 3) : P.shieldT > 0 ? -1 : 0;
     set('abU', Math.floor(P.skill) + ':' + Math.ceil(act * 50), () => {
@@ -536,7 +542,7 @@
       n.classList.toggle('ready', v >= 100 && !(act > 0));
       n.classList.toggle('active', act > 0);
       n.querySelector('.ulact').textContent = act > 0 ? `${P.hero.skillName} 발동 중` : v >= 100 ? '준비 완료' : '';
-      const tb = document.querySelector('.tb.skill'); if (tb) { tb.style.setProperty('--p', (v / 100).toFixed(2)); const sp = tb.querySelector('span'); if (sp) sp.textContent = act > 0 ? '발동' : v >= 100 ? '스킬!' : v + '%'; } // the charge as a number, not just a dim fill
+      const tb = document.querySelector('.tb.skill'); if (tb) { tb.style.setProperty('--p', (act > 0 ? act : v / 100).toFixed(2)); tb.classList.toggle('ready', v >= 100 && !(act > 0)); tb.classList.toggle('active', act > 0); const sp = tb.querySelector('span'); if (sp) sp.textContent = act > 0 ? '발동' : v >= 100 ? '스킬!' : v + '%'; } // the charge as a number, not just a dim fill
     });
     const sk = Math.floor(P.skill);
     set('skill', sk, (v) => {
@@ -561,6 +567,15 @@
       for (let i = 0; i < n; i++) { const c = el.magBar.children[i], on = i < filled; if (c.classList.contains('on') !== on) c.classList.toggle('on', on); }
     });
     set('ammo', g.infinite ? '∞' : g.ammo, (v) => { el.ammoN.textContent = v; });
+    // touch: the swap button doubles as the weapon chip (name, magazine, reserve); tap = next weapon
+    if (INPUT.isTouch) set('chip', g.id + ':' + g.mag + ':' + (g.infinite ? '∞' : g.ammo) + ':' + P.guns.length, () => {
+      const b = document.querySelector('#touch .tb.swap'); if (!b) return;
+      let c = b.querySelector('.chip'); if (!c) { c = document.createElement('div'); c.className = 'chip'; c.innerHTML = '<em></em><b></b>'; b.appendChild(c); }
+      c.querySelector('em').textContent = g.d.name.split(' ')[0];
+      c.querySelector('b').innerHTML = `${g.mag}<small>/${g.infinite ? '∞' : g.ammo}</small>`;
+      c.style.setProperty('--c', RANKS[g.d.rank].color);
+      b.classList.toggle('multi', P.guns.length > 1); b.classList.toggle('low', g.mag <= Math.max(1, ms * 0.2));
+    });
     const rl = P.reloadT > 0 ? 1 - P.reloadT / (P.reloadMax || 1) : -1;
     set('reload', rl < 0 ? -1 : Math.round(rl * 40), () => {
       const on = rl >= 0;
