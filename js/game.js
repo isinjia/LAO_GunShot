@@ -338,7 +338,7 @@
   function giveGun(P, id, infinite) {
     if (P.guns.some((g) => g.id === id)) {
       const g = P.guns.find((x) => x.id === id);
-      if (!g.infinite) g.ammo = Math.min(maxAmmo(g), g.ammo + Math.round(g.d.ammo * 0.5));
+      if (!g.infinite) g.ammo = Math.min(maxAmmo(g), g.ammo + Math.round(g.d.ammo * 0.35));
       return g;
     }
     const g = gunState(id, infinite);
@@ -2605,8 +2605,9 @@
         const g = curGun();
         const target = !g.infinite ? g : P.guns.find((x) => !x.infinite && x.ammo < maxAmmo(x));
         if (!target) { P.gold += 20; SFX.play('coin'); UI.toast('탄약 상자 → 부품 +20 (보급 무기의 탄약이 가득합니다)', ''); return true; }
-        target.ammo = maxAmmo(target);
-        SFX.play('reinforce'); UI.toast(`${target.d.name} 탄약 보충`, 'gem'); return true;
+        const add = Math.ceil(maxAmmo(target) * 0.4); // a box tops up 40 %, not the whole reserve: high-grade rounds stay precious
+        target.ammo = Math.min(maxAmmo(target), target.ammo + add);
+        SFX.play('reinforce'); UI.toast(`${target.d.name} 탄약 +${add}`, 'gem'); return true;
       }
     }
     return true;
@@ -2702,7 +2703,7 @@
   function lootDesc(loot) {
     if (loot.kind === 'gun') { const g = GUNS[loot.id]; return `${RANKS[g.rank].key}급 무기 · ${g.desc}`; }
     if (loot.kind === 'item') { const it = ITEMS.find((i) => i.id === loot.id); return `${RANKS[it.rank].key}급 장비 · ${it.desc}`; }
-    return { heart: '체력을 50 회복합니다', armor: '피격 1회를 막아 주는 방어막 +1', key: '보급 상자를 여는 열쇠 +1', ammo: '들고 있는 무기의 탄약을 가득 채웁니다' }[loot.kind] || '';
+    return { heart: '체력을 50 회복합니다', armor: '피격 1회를 막아 주는 방어막 +1', key: '보급 상자를 여는 열쇠 +1', ammo: '들고 있는 무기의 예비 탄약을 최대치의 40% 채웁니다' }[loot.kind] || '';
   }
   function takeLoot(o) {
     const P = G.P;

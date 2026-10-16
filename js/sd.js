@@ -736,6 +736,10 @@
         this.fT.set(this.T); this.fQ.set(this.Q); this.fS.set(this.S);
         this.fadeT = 0;
       }
+      // leaving a pinned clip for one without a pin bone: ease the rig offset out over the crossfade instead of
+      // snapping it to 0 while the held pose still shows the travelled body
+      const npb = this.tpl.pinBone && this.tpl.pinBone[name];
+      this.pinFade = this.fadeD && npb == null && (this.mesh.position.x || this.mesh.position.y) ? [this.mesh.position.x, this.mesh.position.y] : null;
       this.reset();
       this.clip = c || null;
       this.pinRef = null;
@@ -1041,7 +1045,10 @@
         const R = SD.pinRanges && SD.pinRanges[this.tpl.id] != null ? SD.pinRanges[this.tpl.id] : SD.pinRange;
         const k = L > 1e-6 && R > 0 ? (R * Math.tanh(L / R)) / L : 0; // share of the travel that is kept
         this.mesh.position.set(dx * (k - 1), dy * (k - 1), 0);
-      } else if (this.mesh.position.x || this.mesh.position.y) this.mesh.position.set(0, 0, 0);
+      } else if (this.pinFade && this.fadeD) {
+        const w0 = Math.min(1, this.fadeT / this.fadeD), v = 1 - w0 * w0 * (3 - 2 * w0);
+        this.mesh.position.set(this.pinFade[0] * v, this.pinFade[1] * v, 0);
+      } else if (this.mesh.position.x || this.mesh.position.y) { this.pinFade = null; this.mesh.position.set(0, 0, 0); }
       const tp = this.tpl, W = this.W;
       const pos = this.pos, uv = this.uv, col = this.col;
       const gpu = this.gpu, B = BA.arr, bo = gpu ? this.boneRow * BA.W * 4 : 0;
