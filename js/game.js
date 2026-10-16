@@ -1996,7 +1996,7 @@
             if (!e.alive || e.spawnT > 0 || Math.hypot(e.x - tx, e.y - ty) > R + e.r) continue;
             e.rootT = Math.max(e.rootT || 0, dur); e.markT = Math.max(e.markT || 0, dur); e.supT = Math.max(e.supT || 0, dur);
             if (e.boss) { e.seq.length = 0; e.tele = null; e.patT = (e.patT || 0) + 1.5; }
-            hurtEnemy(e, 50 * P.mods.dmg, false, 0, 0, 'hitM');
+            hurtEnemy(e, 60 * P.mods.dmg, false, 0, 0, 'hitM');
             FX.ring(e.x, e.y + 0.2, e.r * 2.2, e.r * 1.1, 0xb08cff, 0.5);
             // 발목 잡기: a violet bind stays on the floor under the pinned target for the whole duration
             FX.particle({ x: e.x, y: e.y + 0.05, life: e.boss ? 1.5 : dur, size: e.r * 2.6, size1: e.r * 2.2, aspect: 0.45, color: 0xb08cff, tex: FX.tex.ring || FX.tex.glow, alpha: 0.75 });
@@ -2379,7 +2379,7 @@
         const primed = (e.rootT > 0 || e.markT > 0) && !((e.popT || 0) > G.t), cr = Math.random() < 0.35, dmg = 150 * pw * (cr ? 1.8 : 1) * (primed ? 2 : 1) * P.mods.dmg;
         hurtEnemy(e, dmg, cr || primed, ca * 10, sa * 10, 'hitB'); if (!e.boss) e.stun = Math.max(e.stun, 0.35);
         if (primed) { popStatus(e, dmg, ['root', 'mark']); G.slowT = Math.max(G.slowT, 0.06); FX.ring(e.x, e.y + e.h * 0.42, 0.3, 2.2, 0xff9af0, 0.35); }
-        else prime(e, 'mark', 4);
+        else prime(e, 'mark', 6.5); // outlasts the 6 s cooldown: rifle → rifle executes too
         if (cr) { G.slowT = Math.max(G.slowT, 0.04); if (G.opt.shake) FX.shake(0.22); }
         FX.ring(e.x, e.y + e.h * 0.42, 0.2, 1.6, 0xff9af0, 0.3);
         FX.sparks(e.x, e.y + e.h * 0.42, 0xff9af0, 10, 6, 0.1, 0.35); FX.particle({ x: e.x, y: e.y + e.h * 0.42, life: 0.22, size: 0.5, size1: 1.9, color: 0xffc0f4, tex: FX.tex.glow, alpha: 0.8 });
@@ -2406,8 +2406,8 @@
       });
     } else if (sk.id === 'axe') {
       // LRL · 액스 오브 다크니스: a swing of the dragon-slayer axe in front of her — sometimes it finds a weak point (x2.45)
-      const pw = 1 + 0.2 * upE(P), R = 3.8, luck = 0.15 + 0.08 * upE(P);
-      P.iframe = Math.max(P.iframe, 0.45); // she steps into the swing
+      const pw = 1 + 0.2 * upE(P), R = 3.8, luck = 0.2 + 0.08 * upE(P);
+      P.iframe = Math.max(P.iframe, 0.6); // she steps into the swing
       FX.ring(P.x + ca * 1.2, P.y + 0.6 + sa * 1.2, 0.4, R, 0xff5a8a, 0.35); SFX.play('swing', 0.9); SFX.play('expS', 0.4);
       // the crescent sweeps across the arc in order, so it reads as one swing rather than a burst
       for (let i = 0; i < 14; i++) { const aa = a + (i / 13 - 0.5) * 2.3; FX.later(i * 0.008, () => { for (const rr of [2.0, 2.9, 3.7]) FX.particle({ x: P.x + Math.cos(aa) * rr, y: P.y + 0.6 + Math.sin(aa) * rr, life: 0.28, size: rr === 2.9 ? 1 : 0.55, size1: 0.1, color: rr === 2.9 ? 0xffd0e0 : 0xff5a8a, tex: FX.tex.glow, alpha: 0.85 }); }); }
@@ -2422,7 +2422,7 @@
         // blinded targets can't guard their weak point: a guaranteed x2.45 that pops the blind
         const blind = e.blindT > 0 && !((e.popT || 0) > G.t), crit = blind || Math.random() < luck; if (crit) weak = true; if (blind) sure = true;
         const dmg = 75 * pw * (crit ? 2.45 : 1) * P.mods.dmg;
-        hurtEnemy(e, dmg, crit, px / d * 9, py / d * 9, 'hitB');
+        hurtEnemy(e, dmg, crit, px / d * 13, py / d * 13, 'hitB'); // the heavy blade throws them clear of her
         if (blind) { popStatus(e, dmg, 'blind'); FX.slash(e.x, e.y + e.h * 0.45, 0xffffff, 2.4); }
         if (!e.boss) e.stun = Math.max(e.stun, 0.35);
         FX.sparks(e.x, e.y + e.h * 0.42, crit ? 0xffffff : 0xff5a8a, crit ? 16 : 8, 6, 0.12, 0.35); FX.slash(e.x, e.y + e.h * 0.45, 0xff5a8a, crit ? 2 : 1.3);
