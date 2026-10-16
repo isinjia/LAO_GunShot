@@ -29,6 +29,12 @@
       stats: { atk: 4, def: 3, mob: 3 }, desc: 'MG80 경기관총의 화력 지원. 제압 난사로 적의 손발을 묶는다.',
     },
     {
+      id: 'kheshig', name: 'T-4 케시크', title: '앵거 오브 호드 의무병', img: 'c_BR_Kheshig_N', gun: 'ct11', hp: 10, armor: 1, speed: 6.1, skate: true,
+      skill: 'deploy', skillName: '전술 배치', skillDesc: '6초간 공격력 +28.5% · 연사 +14% · 피격 1회 무효, 체력이 줄었으면 응급 처치로 25 회복', color: '#ff8a5a', upF: 'u_deploy', upE: 'u_cqb',
+      sk2: { id: 'pointblank', name: '근거리 포격', icon: 'i_power', cd: 5, desc: '지근거리 산탄 일격 — 가까울수록 피해 +28.5%, 맞은 적은 4초간 표식(받는 피해 +50%)' },
+      stats: { atk: 4, def: 4, mob: 3 }, desc: 'CT-11 자동 산탄총을 든 의무병. 근접 화력과 응급 처치로 버틴다.',
+    },
+    {
       id: 'gnome', name: 'T-20S 노움', title: '스틸라인 유탄병', img: 'c_BR_Gnome_N', gun: 'gl', hp: 8, armor: 1, speed: 5.9,
       skill: 'barrier', skillName: '방벽 생성', skillDesc: '발포 콘크리트 방벽을 세워 전방의 적탄을 막는다(6초) — 그동안 피격 1회 무효', color: '#ffa040', upF: 'u_wall', upE: 'u_cover',
       sk2: { id: 'covermark', name: '원호 사격', icon: 'i_target', cd: 7, desc: '착탄 지점 주변의 적을 5초간 표식 — 받는 피해 +50%' },
@@ -39,12 +45,6 @@
       skill: 'snare', skillName: '발목 잡기', skillDesc: '보리와 함께 조준 지점 일대의 적을 4초간 이동 불가 · 표식 · 행동 저하 — 보스는 패턴이 끊긴다', color: '#ff6af0', upF: 'u_snare', upE: 'u_rifle',
       sk2: { id: 'rifleshot', name: '라이플 사격', icon: 'i_crit', cd: 6, desc: '열화우라늄 탄 한 발 — 조준선의 적 최대 2명에게 큰 피해, 4초간 받는 피해 증가' },
       stats: { atk: 5, def: 2, mob: 4 }, desc: '관통하는 고위력 정밀 사격. 한 발 한 발이 치명적이다.',
-    },
-    {
-      id: 'kheshig', name: 'T-4 케시크', title: '앵거 오브 호드 의무병', img: 'c_BR_Kheshig_N', gun: 'ct11', hp: 10, armor: 1, speed: 6.1, skate: true,
-      skill: 'deploy', skillName: '전술 배치', skillDesc: '6초간 공격력 +28.5% · 연사 +14% · 피격 1회 무효, 체력이 줄었으면 응급 처치로 25 회복', color: '#ff8a5a', upF: 'u_deploy', upE: 'u_cqb',
-      sk2: { id: 'pointblank', name: '근거리 포격', icon: 'i_power', cd: 5, desc: '지근거리 산탄 일격 — 가까울수록 피해 +28.5%, 맞은 적은 4초간 표식(받는 피해 +50%)' },
-      stats: { atk: 4, def: 4, mob: 3 }, desc: 'CT-11 자동 산탄총을 든 의무병. 근접 화력과 응급 처치로 버틴다.',
     },
   ];
 
