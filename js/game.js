@@ -1902,7 +1902,7 @@
       case 'aimshot': {
         // 브라우니 · 조준 사격: three aimed rifle rounds that pierce; +29 % on suppressed / slowed / stunned targets
         const pw = 1 + 0.25 * upF(P);
-        P.ultT = 1.4; P.iframe = Math.max(P.iframe, 0.6);
+        P.ultT = 1.4; P.iframe = Math.max(P.iframe, 1.2); // she holds still to aim: covered for the whole sequence
         for (let i = 0; i < 3; i++) {
           // a thin laser sight settles on the line first, then the round goes down it (the third is the heavy one)
           FX.later(0.02 + i * 0.32, () => { if (!G.P) return; const aa = G.P.aim, [x0, y0] = muzzleOf(G.P); FX.beam(x0, y0, x0 + Math.cos(aa) * 18, y0 + Math.sin(aa) * 18, 0.025, 0xff5040, 0.13); });
@@ -1950,7 +1950,7 @@
       case 'barrier':
         // 노움 · 방벽 생성: foam-concrete wall in front of her that stops enemy rounds; one hit on her is nullified
         P.wallT = 6 + 1.5 * upF(P); P.ultT = 1.2; P.wallAbs = 0;
-        P.emplaceT = P.wallT; P.emplaceGuard = 1;
+        P.emplaceT = P.wallT; P.emplaceGuard = 2;
         SFX.play('quake', 0.6); SFX.play('shield', 0.7); SFX.play('expM', 0.5);
         FX.ring(P.x, P.y + 0.6, 0.4, 2.4, 0xd8c8a0, 0.6); FX.ring(P.x, P.y + 0.3, 0.6, 4.2, 0xb8a888, 0.5);
         // the foam slams out of the launcher: a shockwave shoves back and staggers everyone close, and clears rounds nearby
@@ -2009,7 +2009,7 @@
       case 'eyebeam': {
         // LRL · 사이클롭스 이터널 빔: the eye-patch comes off — a long beam that blinds (적중 감소) and slows (AP 감소)
         const ca = Math.cos(a), sa = Math.sin(a), ex = P.x + ca * 0.25, ey = P.y + 1.3, len = 22, wid = 1.6 * (1 + 0.3 * upF(P)), dur = 5 + upF(P);
-        SFX.play('charge');
+        SFX.play('charge'); P.iframe = Math.max(P.iframe, 0.8); // the seal breaks: she is untouchable while the beam fires
         FX.particle({ x: ex, y: ey, life: 0.32, size: 0.3, size1: 2.4, color: 0xff5a8a, tex: FX.tex.glow, alpha: 0.9 }); // the eye glares open
         FX.particle({ x: ex, y: ey, life: 0.32, size: 0.1, size1: 3.2, aspect: 0.12, color: 0xffd0e0, tex: FX.tex.glow, alpha: 0.9 });
         FX.later(0.3, () => {
@@ -2312,7 +2312,7 @@
     } else if (sk.id === 'axe') {
       // LRL · 액스 오브 다크니스: a swing of the dragon-slayer axe in front of her — sometimes it finds a weak point (x2.45)
       const pw = 1 + 0.2 * upE(P), R = 3.8, luck = 0.25 + 0.08 * upE(P);
-      P.iframe = Math.max(P.iframe, 0.3); // she steps into the swing
+      P.iframe = Math.max(P.iframe, 0.45); // she steps into the swing
       FX.ring(P.x + ca * 1.2, P.y + 0.6 + sa * 1.2, 0.4, R, 0xff5a8a, 0.35); SFX.play('swing', 0.9); SFX.play('expS', 0.4);
       // the crescent sweeps across the arc in order, so it reads as one swing rather than a burst
       for (let i = 0; i < 14; i++) { const aa = a + (i / 13 - 0.5) * 2.3; FX.later(i * 0.008, () => { for (const rr of [2.0, 2.9, 3.7]) FX.particle({ x: P.x + Math.cos(aa) * rr, y: P.y + 0.6 + Math.sin(aa) * rr, life: 0.28, size: rr === 2.9 ? 1 : 0.55, size1: 0.1, color: rr === 2.9 ? 0xffd0e0 : 0xff5a8a, tex: FX.tex.glow, alpha: 0.85 }); }); }

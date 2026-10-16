@@ -13,7 +13,7 @@
     {
       id: 'brownie', name: 'T-2 브라우니', title: '스틸라인 돌격병', img: 'c_BR_Brownie_N', gun: 'ar', hp: 10, armor: 2, speed: 6.3,
       skill: 'aimshot', skillName: '조준 사격', skillDesc: '레이저 조준 후 관통 저격 3연발 — 마지막 탄은 착탄 지점 폭발 + 기절, 제압 · 둔화 · 기절 상태의 적에게 피해 +29%', color: '#ffd34d', upF: 'u_aim', upE: 'u_check',
-      sk2: { id: 'frag', name: '전술 수류탄', icon: 'i_warning', cd: 6, desc: '커서 지점에 수류탄 — 폭발 피해 + 넉백 + 0.8초 기절, 폭발 범위의 적탄 소거, 잠시 불길이 남는다' },
+      sk2: { id: 'frag', name: '전술 수류탄', icon: 'i_warning', cd: 5, desc: '커서 지점에 수류탄 — 폭발 피해 + 넉백 + 0.8초 기절, 폭발 범위의 적탄 소거, 잠시 불길이 남는다' },
       stats: { atk: 3, def: 3, mob: 4 }, desc: '균형 잡힌 돌격소총과 높은 기동력. 처음 출격하는 지휘관에게 추천.',
     },
     {
@@ -36,8 +36,8 @@
     },
     {
       id: 'gnome', name: 'T-20S 노움', title: '스틸라인 유탄병', img: 'c_BR_Gnome_N', gun: 'gl', hp: 8, armor: 1, speed: 5.9,
-      skill: 'barrier', skillName: '방벽 생성', skillDesc: '충격파와 함께 방벽을 세워 전방의 적탄을 막는다(6초) · 피격 1회 무효 — 끝날 때 막은 탄만큼 폭발', color: '#ffa040', upF: 'u_wall', upE: 'u_cover',
-      sk2: { id: 'covermark', name: '원호 사격', icon: 'i_target', cd: 7, desc: '커서 지점에 표식탄 — 주변 적 경직 + 5초간 표식(받는 피해 +50%)' },
+      skill: 'barrier', skillName: '방벽 생성', skillDesc: '충격파와 함께 방벽을 세워 전방의 적탄을 막는다(6초) · 피격 2회 무효 — 끝날 때 막은 탄만큼 폭발', color: '#ffa040', upF: 'u_wall', upE: 'u_cover',
+      sk2: { id: 'covermark', name: '원호 사격', icon: 'i_target', cd: 6, desc: '커서 지점에 표식탄 — 주변 적 경직 + 5초간 표식(받는 피해 +50%)' },
       stats: { atk: 5, def: 3, mob: 3 }, desc: '유탄의 범위 피해로 무리를 한 번에 정리. 직격 판정에 주의.',
     },
     {
