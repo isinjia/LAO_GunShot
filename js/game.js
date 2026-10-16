@@ -1990,11 +1990,13 @@
         const [tx, ty] = aimPoint(P, 6.5), R = 3.2, dur = 4 + upF(P);
         { const [x0, y0] = muzzleOf(P); FX.beam(x0, y0, tx, ty, 0.06, 0xd0b8ff, 0.3); FX.muzzleFlash(x0, y0, a, 0xb08cff, 1.6); }
         FX.ring(tx, ty, R, 0.3, 0xb08cff, 0.3); // the target circle closes in before it bites
+        boriRun(P, tx, ty, 0.3, 1.5); // 보리 bounds out to the spot and pins it
         // 보리 guards her too: anything within 2.2 tiles of Constantia is pinned and shoved off at once
         FX.ring(P.x, P.y + 0.3, 0.3, 2.2, 0xd0b8ff, 0.35);
         for (const e of G.enemies) { if (!e.alive || e.spawnT > 0) continue; const dx = e.x - P.x, dy = e.y - P.y, dd = Math.hypot(dx, dy) || 1; if (dd > 2.2 + e.r) continue; prime(e, 'root', 2.5); hurtEnemy(e, 30 * P.mods.dmg, false, e.boss ? 0 : dx / dd * 8, e.boss ? 0 : dy / dd * 8, 'hitM'); FX.ring(e.x, e.y + 0.2, e.r * 2.2, e.r * 1.1, 0xb08cff, 0.4); }
         FX.later(0.3, () => {
-          FX.ring(tx, ty, 0.4, R, 0xb08cff, 0.6); FX.particle({ x: tx, y: ty, life: 0.6, size: 1, size1: R * 2, color: 0xb08cff, tex: FX.tex.glow, alpha: 0.45 });
+          FX.ring(tx, ty, 0.4, R, 0xb08cff, 0.6); FX.particle({ x: tx, y: ty, life: 0.5, size: 1, size1: R * 2, color: 0xb08cff, tex: FX.tex.glow, alpha: 0.22 });
+          if (FX.tex.dogaim) FX.particle({ x: tx, y: ty + 0.3, life: 0.75, size: R * 1.05, size1: R * 0.75, color: 0xe2d6ff, tex: FX.tex.dogaim, alpha: 0.8, spin: 0.5, normal: true }); // the original 보리 reticle (normal blend: additive white washed the spot out)
           for (let k = 0; k < 16; k++) { const aa = k / 16 * TAU; FX.particle({ x: tx + Math.cos(aa) * R, y: ty + Math.sin(aa) * R * 0.75, vx: -Math.cos(aa) * 4, vy: -Math.sin(aa) * 3, life: 0.35, size: 0.3, size1: 0.05, color: 0xd0b8ff, tex: FX.tex.glow, alpha: 0.9 }); }
           SFX.play('ice', 0.8); SFX.play('handgun', 0.6); if (G.opt.shake) FX.shake(0.15);
           for (const e of G.enemies) {
@@ -2003,6 +2005,7 @@
             if (e.boss) { e.seq.length = 0; e.tele = null; e.patT = (e.patT || 0) + 1.5; }
             hurtEnemy(e, 60 * P.mods.dmg, false, 0, 0, 'hitM');
             FX.ring(e.x, e.y + 0.2, e.r * 2.2, e.r * 1.1, 0xb08cff, 0.5);
+            boriBite(e);
             // 발목 잡기: a violet bind stays on the floor under the pinned target for the whole duration
             FX.particle({ x: e.x, y: e.y + 0.05, life: e.boss ? 1.5 : dur, size: e.r * 2.6, size1: e.r * 2.2, aspect: 0.45, color: 0xb08cff, tex: FX.tex.ring || FX.tex.glow, alpha: 0.75 });
           }
@@ -2155,6 +2158,36 @@
       FX.ring(cx, cy, 0.3, 2, 0xff5a8a, 0.3); FX.particle({ x: cx, y: cy, life: 0.2, size: 0.6, size1: 2.4, color: 0xffb0d0, tex: FX.tex.glow, alpha: 0.8 }); SFX.play('laser', 0.6);
     }
     return kind;
+  }
+  // 콘스탄챠 S2 · 보리: the dog bounds from her side to (tx, ty) in `run` seconds, holds the spot for `stay`, then fades
+  function boriRun(P, tx, ty, run, stay) {
+    if (!FX.tex.bori) return;
+    const dir = tx >= P.x ? 1 : -1, x0 = P.x + dir * 0.7, y0 = P.y, S = 1.35;
+    const sp = FX.sprite({ x: x0, y: y0 + S / 2, size: S, tex: dir > 0 ? FX.tex.bori : FX.tex.boriM, color: 0xffffff, alpha: 1, normal: true, order: L.FX - 1 });
+    FX.particle({ x: x0, y: y0 + 0.3, life: 0.4, size: 0.6, size1: 1.6, color: 0xd0b8ff, tex: FX.tex.glow, alpha: 0.6 });
+    SFX.play('swing', 0.5);
+    let t = 0;
+    FX.tickers.push((dt) => {
+      t += dt;
+      if (t < run) { // a bounding run with a hop and paw dust
+        const f = t / run, x = x0 + (tx - x0) * f, y = y0 + (ty - y0) * f;
+        sp.x = x; sp.y = y + S / 2 + Math.sin(f * Math.PI) * 0.9;
+        if (Math.random() < dt * 30) FX.particle({ x, y: y + 0.05, vy: rnd(0.3, 0.8), life: 0.35, size: 0.25, size1: 0.6, color: 0x9a948c, tex: FX.tex.dot, alpha: 0.4, normal: true, order: 4 });
+        return true;
+      }
+      if (t < run + stay) { sp.x = tx; sp.y = ty + S / 2 + Math.abs(Math.sin((t - run) * 9)) * 0.08; return true; } // holding the pin
+      const k = 1 - (t - run - stay) / 0.3;
+      if (k <= 0) { FX.kill(sp); FX.particle({ x: tx, y: ty + 0.5, life: 0.35, size: 0.5, size1: 1.4, color: 0xd0b8ff, tex: FX.tex.glow, alpha: 0.5 }); return false; }
+      sp.alpha = k; sp.y = ty + S / 2 + (1 - k) * 0.4;
+      return true;
+    });
+  }
+  // a 보리 bite: the original fang flipbook snapping shut on the target, plus the baked bite hit
+  function boriBite(e) {
+    const fr = FX.sheets && FX.sheets.borifang;
+    if (fr && fr.length) FX.particle({ x: e.x, y: e.y + e.h * 0.45, life: 0.36, size: 1.1 + e.r, size1: 1.2 + e.r, aspect: 1.25, frames: fr, color: 0xffffff, alpha: 1, normal: true, order: L.FX + 1 });
+    spawnStatic('FX_hit_bori', e.x, e.y + e.h * 0.4, 0.22);
+    SFX.play('hitB', 0.5);
   }
   // where a placed skill lands: the mouse cursor (clamped), else the locked target, else a fixed distance down the aim
   function aimPoint(P, d0, lo = 2.5, hi = 9) {
@@ -3539,7 +3572,7 @@
     const all = [...new Set([...need, ...enemyIds])];
     bgAfter = Math.max(bgAfter, performance.now() + 60000); // hold the title-time queue while the run loads
     let done = 0;
-    const jobs = [...all.map((id) => SD.prepare(id)), ...COMMON_FX.slice(0, 2).map((n) => FXB.prepare(n))];
+    const jobs = [...all.map((id) => SD.prepare(id)), ...COMMON_FX.slice(0, 2).map((n) => FXB.prepare(n)), ...(hero.skill === 'snare' ? [FXB.prepare('FX_hit_bori')] : [])];
     await Promise.all(jobs.map((p) => Promise.resolve(p).then(() => UI.loading(++done / (jobs.length + 1)))));
     bgAfter = performance.now() + 8000; // and resume it once the first room is under way
     const missing = () => need.filter((id) => !SD.ready(id));

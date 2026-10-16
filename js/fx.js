@@ -171,6 +171,10 @@
     // mirrored copies for rolling left (a negative quad scale would be back-face culled)
     const mirror = (fr) => fr.map((f) => { const cv = document.createElement('canvas'); cv.width = f.image.width; cv.height = f.image.height; const g = cv.getContext('2d'); g.translate(cv.width, 0); g.scale(-1, 1); g.drawImage(f.image, 0, 0); return canvasTex(cv); });
     sheets.kdust1m = mirror(sheets.kdust1); sheets.kdust2m = mirror(sheets.kdust2);
+    // 콘스탄챠 S2's 보리: the dog (and a mirrored copy), the original dog-face reticle and the 5 x 2 bite flipbook
+    if (images.fx_bori) { tex.bori = t(images.fx_bori); tex.boriM = mirror([tex.bori])[0]; }
+    if (images.fx_dogaim) tex.dogaim = t(images.fx_dogaim);
+    sheets.borifang = images.fx_borifang ? splitSheet(images.fx_borifang, 5, 2) : [];
     tex.beam = softTex('beam');
     tex.dot = softTex('dot');
     tex.slash = softTex('slash');
@@ -180,7 +184,7 @@
     tex.white = canvasTex(wc); // solid quads (HP bars) in the particle batches
 
     buildAtlas([...['glow', 'cross', 'ring', 'spark', 'elec', 'beam', 'dot', 'slash', 'snow', 'white'].map((k) => tex[k]),
-      ...sheets.smoke, ...sheets.fire, ...sheets.aura, ...sheets.bolt, ...sheets.kdust1, ...sheets.kdust2, ...sheets.kdust1m, ...sheets.kdust2m, ...(tex.kpuff ? [tex.kpuff] : [])]);
+      ...sheets.smoke, ...sheets.fire, ...sheets.aura, ...sheets.bolt, ...sheets.kdust1, ...sheets.kdust2, ...sheets.kdust1m, ...sheets.kdust2m, ...sheets.borifang, ...[tex.bori, tex.boriM, tex.dogaim].filter(Boolean), ...(tex.kpuff ? [tex.kpuff] : [])]);
 
     flashMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(200, 200),
