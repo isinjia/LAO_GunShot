@@ -287,6 +287,14 @@
       // right hand on the grip, left hand where the hero's own idle pose rests it (under the barrel);
       // the palm pieces draw behind the weapon, the fingers in front, as in the source art
       let hold = g.hold;
+      if (g.singleHand) {
+        const palm = RIGS.makeHand(heroId, hk, null, 'handAll', 'R');
+        if (palm) {
+          const [x0,y0,,y1] = palm.box;
+          hold = {r:[h.box[2]-x0-0.16,(h.box[1]+h.box[3]-y0-y1)/2]};
+          palm.c.dispose();
+        }
+      }
       if (g.alignGrip) {
         /* Match the holder's palm centers to this weapon's original grip and support hand. */
         const center = (id, k, side) => {
@@ -310,7 +318,7 @@
         // a gun with its own grip spots (e.g. a thick barrel): the support hand moves there and sits wholly in front
         const k = hk;
         const rb = RIGS.makeHand(heroId, k, null, 'handB', 'R'), rf = RIGS.makeHand(heroId, k, null, 'handF', 'R');
-        const lh = RIGS.makeHand(heroId, k, null, 'handAll', 'L');
+        const lh = g.singleHand ? null : RIGS.makeHand(heroId, k, null, 'handAll', 'L');
         // the grip hand can move to the gun's own grip too (r: [dx, dy, tilt°])
         let rpiv = null;
         if (hold.r) { rpiv = new THREE.Group(); rpiv.position.set(hold.r[0], hold.r[1], 0); rpiv.rotation.z = (hold.r[2] || 0) * Math.PI / 180; }
