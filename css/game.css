@@ -1374,3 +1374,5 @@ body.touchui .tb.act:not(.avail) { background: rgba(60, 64, 70, 0.6) !important;
 
 #gunBox.no-reload #gunAmmo small, #gunBox.no-reload #magBar i { display: none; }
 #gunBox.no-reload #magBar::after { content: '장전 없음'; font-size: 13px; color: #ffdba2; white-space: nowrap; }
+
+#title #heroSel { touch-action: pan-y; }

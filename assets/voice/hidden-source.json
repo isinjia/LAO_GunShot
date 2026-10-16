@@ -1,0 +1,195 @@
+{
+  "sourceProject": "E:/LAO_Google_QA",
+  "files": [
+    {
+      "file": "assets/voice/lrl/SortiePick.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_SortiePick.mp3",
+      "sha256": "29f3d51bbfca7bc29460adc5bdb2e58213fd4b0956c6306ddefe8df09acceee1"
+    },
+    {
+      "file": "assets/voice/lrl/StageStart.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_StageStart.mp3",
+      "sha256": "c174c548a6f11e41b56a6cc22fdff7679978ad94427640c4074efcefe63641d1"
+    },
+    {
+      "file": "assets/voice/lrl/Leader.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_Leader.mp3",
+      "sha256": "3466a46e3baddafb072cccab52fc16c7830e3dc33cdaf716306782579c63cdab"
+    },
+    {
+      "file": "assets/voice/lrl/SpSkill.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_SpSkill.mp3",
+      "sha256": "d4db4da3fc344e5d411c64004e511c38974766390078e32bb015d44c5235f221"
+    },
+    {
+      "file": "assets/voice/lrl/ActionApprove.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_ActionApprove.mp3",
+      "sha256": "440def3f4f9d794b71a3a740c5df237e45b36fea473a1ab84aeafb3ddd735f4f"
+    },
+    {
+      "file": "assets/voice/lrl/BattleFocus.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_BattleFocus.mp3",
+      "sha256": "bafef3ff17c17ef6d1f540b604527395c3f601f4cb1d7b8523187f4729b31060"
+    },
+    {
+      "file": "assets/voice/lrl/Retreat.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_Retreat.mp3",
+      "sha256": "9b74db1bbea01cb9a4c927cae02033b472eef06b32dbb2b5ab4ab936faae3a18"
+    },
+    {
+      "file": "assets/voice/lrl/Retire.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_Retire.mp3",
+      "sha256": "d3a43646a2bdda6bd0325d4307363ae115ae8e3e96d20746967cfffb42fbbe1c"
+    },
+    {
+      "file": "assets/voice/lrl/MVP.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_MVP.mp3",
+      "sha256": "78cca4bbc9bd124ec20f7b7b0f5f98b923dde30591d46b9d1fe330047c96c0bd"
+    },
+    {
+      "file": "assets/voice/lrl/ItemEquip.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_ItemEquip.mp3",
+      "sha256": "63a3f8ac67f71f475132c26942bd1e8fa23827f8e5bb9eba51c54af85f74816c"
+    },
+    {
+      "file": "assets/voice/lrl/Join.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_Join.mp3",
+      "sha256": "f916e7d7c2833a9a53a3be2380fa986ea5e0442651f3fbe5d371af93f9501fdc"
+    },
+    {
+      "file": "assets/voice/lrl/SquadJoin.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_SquadJoin.mp3",
+      "sha256": "834377ce743fd90f9549d17ff34ed2868e85635c220630ce6da951bdc7607607"
+    },
+    {
+      "file": "assets/voice/lrl/SearchStart.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_SearchStart.mp3",
+      "sha256": "af42ba8bc60cdd8f9016244777ab690c6f9c8b3ea5acc9e5c6235b8f672de3ed"
+    },
+    {
+      "file": "assets/voice/lrl/SearchEnd.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_SearchEnd.mp3",
+      "sha256": "6bb7fb8b8f0b56c5a6a87d2bb08b3d3d56b46a23a5b7e028a03d8094da872b67"
+    },
+    {
+      "file": "assets/voice/lrl/Repair.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_Repair.mp3",
+      "sha256": "6f87be1ac4d8125352fc775ce6f685722df04ac8e730f770871f165784e2b6b9"
+    },
+    {
+      "file": "assets/voice/lrl/PresentGet.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_PresentGet.mp3",
+      "sha256": "217a21795b8eea6ca14a88da4b4e0c7b452bd33a277a15818f9669871f1227d8"
+    },
+    {
+      "file": "assets/voice/lrl/CoreLink.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_CoreLink.mp3",
+      "sha256": "7006e7d3f4f67ad524642417e7fb5e5bba7c1ed3258c220250a03f6a1a604c68"
+    },
+    {
+      "file": "assets/voice/lrl/Reinforce.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_Reinforce.mp3",
+      "sha256": "1cd6fe6f112b69aff0bd7fb136368ac0fa341629b6c72eabee35589f4651537d"
+    },
+    {
+      "file": "assets/voice/lrl/Idle_01_01.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_Idle_01_01.mp3",
+      "sha256": "25cf4e6e8834d766c2b9a1e570a47d9517783e32fef79024cd92e9fb02292d2a"
+    },
+    {
+      "file": "assets/voice/lrl/Idle_02_01.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/LRL/Voice_PECS_LRL_Idle_02_01.mp3",
+      "sha256": "829df5e18114b6c4dd45365e531092ce64a422a5efc65ae415455fd39a2f28d4"
+    },
+    {
+      "file": "assets/voice/ramparion/SortiePick.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_SortiePick.mp3",
+      "sha256": "f163942db37659ffded3f2de22b7f43ab20317afdbbc7c8a1da6feab4c8c3800"
+    },
+    {
+      "file": "assets/voice/ramparion/StageStart.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_StageStart.mp3",
+      "sha256": "fff5daaaf2e685bbccda5e9841558f65c88c5d40b29509a4f5a3eb695bb4666a"
+    },
+    {
+      "file": "assets/voice/ramparion/Leader.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_Leader.mp3",
+      "sha256": "4bbb53ee6a41f5ad2207e5fdb42dfa45a4fb01bd198d7a917e26cb01a0b7b133"
+    },
+    {
+      "file": "assets/voice/ramparion/SpSkill.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_SpSkill.mp3",
+      "sha256": "6719e506e74dfc96f0eabd2eb8ad365c9136e8f656e2d75c69ad76b8db86798e"
+    },
+    {
+      "file": "assets/voice/ramparion/ActionApprove.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_ActionApprove.mp3",
+      "sha256": "b7ce6b87844f8f2b0dcd165fd1dc7bb5ddf6e5586c9edc236485212a2f147c1f"
+    },
+    {
+      "file": "assets/voice/ramparion/BattleFocus.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_BattleFocus.mp3",
+      "sha256": "4c7d1f23e3ec45ee76301adecbe0745557d90944bc6de50d6f10f4e7e0eb6748"
+    },
+    {
+      "file": "assets/voice/ramparion/Retreat.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_Retreat.mp3",
+      "sha256": "9064900820e492929af9fa3ec9c46086c4a0a2ff70393c1523bfcddf8f2532e0"
+    },
+    {
+      "file": "assets/voice/ramparion/Retire.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_Retire.mp3",
+      "sha256": "732427fa598838c611f69c19c27d1b52efd95896967bf8732d9b214d45a28366"
+    },
+    {
+      "file": "assets/voice/ramparion/MVP.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_MVP.mp3",
+      "sha256": "8ef8af7a4cdba0156f2b862b3e5fb98f039f27d6aa79634aa95d1693351cc045"
+    },
+    {
+      "file": "assets/voice/ramparion/ItemEquip.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_ItemEquip.mp3",
+      "sha256": "bbfc8faf7c4ae4929284a3731922c3ae72bace22245ac891cb9facbe6b74a96d"
+    },
+    {
+      "file": "assets/voice/ramparion/SquadJoin.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_SquadJoin.mp3",
+      "sha256": "bafcb1be461462e72552b47717dc94599e1dca967b9f4bfad34b996fd421cb51"
+    },
+    {
+      "file": "assets/voice/ramparion/SearchStart.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_SearchStart.mp3",
+      "sha256": "5419c61342483ae0701a78908c78ce73987d01c70b396af206545721d9fdf545"
+    },
+    {
+      "file": "assets/voice/ramparion/SearchEnd.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_SearchEnd.mp3",
+      "sha256": "c2c6b03e574fdb4edf4899d74e9fcd85471c466fadcfd483ad5a00c25df722ae"
+    },
+    {
+      "file": "assets/voice/ramparion/Repair.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_Repair.mp3",
+      "sha256": "c73a6e2319122a876a9861e728966a2d50fb3ddb1f0e3850b8aeb964ccd22393"
+    },
+    {
+      "file": "assets/voice/ramparion/CoreLink.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_CoreLink.mp3",
+      "sha256": "683299c30725ad60d75bad1ae5b486dbc898d917f1fc677b5a85986076490fc5"
+    },
+    {
+      "file": "assets/voice/ramparion/Reinforce.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_Reinforce.mp3",
+      "sha256": "e84a9c5f3eef3b987278e358817b1df5d2c008c914f461435bad2d496ffb42df"
+    },
+    {
+      "file": "assets/voice/ramparion/Idle_01_01.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_Idle_01_01.mp3",
+      "sha256": "f1b301d2ef82ad8432ae0c32394bb960a1fa3f840764347c2f7419ef15a9581c"
+    },
+    {
+      "file": "assets/voice/ramparion/SpSkill_3.mp3",
+      "source": "E:/LAO_Google_QA/Assets/AssetBundleResource/Sounds/Voice/RampartNS1/Voice_AGS_Rampart_NS1_SpSkill_3.mp3",
+      "sha256": "0a90450afc4f8f9a96272ed12b8b75d8311ac80dd90773509d8e6483f47f3fc1"
+    }
+  ]
+}

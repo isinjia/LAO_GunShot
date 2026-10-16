@@ -327,6 +327,8 @@
 
   // ── player ───────────────────────────────────────────────
   // the hero colour as a hex int, parsed once (was a new THREE.Color per particle)
+  // whose voice: 램파리온 broken down to 램파트 speaks with Rampart's own lines
+  function vid(P) { return P.form === 'rampart' ? 'rampart' : P.hero.id; }
   function heroHex(P) { if (P.hex == null) P.hex = new THREE.Color(P.hero.color).getHex(); return P.hex; }
   // saved research levels, sanitised: known ids only, whole numbers clamped to each upgrade's max
   function metaLv() {
@@ -385,7 +387,7 @@
       return g;
     }
     const g = gunState(id, infinite);
-    if (!infinite && G.phase === 'play') SFX.voice(P.hero.id, 'ItemEquip');
+    if (!infinite && G.phase === 'play') SFX.voice(vid(P), 'ItemEquip');
     g.mag = magSize(g, P);
     P.guns.push(g);
     equip(P, P.guns.length - 1);
@@ -583,7 +585,7 @@
     const moving = Math.hypot(mv[0], mv[1]) > 0.15;
     if (moving) P.lastDir = [mv[0], mv[1]];
     P.idleT = moving || (G.room && G.room.active) ? 0 : (P.idleT || 0) + dt;
-    if (P.idleT > 18) { P.idleT = -30; SFX.voice(P.hero.id, 'Idle'); }
+    if (P.idleT > 18) { P.idleT = -30; SFX.voice(vid(P), 'Idle'); }
 
     // dodge input buffer: a press up to 0.2 s before the roll / dash / cooldown ends still rolls
     if (INPUT.take('dodge') && !P.hh && !P.lrlCast) P.dodgeBuf = 0.2; else P.dodgeBuf = Math.max(0, (P.dodgeBuf || 0) - dt);
@@ -645,7 +647,7 @@
       P.moving = moving;
       if (!P.roll) P.body.c.play(moving ? 'move' : 'idle', null, true);
     }
-    if (P.hp <= 2 && P.armor === 0 && !P.dead && (P.beats || 0) < 5) { P.beatT = (P.beatT || 0) - dt; if (P.beatT <= 0) { P.beatT = P.hp <= 1 ? 1.1 : 2.2; P.beats = (P.beats || 0) + 1; SFX.synth('beat', 1); } }
+    if (P.hp <= 2 && P.armor === 0 && !P.dead && (P.beats || 0) < 5) { P.beatT = (P.beatT || 0) - dt; if (P.beatT <= 0) { P.beatT = P.hp <= 1 ? 1.1 : 2.2; P.beats = (P.beats || 0) + 1; SFX.synth('beat', 1); if (P.beats === 1) SFX.announce('HP_Low'); } }
     if (moving) { P.stepT -= dt; if (P.stepT <= 0) { P.stepT = 0.46; SFX.play('step', 0.35); FX.particle({ x: P.x, y: P.y, life: 0.35, size: 0.2, size1: 0.45, color: 0x6a7480, tex: FX.tex.dot, alpha: 0.25, normal: true, order: 4 }); } }
 
     // aim
@@ -1840,7 +1842,8 @@
     return null;
   }
   function bossDeath(e) {
-    FX.later(1.2, () => G.P && !G.P.dead && SFX.voice(G.P.hero.id, 'MVP', 1, true));
+    FX.later(0.2, () => SFX.announce(G.fi < FLOORS.length - 1 ? 'StageClear' : 'Clear'));
+    FX.later(1.6, () => G.P && !G.P.dead && SFX.voice(vid(G.P), 'MVP', 1, true));
     G.slowT = 1.6;
     clearEBullets(true);
     G.enemies.forEach((o) => { if (o !== e && o.alive) { o.hp = 0; killEnemy(o); } });
@@ -1896,6 +1899,7 @@
     P.hurtFlash = 0.35;
     G.slowT = Math.max(G.slowT, 0.25);
     SFX.play('hurt'); SFX.play('expS', 0.35);
+    if (P.hero.hidden) SFX.voice(vid(P), 'Hurt');
     FX.flash(0xff1010, 0.3); if (G.opt.shake) FX.shake(0.35);
     FX.sparks(P.x, P.y + 0.6, 0xff3355, 14, 4, 0.14, 0.5);
     UI.hurt();
@@ -1937,7 +1941,7 @@
     G.stats.skills++;
     const h = P.hero;
     UI.skillCut(h);
-    SFX.voice(h.id, 'SpSkill', 1, true);
+    SFX.voice(vid(P), 'SpSkill', 1, true);
     const a = P.aim, [mx, my] = muzzleOf(P); // gun skills leave from the muzzle
     // ultimates are pure damage; only the cast itself is covered (0.5 s)
     P.iframe = Math.max(P.iframe, 0.5);
@@ -2359,6 +2363,7 @@
     FX.particle({ x: P.x, y: P.y + 1, life: 0.5, size: 1.5, size1: 5, frames: FX.sheets.airboom, color: 0xffd080, alpha: 0.9 });
     for (let k = 0; k < 18; k++) { const aa = Math.random() * TAU; FX.particle({ x: P.x, y: P.y + 1, vx: Math.cos(aa) * rnd(2, 6), vy: rnd(2, 6), grav: 9, life: 0.9, size: 0.3, size1: 0.2, color: 0xd8c8a0, tex: FX.tex.dot, alpha: 0.9, normal: true, spin: 6 }); } // armour plates fly off
     UI.shout('램파리온 대파 — 램파트로 버텨라!', false, '#ff6a4a');
+    SFX.voice('ramparion', 'Broken', 1, true); FX.later(2.6, () => G.P === P && P.form === 'rampart' && SFX.voice('rampart', 'Join', 1, true)); // the armour falls away and Rampart answers
     UI.toast(`${RAMP_HOLD}초 동안 버티면 램파리온으로 복귀합니다 (램파트: 체력 75 · 공격력 40% · 스킬 불가)`, 'warn');
     const toRampart = () => { if (G.P === P && P.form === 'rampart') { swapBody(P, 'e_Rampart_N', true); swapBaseGun(P, 'ramp_cannon'); } };
     if (P.body.c.has('trans')) P.body.c.playReverse('trans', toRampart); else toRampart();
@@ -2378,6 +2383,7 @@
       for (const e of G.enemies) { if (!e.alive || e.spawnT > 0) continue; const dx = e.x - P.x, dy = e.y - P.y, dd = Math.hypot(dx, dy) || 1; if (dd < 4.5 + e.r) hurtEnemy(e, 80 * P.mods.dmg, false, dx / dd * 10, dy / dd * 10, 'hitB'); }
       blankWave(P.x, P.y + 0.5, 5, false); if (G.opt.shake) FX.shake(0.4);
       UI.shout('램파리온, 재기동!!', true, '#ffd27a');
+      SFX.voice('ramparion', 'Restored', 1, true);
     });
   }
   function updateRampForm(P, dt) {
@@ -2418,7 +2424,7 @@
     FX.particle({ x: cx + ca * 0.6, y: cy + sa * 0.6, life: 0.35, size: 1.4, size1: 3, frames: FX.sheets.airboom, color: 0xffffff, alpha: 0.8 });
     FX.flash(0xffb040, big ? 0.16 : 0.1); G.slowT = Math.max(G.slowT, 0.05); if (G.opt.shake) FX.shake(big ? 0.5 : 0.35);
     SFX.play('ramp_skill2', big ? 1 : 0.85); SFX.play('expM', 0.6);
-    if (!big) UI.shout('브레스트 라이언!!', true, '#ff8a3a');
+    if (!big) { UI.shout('브레스트 라이언!!', true, '#ff8a3a'); SFX.voice(vid(P), 'Skill2', 1, true); }
     const hit = new Set(); let t = 0;
     FX.tickers.push((dt) => {
       t += dt;
@@ -2772,6 +2778,7 @@
         }
       });
     } else if (sk.id === 'axe') {
+      SFX.voice(vid(P), 'Skill2', 1, true);
       // LRL · 액스 오브 다크니스: a swing of the dragon-slayer axe in front of her — sometimes it finds a weak point (x2.45)
       const pw = 1 + 0.2 * upE(P), R = 3.8, luck = 0.2 + 0.08 * upE(P);
       P.iframe = Math.max(P.iframe, 0.6); // she steps into the swing
@@ -2894,7 +2901,8 @@
     SFX.play('fail'); SFX.music(null);
     clearEBullets(true);
     G.stats.cause = src;
-    SFX.voice(P.hero.id, 'Retreat', 1, true);
+    SFX.voice(vid(P), 'Retreat', 1, true);
+    FX.later(2.4, () => SFX.announce('GameOver'));
     G.deathRun = G.stats;
     if (G.tut) { G.tut = null; UI.coach(null); }
     FX.later(1.7, () => { if (G.deathRun === G.stats) endRun(false); }); // ~2.5 s of real time in the slow-mo, quick to retry
@@ -2952,7 +2960,7 @@
       case 'heart': case 'half':
         if (P.hp >= P.maxHp) return false;
         P.hp = Math.min(P.maxHp, P.hp + (p.kind === 'heart' ? 2 : 1));
-        SFX.play('reinforce'); FX.ring(P.x, P.y + 0.6, 0.2, 1.2, 0xff4060, 0.4); UI.toast(p.kind === 'heart' ? '체력 +50' : '체력 +25', 'gem'); if (p.kind === 'heart') SFX.voice(P.hero.id, 'Repair'); return true;
+        SFX.play('reinforce'); FX.ring(P.x, P.y + 0.6, 0.2, 1.2, 0xff4060, 0.4); UI.toast(p.kind === 'heart' ? '체력 +50' : '체력 +25', 'gem'); if (p.kind === 'heart') SFX.voice(vid(P), 'Repair'); return true;
       case 'armor': P.armor++; SFX.play('ice'); UI.toast('방어막 +1', 'gem'); return true;
       case 'key': P.keys++; SFX.play('uiEquip', 0.8); UI.toast('열쇠 획득', 'gem'); return true;
       default: {
@@ -3007,7 +3015,7 @@
     G.objs.splice(G.objs.indexOf(o), 1);
     killObj(o.m); FX.kill(o.glow);
     SFX.play(o.rank >= 2 ? 'genSS' : 'genS'); SFX.play('uiEquip', 0.7);
-    if (o.rank >= 2) SFX.voice(P.hero.id, 'PresentGet');
+    if (o.rank >= 2) SFX.voice(vid(P), 'PresentGet');
     FX.summonBurst(o.x, o.y + 0.5, Math.min(4, o.rank + 1), RANKS[o.rank].hex);
     const loot = rollLoot(o.rank + (P.mods.lucky && Math.random() < 0.35 ? 1 : 0));
     if (loot.kind === 'gold') { dropPickup(o.x, o.y, 'gold', 30); return; }
@@ -3080,7 +3088,7 @@
       if (P.gold < o.price) { UI.toast('부품이 부족합니다', 'warn'); SFX.play('fail', 0.6); return; }
       if ((o.loot.kind === 'heart') && P.hp >= P.maxHp) { UI.toast('체력이 가득 찼습니다', 'warn'); return; }
       P.gold -= o.price;
-      SFX.play('purchase'); SFX.voice(P.hero.id, 'ActionApprove');
+      SFX.play('purchase'); SFX.voice(vid(P), 'ActionApprove');
     }
     G.objs.splice(G.objs.indexOf(o), 1);
     killObj(o.vis); FX.kill(o.glow); FX.kill(o.base); if (o.tag) killObj(o.tag); if (o.plate) killObj(o.plate);
@@ -3156,7 +3164,7 @@
     if (own.length && Math.random() < 0.85) take(own);
     for (let guard = 0; pick.length < Math.min(P.cards || 3, pool.length) && guard < 30; guard++) { if (!take(Math.random() < 0.2 ? own : com)) take(pool); }
     G.choosing = pick; G.paused = true; G.chooseAt = performance.now(); refreshHints(); INPUT.stopFire();
-    SFX.play('rankUp', 0.9); if ((P.lv - 2) % 3 === 0) SFX.voice(P.hero.id, P.lv % 2 ? 'CoreLink' : 'Reinforce', 1, true);
+    SFX.play('rankUp', 0.9); SFX.announce('LevelUp'); if ((P.lv - 2) % 3 === 0) SFX.voice(vid(P), P.lv % 2 ? 'CoreLink' : 'Reinforce', 1, true);
     // a light ring at her feet: the level-up never hides the hero mid-fight
     FX.ring(P.x, P.y + 0.3, 0.4, 2.2, heroHex(P), 0.5, 0.55);
     if (!(G.room && G.room.active)) FX.pillar(P.x, P.y, 0.5, heroHex(P));
@@ -3558,7 +3566,7 @@
     r.chT = r.chMode === 'hunt' ? 40 : CH_TIME; r.chNext = 0; r.chElite = false; r.waves = []; r.waveI = 0;
     r.chGoal = 10 + G.fi * 2; r.chKills = 0;
     FX.later(2.3, () => { if (r.active) UI.toast(r.chMode === 'hunt' ? `40초 안에 ${r.chGoal}기 섬멸 — 성공하면 고급 보급 상자` : '끝까지 버티면 고급 보급 상자 획득', 'gem'); });
-    FX.later(0.5, () => G.P && SFX.voice(G.P.hero.id, 'SearchStart'));
+    FX.later(0.5, () => G.P && SFX.voice(vid(G.P), 'SearchStart'));
     SFX.play('warning', 0.6);
     UI.chTimer(r.chT, r);
   }
@@ -3647,7 +3655,7 @@
     if (r.challenge && r.chFail) { UI.banner('room', '도전 실패 — 시간 초과', ''); SFX.play('fail', 0.6); return; }
     if (r.challenge) {
       UI.banner('room', '도전 성공', '');
-      SFX.voice(P.hero.id, 'SearchEnd', 1, true);
+      SFX.voice(vid(P), 'SearchEnd', 1, true);
       SFX.play('rankUp', 0.8);
       FX.ring(r.cx, r.cy + 0.5, 0.4, 3.2, 0xffc81e, 0.6);
       const away = Math.hypot(P.x - r.cx, P.y - r.cy) < 2.6 ? [r.cx + (P.x < r.cx ? 3 : -3), r.cy] : [r.cx, r.cy];
@@ -3679,7 +3687,8 @@
     SFX.music({ emperor: 'boss', executioner: 'boss2', goltarion: 'boss3', nidhogg: 'bossGamma', nightqueen: 'bossZeta', doomprime: 'boss10', ironprince: 'bossFinal' }[key] || 'boss');
     SFX.play('warning');
     G.camFocus = { x: e.x, y: e.y + 1, t: 2.2 };
-    FX.later(0.6, () => SFX.voice(G.P.hero.id, 'BattleFocus'));
+    SFX.announce('BossAlert');
+    FX.later(1.6, () => G.P && SFX.voice(vid(G.P), 'BattleFocus'));
     UI.bossIntro(def);
     FX.later(1.6, () => UI.hideBossIntro());
     FX.later(2.4, () => { if (G.phase === 'play' && e.alive) UI.boss(e); });
@@ -3794,7 +3803,7 @@
     G.floorMusicT = G.floorT = G.t; G.inShopMusic = false;
     SFX.music(G.floorMusic);
     UI.banner('floor', `${F.key} · ${F.name}`, F.en);
-    FX.later(0.8, () => G.P && SFX.voice(G.P.hero.id, 'StageStart'));
+    FX.later(0.8, () => G.P && SFX.voice(vid(G.P), 'StageStart'));
     SFX.play('start', 0.7);
   }
   function nextFloor() {

@@ -77,8 +77,14 @@
     // title
     el.heroSel.innerHTML = '<button class="hcard rand" data-i="-1" style="--c:#d8dee8"><i></i><b>무작위</b><small>해금 대원 중 랜덤</small></button>' + HEROES.map((h, i) => `<button class="hcard" data-i="${i}" style="--c:${h.color}"><i style="background-image:${portrait(h)}"></i><b>${h.name}</b><small>${h.title}</small></button>`).join('');
     el.heroSel.querySelectorAll('.hcard').forEach((b) => {
-      b.onclick = () => { if (selHero === +b.dataset.i) start(); else selectHero(+b.dataset.i); };
+      b.onclick = () => {
+        if (performance.now() < swipeClickUntil) return;
+        const next = +b.dataset.i;
+        if (INPUT.isTouch && next !== selHero && touchHeroDirection(Math.sign(next - selHero))) return;
+        if (selHero === next) start(); else selectHero(next);
+      };
     });
+    initHeroTouch();
     $('#btnStart').onclick = start;
     // title settings: the pause menu's option panel on its own (volume, keys, accessibility, touch layout)
     $('#btnSet').onclick = () => openSettings(true);
@@ -312,14 +318,17 @@
   const LRL_CODE = ['ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight'];
   let cheatBuf = [], cheatAt = 0;
   const ends = (buf, seq) => buf.length >= seq.length && seq.every((c, i) => buf[buf.length - seq.length + i] === c);
-  function forceHidden(id) {
+  let swipeClickUntil = 0;
+  function forceHidden(id, selectNow) {
     const HID = DATA.HIDDEN || [], k = HID.findIndex((h) => h.id === id);
     if (k < 0) return;
     forcedHidden = HEROES.length + k;
     const h = HID[k];
     SFX.play('rankUpSS', 0.8); toast(`무작위 칸에 히든 대원 등장 — ${h.name}`, 'gem');
     dressRandomCard();
-    if (selHero === -1) setTimeout(() => selectHero(-1, true), 0); // already on that card: show them
+    SFX.voice(h.id, 'SortiePick', 1, true);
+    if (selectNow) selectHero(-1, true);
+    else if (selHero === -1) setTimeout(() => selectHero(-1, true), 0); // already on that card: show them
   }
   function trackCheat(e) {
     if (e.repeat || e.altKey || e.ctrlKey || e.metaKey || !e.code) return;
@@ -327,7 +336,7 @@
     if (now - cheatAt > 2500) cheatBuf = [];
     cheatAt = now;
     cheatBuf.push(e.code); if (cheatBuf.length > 20) cheatBuf.shift();
-    if (ends(cheatBuf, LRL_CODE)) { cheatBuf = []; forceHidden('lrl'); return false; }
+    if (ends(cheatBuf, LRL_CODE)) { cheatBuf = []; forceHidden('lrl', !!e.touchSelect); return !!e.touchSelect; }
     if (!cheatsOn && ends(cheatBuf, CHEAT_ON)) {
       cheatsOn = true; cheatBuf = [];
       try { sessionStorage.setItem('lao_rogue_cheats', '1'); } catch (er) { /* ignore */ }
@@ -339,6 +348,29 @@
     const codes = [CHEAT_ON, ...RAMP_CODES]; // either code, cheats on or not (치트활성화 typed again must not start a sortie)
     for (let n = Math.min(cheatBuf.length, 20); n >= 2; n--) { const tail = cheatBuf.slice(-n); if (codes.some((q) => n <= q.length && tail.every((c, i) => c === q[i]))) return true; }
     return false;
+  }
+  function touchHeroDirection(dir) {
+    if (!dir || GAME.G.phase !== 'title' || el.title.hidden || !$('#labOv').hidden || settingsOpen()) return false;
+    return trackCheat({code: dir < 0 ? 'ArrowLeft' : 'ArrowRight', touchSelect: true});
+  }
+  function initHeroTouch() {
+    let gesture = null;
+    el.heroSel.addEventListener('pointerdown', e => {
+      if (e.pointerType !== 'touch' || !e.isPrimary) return;
+      gesture = {id:e.pointerId,x:e.clientX,y:e.clientY};
+    });
+    el.heroSel.addEventListener('pointercancel', () => { gesture = null; });
+    el.heroSel.addEventListener('pointerup', e => {
+      const g=gesture; gesture=null;
+      if (!g || e.pointerId!==g.id) return;
+      const dx=e.clientX-g.x,dy=e.clientY-g.y;
+      if (Math.abs(dx)<32 || Math.abs(dx)<Math.abs(dy)*1.4) return;
+      swipeClickUntil=performance.now()+400;
+      e.preventDefault();
+      const dir=dx<0?-1:1;
+      if (touchHeroDirection(dir)) return;
+      selectHero((selHero+1+dir+HEROES.length+1)%(HEROES.length+1)-1);
+    });
   }
   // the random card turns into the cheat's hidden hero card (kept whenever the title is shown again): choose it to deploy them
   function dressRandomCard() {

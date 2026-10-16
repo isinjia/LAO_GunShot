@@ -306,8 +306,12 @@
   const VPOOL = { ItemEquip: ['ItemEquip', 'Join', 'SquadJoin'], StageStart: ['StageStart', 'Leader'], Idle: ['Idle_01_01', 'Idle_02_01'] };
   const VCD = { ItemEquip: 30000, Repair: 20000, PresentGet: 15000, ActionApprove: 15000, BattleFocus: 8000, Idle: 45000 };
   const vLast = {};
+  // hidden heroes: event -> file under assets/voice/<hero>/ (only the lines that exist); "@event" = the pool to draw from
+  const HIDDEN_VOICE = {"lrl": {"SortiePick": "SortiePick", "StageStart": "StageStart", "Leader": "Leader", "ActionApprove": "ActionApprove", "BattleFocus": "BattleFocus", "MVP": "MVP", "ItemEquip": "ItemEquip", "SquadJoin": "SquadJoin", "SearchStart": "SearchStart", "SearchEnd": "SearchEnd", "Repair": "Repair", "CoreLink": "CoreLink", "Reinforce": "Reinforce", "Join": "Join", "PresentGet": "PresentGet", "Retreat": "Retire", "Retire": "Retire", "Hurt": "Retreat", "SpSkill": "SpSkill", "Skill2": "ActionApprove", "Idle_01_01": "Idle_01_01", "Idle_01_02": "Idle_01_02", "Idle_01_03": "Idle_01_03", "Idle_02_01": "Idle_02_01", "Idle_03_01": "Idle_03_01", "Idle_04_01": "Idle_04_01", "SPIdle_01_01": "SPIdle_01_01", "SPIdle_02_01": "SPIdle_02_01", "@Idle": ["Idle_01_01", "Idle_01_02", "Idle_01_03", "Idle_02_01", "Idle_03_01", "Idle_04_01", "SPIdle_01_01", "SPIdle_02_01"]}, "ramparion": {"SortiePick": "SortiePick", "StageStart": "StageStart", "Leader": "Leader", "ActionApprove": "ActionApprove", "BattleFocus": "BattleFocus", "MVP": "MVP", "ItemEquip": "ItemEquip", "SquadJoin": "SquadJoin", "SearchStart": "SearchStart", "SearchEnd": "SearchEnd", "Repair": "Repair", "CoreLink": "CoreLink", "Reinforce": "Reinforce", "Retreat": "Retire", "Retire": "Retire", "Hurt": "Retreat", "SpSkill": "SpSkill", "SpSkill_2": "SpSkill_2", "SpSkill_3": "SpSkill_3", "SpSkill_4": "SpSkill_4", "Skill2": "SpSkill_3", "Idle_01_01": "Idle_01_01", "Idle_01_02": "Idle_01_02", "Idle_01_03": "Idle_01_03", "Broken": "Retreat", "Restored": "Reinforce", "@Idle": ["Idle_01_01", "Idle_01_02", "Idle_01_03"], "@SpSkill": ["SpSkill", "SpSkill_2", "SpSkill_4"]}, "rampart": {"SortiePick": "SortiePick", "StageStart": "StageStart", "Leader": "Leader", "ActionApprove": "ActionApprove", "BattleFocus": "BattleFocus", "MVP": "MVP", "ItemEquip": "ItemEquip", "SquadJoin": "SquadJoin", "SearchStart": "SearchStart", "SearchEnd": "SearchEnd", "Repair": "Repair", "CoreLink": "CoreLink", "Reinforce": "Reinforce", "Join": "Join", "Retreat": "Retire", "Retire": "Retire", "Hurt": "Retreat", "SpSkill": "SpSkill", "Skill2": "ActionApprove", "Idle_01_01": "Idle_01_01", "Idle_01_02": "Idle_01_02", "Idle_01_03": "Idle_01_03", "@Idle": ["Idle_01_01", "Idle_01_02", "Idle_01_03"]}};
   function voice(hero, event, vol = 1, force) {
     if (muted || !hero || !web || VOL.voice <= 0.001) return;
+    const hidden = HIDDEN_VOICE[hero];
+    if (hidden && !hidden[event] && !hidden['@' + event] && !VPOOL[event]) return;
     const c = ensureCtx();
     if (!c) return;
     const now = performance.now();
@@ -315,8 +319,11 @@
     if (VCD[event] && now - (vLast[event] || -1e9) < VCD[event]) return;
     if (c.state !== 'running') return; // a line that can't play doesn't spend its cooldown
     vLast[event] = now;
-    const pool = VPOOL[event] || [event], line = pool[Math.floor(Math.random() * pool.length)];
-    const key = hero + '/' + line;
+    const pool = ((hidden && hidden['@' + event]) || VPOOL[event] || [event]).filter(line => !hidden || hidden[line]);
+    if (!pool.length) return;
+    const line = pool[Math.floor(Math.random() * pool.length)];
+    const key = hero + '/' + (hidden ? hidden[line] : line);
+    const voiceUrl = `assets/voice/${key}.mp3`;
     const go = (buf) => {
       if (muted || c.state !== 'running') { vLast[event] = 0; return; }
       if (voiceSrc) try { voiceSrc.stop(); } catch (e) { /* already ended */ }
@@ -334,7 +341,7 @@
       }
     };
     if (vbuf[key]) return go(vbuf[key]);
-    fetch(`assets/voice/${key}.mp3`).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error('no voice'))))
+    fetch(voiceUrl).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error('no voice'))))
       .then((ab) => new Promise((res, rej) => c.decodeAudioData(ab, res, rej)))
       .then((b) => {
         if (!vbuf[key]) vOrder.push(key); vbuf[key] = b;
@@ -344,7 +351,33 @@
       .catch(() => { /* missing line: stay silent, the music is untouched */ });
   }
 
+  // the mini-game announcer (assets/voice/announcer/<line>-1|2.mp3): boss alert, level up, stage clear, low HP, game over
+  let annSrc = null, annUntil = 0;
+  const annLast = {};
+  function announce(line, vol = 1) {
+    if (muted || !web || VOL.voice <= 0.001) return;
+    const c = ensureCtx();
+    if (!c || c.state !== 'running') return;
+    const now = performance.now();
+    if (now < annUntil || now - (annLast[line] || -1e9) < 4000) return;
+    annLast[line] = now;
+    const key = 'announcer/' + line + '-' + (1 + Math.floor(Math.random() * 2));
+    const go = (buf) => {
+      if (muted) return;
+      if (annSrc) try { annSrc.stop(); } catch (e) { /* ended */ }
+      const src = c.createBufferSource(), gn = c.createGain();
+      src.buffer = buf; gn.gain.value = Math.min(1.2, BASE.sfx * VOL.voice * 1.05 * vol);
+      src.connect(gn).connect(sfxGain); src.start();
+      annSrc = src; annUntil = performance.now() + buf.duration * 1000;
+    };
+    if (vbuf[key]) return go(vbuf[key]);
+    fetch(`assets/voice/${key}.mp3`).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error('no line'))))
+      .then((ab) => new Promise((res, rej) => c.decodeAudioData(ab, res, rej)))
+      .then((b) => { if (!vbuf[key]) vOrder.push(key); vbuf[key] = b; while (vOrder.length > 24) delete vbuf[vOrder.shift()]; if (performance.now() - now < 800) go(b); })
+      .catch(() => { /* missing: silent */ });
+  }
+
   window.SFX = {
-    debug: { stats, buffers, get ctx() { return ctx; }, get bgm() { return bgmEl; }, get bgmKey() { return bgmKey; }, level() { if (!analyser) return 0; const a = new Float32Array(analyser.fftSize); analyser.getFloatTimeDomainData(a); let m = 0; for (const v of a) m = Math.max(m, Math.abs(v)); return m; } },
-    play, synth, voice, music, setMuted, setVolume, getVolume, preload, warm, unlock, get muted() { return muted; }, get userMuted() { return userMuted; } };
+    debug: { stats, buffers, get ctx() { return ctx; }, get voice() { return voiceSrc; }, get bgm() { return bgmEl; }, get bgmKey() { return bgmKey; }, level() { if (!analyser) return 0; const a = new Float32Array(analyser.fftSize); analyser.getFloatTimeDomainData(a); let m = 0; for (const v of a) m = Math.max(m, Math.abs(v)); return m; } },
+    play, synth, voice, announce, music, setMuted, setVolume, getVolume, preload, warm, unlock, get muted() { return muted; }, get userMuted() { return userMuted; } };
 })();
