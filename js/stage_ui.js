@@ -96,7 +96,7 @@
     const chap = S.map((s, i) => {
       const open = stageOpen(p, i), c = cleared(p, i);
       return `<button type="button" class="chp${i === sel ? ' on' : ''}${open ? '' : ' locked'}" data-i="${i}" aria-label="스테이지 ${i + 1} ${s.name}${open ? '' : ' (잠김)'}">
-        <i style="background-image:url(${UIP}chap_${i + 1}.webp)"></i><span class="cn num">${String(i + 1).padStart(2, '0')}</span><span class="cnm">${s.name}</span>
+        <i style="background-image:url(${UIP}chap_${i + 1}.webp)"></i><span class="cn num">${String(i + 1).padStart(2, '0')}</span><span class="cnm">${s.name}<em class="cil${gearIl(curChar) < reqIl(i, 0) ? ' low' : ''}">입장 Lv ${reqIl(i, 0)}</em></span>
         <span class="st">${[0, 1, 2].map((k) => `<b class="${k < c ? 'on' : ''}" style="--c:${Df[k].color}"></b>`).join('')}</span>${open ? '' : '<span class="lk"></span>'}</button>`;
     }).join('');
     const path = floors.map((f, i) => {
@@ -111,7 +111,7 @@
         <p>${floors.length}개 층 · 3층 중간 보스 · ${floors.length}층 최종 보스<br>층마다 경비 구역을 제압하고 승강기로 내려갑니다.</p>
         ${rec ? `<span class="rec${short ? ' low' : ''}">입장 아이템 레벨 ${rec}${short ? ` · 현재 ${il}` : ''}</span>` : '<span class="rec">입문 스테이지 · 제한 없음</span>'}</div>
       <ol class="path" style="--n:${floors.length}">${path}</ol>
-      <div class="diffs" role="radiogroup" aria-label="난이도">${Df.map((d, k) => { const open = diffOpen(p, sel, k); return `<button type="button" role="radio" aria-checked="${k === diff}" class="df${k === diff ? ' on' : ''}${open ? '' : ' locked'}" data-d="${k}" style="--c:${d.color}"><b>${d.name}</b><small>${open ? `적 체력 x${d.hp} · 입장 Lv ${reqIl(sel, k)}` : `${Df[k - 1].name} 클리어 시 개방`}</small><kbd>${k + 1}</kbd></button>`; }).join('')}</div>
+      <div class="diffs" role="radiogroup" aria-label="난이도">${Df.map((d, k) => { const open = diffOpen(p, sel, k); return `<button type="button" role="radio" aria-checked="${k === diff}" class="df${k === diff ? ' on' : ''}${open ? '' : ' locked'}" data-d="${k}" style="--c:${d.color}"><b>${d.name}</b><small>${open ? `적 체력 x${d.hp} · 입장 Lv ${reqIl(sel, k)}` : `${Df[k - 1].name} 클리어 시 개방 · 입장 Lv ${reqIl(sel, k)}`}</small><kbd>${k + 1}</kbd></button>`; }).join('')}</div>
       <div class="rwd"><small>획득 보상</small><span class="rc gear"><i></i>장비<b class="num">Lv ${ilv0}~${ilv1}</b></span><span class="rc rune"><i></i>보석 · 룬</span><span class="rc chip"><i></i>데이터 칩<b>소량</b></span></div>
       ${short ? `<button type="button" class="btn lg go blocked" id="stageGo" aria-disabled="true"><span>입장 불가</span><small>아이템 레벨 합 ${il} / ${rec} — 장비를 더 갖추세요</small></button>` : `<button type="button" class="btn lg go" id="stageGo"><span>출격</span><small>${St.name} · ${Df[diff].name}</small></button>`}`;
     // the nameplate beside the 3D stage

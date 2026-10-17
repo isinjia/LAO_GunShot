@@ -379,3 +379,5 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin: 0 1px; fo
 /* nameplate: label / value spacing; scaled from its bottom-right corner so it never runs off screen */
 #rpgPlate .pnpw { gap: 12px; align-items: center; } #rpgPlate .pnpw > small:first-child { white-space: nowrap; } #rpgPlate .pnpw b { margin-right: auto; }
 @media (min-width: 901px) and (min-aspect-ratio: 1/1) { #rpgPlate { zoom: 1; transform: scale(var(--fs, 1)); transform-origin: right bottom; } }
+#rpgOv .chp .cnm .cil { display: block; margin-top: 1px; font-style: normal; font-size: 10px; color: var(--y); } #rpgOv .chp .cnm .cil.low { color: #ff8a7a; }
+#rpgOv .chp .cnm { bottom: 16px; }
