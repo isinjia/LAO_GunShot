@@ -88,6 +88,8 @@
         const score = Math.min(minD, 1.2) * 4 * BOT.skill + (dx * gx + dy * gy) * 0.6;
         if (score > bestScore) { bestScore = score; best = [dx, dy, minD]; }
       }
+      // reaction lag: a weaker bot re-reads the bullets less often and keeps its stale heading (0.8 → 74 %, 0.55 → 40 % of frames)
+      if (BOT.lastBest && Math.random() > BOT.skill * BOT.skill + 0.1) best = BOT.lastBest; else BOT.lastBest = best;
       if (best && (best[0] || best[1])) { mx = best[0]; my = best[1]; }
       else if (best) { mx *= 0.3; my *= 0.3; }
       if (curDanger < 0.05 && best && best[2] < 0.15 && Math.random() < BOT.skill) tap('KeyK');

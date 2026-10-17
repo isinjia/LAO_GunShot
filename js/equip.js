@@ -15,9 +15,9 @@
   // 재료: the operator's own currency — salvage gear for it, spend it on sockets and gem combines
   const SALVAGE = { normal: 2, magic: 5, rare: 12, unique: 30, set: 30 };
   const salvageOf = (it) => Math.round((SALVAGE[it.rar] || 2) * (1 + (it.ilvl || 1) / 20) + (it.rw ? 20 : 0));
-  const sockCost = (it) => 15 * (it.sockets + 1);
-  const UNSOCK = 30;
-  const combCost = (g) => 10 * (g + 1);
+  const sockCost = (it) => 30 * (it.sockets + 1);
+  const UNSOCK = 50;
+  const combCost = (g) => 25 * (g + 1);
   const ICON = (n) => `assets/equip/${n}.webp`;
   // rarity: the icon tier (T1-T4) carries the original's colour plate
   const RAR = {
@@ -85,6 +85,10 @@
     { id: 'u_bulwark', base: 'armor_space', name: '철벽의 장갑', req: 22, stats: { hp: 4, armor: 2, roll: 10 } },
     { id: 'u_eye', base: 'helm_holo', name: '사이클롭스의 눈', req: 34, stats: { crit: 10, dmg: 12, skill: 12 } },
     { id: 'u_wind', base: 'boots_maneuver', name: '질풍의 부스터', req: 30, stats: { speed: 14, roll: 20, rof: 6 } },
+    { id: 'u_aegis', base: 'armor_def', name: '아이기스 프로토콜', req: 55, stats: { hp: 6, armor: 3, block: 12 } },
+    { id: 'u_reaper', base: 'core_sniper', name: '사신의 조준핵', req: 60, stats: { dmg: 55, crit: 12, pierce: 2 } },
+    { id: 'u_storm', base: 'glove_bullet', name: '폭풍의 탄띠', req: 50, stats: { rof: 18, dmg: 14 } },
+    { id: 'u_halo', base: 'ring_cri', name: '헤일로 링', req: 45, stats: { crit: 10, skill: 14, vamp: 3 } },
     { id: 'u_ds', base: 'amu_mark', name: '드라큘라의 표식', req: 10, stats: { vamp: 4, skill: 12, dmg: 8 } },
   ];
   const SETS = { orca: { name: '오르카 친위대', bonus: { 2: { dmg: 10 }, 3: { hp: 2, armor: 1 }, 4: { skill: 20, speed: 8 } } } };
@@ -137,18 +141,18 @@
   const add = (o, s, k = 1) => { for (const key in s) o[key] = (o[key] || 0) + Math.round(s[key] * k * 10) / 10; return o; };
 
   // ── item generation ──
-  function genItem(ilvl, minRar) {
+  function genItem(ilvl, minRar, forceU) {
     const pool = BASES.filter((b) => b.req <= ilvl + 4);
     const b = pick(pool);
     // unique / set: 1.2 % from trash, more from elites / chests / bosses (minRar 0-3); otherwise the tier roll
     const roll = Math.random() + (minRar || 0) * 0.15;
-    if (Math.random() < 0.006 + (minRar || 0) * 0.015) {
+    if (forceU || Math.random() < 0.006 + (minRar || 0) * 0.015) {
       const u = UNIQUES.concat(SET_ITEMS).filter((x) => x.req <= ilvl + 4);
       if (u.length) { const q = pick(u), B = baseOf(q.base); return { id: uid(), base: B.id, name: q.name, rar: q.set ? 'set' : 'unique', set: q.set || null, ilvl, req: q.req, stats: { ...q.stats }, base_: scaleBase(B, ilvl), sockets: Math.min(B.sock, ri(0, 1)), socketed: [], w: B.w, h: B.h }; }
     }
     const rar = roll > 0.92 ? 'rare' : roll > 0.58 ? 'magic' : 'normal';
     const it = { id: uid(), base: b.id, name: b.name, rar, ilvl, req: Math.max(b.req, Math.floor(ilvl * 0.8)), stats: {}, base_: scaleBase(b, ilvl), sockets: 0, socketed: [], w: b.w, h: b.h };
-    const k = 1 + ilvl / 20;
+    const k = 1 + ilvl / 12;
     const roll1 = (a) => { const v = rnd(a.r[0], a.r[1]) * (a.s === 'hp' || a.s === 'armor' || a.s === 'pierce' ? 1 : k); it.stats[a.s] = Math.round(((it.stats[a.s] || 0) + v) * 10) / 10; if (a.s === 'hp' || a.s === 'armor' || a.s === 'pierce') it.stats[a.s] = Math.round(it.stats[a.s]); };
     const okA = (a) => !a.lv || a.lv <= ilvl;
     if (rar === 'magic') {
@@ -168,7 +172,7 @@
     }
     return it;
   }
-  function scaleBase(b, ilvl) { const k = 1 + ilvl / 25, o = {}; for (const s in b.base) o[s] = s === 'hp' || s === 'armor' || s === 'pierce' ? b.base[s] : Math.round(b.base[s] * k * 10) / 10; return o; }
+  function scaleBase(b, ilvl) { const k = 1 + ilvl / 14, o = {}; for (const s in b.base) o[s] = s === 'hp' || s === 'armor' || s === 'pierce' ? b.base[s] : Math.round(b.base[s] * k * 10) / 10; return o; }
   function genGem(ilvl) { const g = pick(Object.keys(GEMS)), gr = Math.random() < Math.min(0.5, ilvl / 80) ? 1 : 0; return { id: uid(), gem: g, grade: gr, w: 1, h: 1 }; }
   function genRune(ilvl) {
     const top = Math.min(RUNES.length - 1, 2 + Math.floor(ilvl / 6));
@@ -294,10 +298,10 @@
     if (P && P.gearVamp && P.hp < P.maxHp && Math.random() < P.gearVamp) { P.hp++; SFX.play('reinforce', 0.4); } // 흡혈: a kill can mend half a heart
     const lv = ilvlNow(), r = Math.random();
     if (e.golden) { // 보물 철충 jackpot
-      for (let i = 0; i < 4; i++) drop(e.x + Math.cos(i * 1.6) * 1.2, e.y + Math.sin(i * 1.6) * 1.2, genItem(lv + 2, 2));
+      for (let i = 0; i < 4; i++) drop(e.x + Math.cos(i * 1.6) * 1.2, e.y + Math.sin(i * 1.6) * 1.2, genItem(lv + 2, i ? 2 : 3, i === 0));
       drop(e.x, e.y + 1.4, genGem(lv + 4)); drop(e.x + 1, e.y - 1, genGem(lv + 4)); drop(e.x - 1, e.y - 1, genRune(lv + 6));
       const db = load(), c = db.list.find((x) => x.id === runChar); if (c) { const A = loadAcct(); localStorage.setItem(VAULT_KEY, JSON.stringify({ v: 1, list: A.list, mats: A.mats + 40 })); }
-      UI.banner('clear', '보물 철충 처치!', '장비 4 · 보석 2 · 룬 1 · 재료 +40'); SFX.play('pickSS', 1);
+      UI.banner('clear', '보물 철충 처치!', '유니크 1 · 장비 3 · 보석 2 · 룬 1 · 재료 +40'); SFX.play('pickSS', 1);
       return;
     }
     if (r < (e.elite ? 0.12 : 0.008)) drop(e.x, e.y, genItem(lv, e.elite ? 1 : 0));
@@ -308,7 +312,7 @@
   function onBoss(x, y, mid) {
     if (!runChar) return;
     const lv = ilvlNow() + (mid ? 0 : 3);
-    for (let i = 0; i < (mid ? 1 : 2); i++) drop(x + (i - 1) * 1.6, y - 1.2, genItem(lv, mid ? 1 : 2));
+    for (let i = 0; i < (mid ? 1 : 2); i++) drop(x + (i - 1) * 1.6, y - 1.2, genItem(lv, mid ? 1 : 2, Math.random() < 0.08));
     drop(x, y - 2.4, genRune(lv + 4)); if (Math.random() < 0.6) drop(x + 1.6, y - 2.4, genGem(lv));
   }
   // picked up: straight into the character's save (never lost, win or lose)

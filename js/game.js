@@ -266,7 +266,18 @@
   function donorK(id) { const t = SD.template(id); return t ? HERO_H / t.height : 0.18; }
   // the weapon is cut from its donor rig without the donor's hand; the holder's own hands (from heroId's rig) are
   // floated onto it Gungeon-style: one on the grip, one under the barrel. Without heroId (pickups) it's the bare gun.
+  function makeDualPistols() {
+    const parts = ['R', 'L'].map(side => RIGS.makeHand('blacklilith', donorK('blacklilith'), null, 'native', side));
+    if (parts.some(h => !h)) { parts.forEach(h => h && h.c.dispose()); return null; }
+    const outer = new THREE.Group(), mounts = [[0.12, -0.16], [-0.38, -0.03]];
+    parts.forEach((h, i) => { h.group.position.x += mounts[i][0]; h.group.position.y += mounts[i][1]; outer.add(h.group); });
+    const muzzles = parts.map((h, i) => [h.muzzle[0] + mounts[i][0], h.muzzle[1] + mounts[i][1]]);
+    return { outer, pair: parts, muzzles, muzzle: muzzles[0], len: Math.max(...parts.map(h => h.len)), box: parts[0].box,
+      c: { setOrder: o => parts.forEach((h, i) => h.c.setOrder(o + (1 - i) * 0.00002)),
+        setOpacity: a => parts.forEach(h => h.c.setOpacity(a)), dispose: () => parts.forEach(h => h.c.dispose()) } };
+  }
   function makeGunHand(gunId, heroId) {
+    if (gunId === 'bl_dual' && heroId === 'blacklilith') return makeDualPistols();
     const g = GUNS[gunId];
     const h = RIGS.makeHand(g.donor, donorK(g.donor) * (g.scale || 1), null, g.nativeGrip && heroId === g.donor ? 'grip' : 'gun');
     // the hero's own hands: scaled with the weapon when it comes from the hero's own rig (LRL's axe, 램파리온's arm)
@@ -387,7 +398,7 @@
         h.cd = (h.cd || 0) - dt; h.inT = inside ? (h.inT || 0) + dt : 0; // a step in is free: the burn starts after 0.6 s on it
         if (inside && h.inT > 0.6) {
           if (Math.random() < dt * 10) FX.particle({ x: P.x + rnd(-0.3, 0.3), y: P.y + 0.15, vy: rnd(0.6, 1.4), life: 0.45, size: 0.22, size1: 0, color: H.col, tex: FX.tex.glow, alpha: 0.85 });
-          if (h.cd <= 0 && P.iframe <= 0 && !P.roll) { h.cd = H.every; if (P.hp > 1 || P.armor > 0) hurtPlayer(H.name, H.dmg); else UI.toast(`${H.name} — 벗어나세요!`, 'warn'); } // hazards wear you down but never land the killing blow
+          if (h.cd <= 0 && P.iframe <= 0 && !P.roll) { h.cd = H.every; hurtPlayer(H.name, H.dmg); } // hazards wear you down but never land the killing blow
         }
       }
       if (H.period && h.room === rid) { // power pads: charge (sparks), then discharge — the iron bugs standing on them get it too
@@ -396,7 +407,7 @@
         if (ph > H.period - H.warn && Math.random() < dt * 14) FX.particle({ x: h.x + rnd(-h.rx, h.rx) * 0.8, y: h.y + rnd(-h.ry, h.ry) * 0.8, life: 0.25, size: 0.35, size1: 0.6, frames: FX.sheets.bolt, color: H.col, alpha: 0.85 });
         if (h.lastPh != null && ph < h.lastPh) {
           FX.ring(h.x, h.y + 0.1, 0.2, Math.max(h.rx, h.ry) * 1.3, H.col, 0.3); SFX.play('elec', 0.35);
-          if (inside && P.iframe <= 0 && !P.roll && (P.hp > 1 || P.armor > 0)) hurtPlayer(H.name, H.dmg);
+          if (inside && P.iframe <= 0 && !P.roll) hurtPlayer(H.name, H.dmg);
           for (const e of G.enemies) if (e.alive && !e.boss && ((e.x - h.x) / h.rx) ** 2 + ((e.y - h.y) / h.ry) ** 2 < 1) { hurtEnemy(e, 40, false, 0, 0, 'hitE'); e.stun = Math.max(e.stun || 0, 0.6); }
         }
         h.lastPh = ph;
@@ -404,7 +415,7 @@
     }
   }
   // the difficulty's HP bonus eases off in later stages: their own tiers and the gear gate already raise the bar there
-  function diffHp() { const k = G.diff.hp - 1; return 1 + k * (1 - 0.13 * (G.stageI || 0)); }
+  function diffHp() { const k = G.diff.hp - 1; return 1 + k * (1 - 0.05 * (G.stageI || 0)); }
   // 보물 철충 (the stage mode's golden goblin): a gilded runner that never fights back, flees the hero and slips away after
   // 14 s; brought down in time it bursts into a jackpot (equip.js onKill: rare+ gear, gems, runes, 재료)
   function spawnGolden(r) {
@@ -412,7 +423,7 @@
     const p = freeSpot(r.cx + rnd(-3, 3), r.cy + rnd(-2, 2), r); if (!p) return;
     const e = spawnEnemy(pool.includes('pupp') ? 'pupp' : pool[0], p[0], p[1]);
     if (!e) return;
-    e.golden = true; e.goldT = 14; e.maxHp = e.hp = Math.max(e.maxHp * 6, 260 * (1 + G.ti * 0.6)); e.r *= 1.15;
+    e.golden = true; e.goldT = 11; e.maxHp = e.hp = Math.max(e.maxHp * 6, 260 * (1 + G.ti * 0.6)) * (G.diff ? diffHp() : 1); e.r *= 1.15;
     e.room = r; G.stats.golden = (G.stats.golden || 0) + 1;
     UI.banner('room', '보물 철충 출현!', '14초 안에 처치하면 대량의 장비'); SFX.play('rankUpSS', 0.8);
     FX.ring(e.x, e.y + 0.5, 0.3, 3.5, 0xffd040, 0.5);
@@ -883,9 +894,10 @@
   }
   // hand + gun pose (called from the render pass): orbit the body centre toward the aim
   function poseHand(P) {
+    poseWildShot(P);
     const g = curGun();
     if (!g || !g.hand) return;
-    const a = P.wildShotEnd > G.t ? P.aim + (G.t - P.wildShotStart) * TAU * 2 : P.aim, ca = Math.cos(a), sa = Math.sin(a);
+    const a = P.aim, ca = Math.cos(a), sa = Math.sin(a);
     const rk = P.recoil * 0.22;
     const bob = P.moving ? Math.sin(G.t * 14) * 0.03 : Math.sin(G.t * 3) * 0.015;
     // the wrist sits so the back of the gun reaches the body's centre line, at chest height
@@ -908,13 +920,14 @@
     o.visible = !P.dead;
     g.hand.c.setOrder(ORD(P.ordY != null ? P.ordY : P.y) + 0.0004); // the gun always draws over the body and head
     if (P.roll) o.visible = false;
-    if (P.hh || P.lrlCast || P.scud) o.visible = false;
+    if (P.hh || P.lrlCast || P.scud || P.wildShotEnd > G.t) o.visible = false;
     if (P.swingT > 0) { // 액스 오브 다크니스: the axe hand sweeps the same arc as the slash, high to low across the aim
       const k = 1 - P.swingT / P.swingMax, e = k * k * (3 - 2 * k), off = (1.25 - 2.5 * e) * fl, sa2 = a + off;
       o.position.set(P.x + Math.cos(sa2) * 0.95, P.y + 0.85 + Math.sin(sa2) * 0.75, 0);
       o.rotation.z = sa2 + 0.4 * fl; o.visible = !P.dead;
     }
-    P.muzzle = [hx + ca * g.hand.muzzle[0] - sa * g.hand.muzzle[1] * fl, hy + sa * g.hand.muzzle[0] + ca * g.hand.muzzle[1] * fl];
+    const muzzle = g.hand.muzzles ? g.hand.muzzles[(P.dualShot || 0) % 2] : g.hand.muzzle;
+    P.muzzle = [hx + ca * muzzle[0] - sa * muzzle[1] * fl, hy + sa * muzzle[0] + ca * muzzle[1] * fl];
   }
 
   const DRONE_GUN = { kind: 'bullet', color: 0x7fe3ff, size: 0.26, life: 0.9, hit: null, hitSnd: 'hitS', dmg: 4, speed: 18, splash: 0 };
@@ -967,6 +980,7 @@
     P.fireCd = d.rate / rof;
     if (!d.noReload && !freeAmmo(P)) g.mag--; /* Temporary firing buffs preserve ammunition on every equipped weapon. */
     P.recoil = 1;
+    if (g.id === 'bl_dual') P.dualShot = (P.dualShot || 0) + 1;
     poseHand(P);
     const [mx, my] = P.muzzle || [P.x, P.y + 0.6];
     const a = P.aim;
@@ -1877,6 +1891,9 @@
       if (ml > 0.3) LEVEL.move(e, mx / ml * def.speed * dt, my / ml * def.speed * dt);
     }
     if (!P.dead && P.iframe <= 0 && Math.hypot(P.x - e.x, P.y - e.y) < e.r + P.r) hurtPlayer(def.name, G.ti >= 2 ? 2 : 1);
+    // enrage after 180 s: faster patterns, but its plating burns away (0.6 %/s) so an under-geared run can't soft-lock
+    e.bt = (e.bt || 0) + dt;
+    if (e.bt > 180) { if (!e.enraged) { e.enraged = true; UI.toast('보스 폭주 — 장갑이 붕괴합니다', 'warn'); } e.hp -= e.maxHp * 0.006 * dt; if (e.hp <= 0) { killEnemy(e); return; } }
     // patterns
     e.patT = (e.patT || 1.5) - dt;
     if (e.patT <= 0 && !e.dash && !e.seq.length) {
@@ -1886,7 +1903,7 @@
       if (p === e.lastPat && Math.random() < 0.7) p = pats[(pats.indexOf(p) + 1) % Math.min(pats.length, 2 + phase * 2)];
       e.lastPat = p;
       BOSS_PAT[p](e, phase);
-      e.patT = [1.7, 1.72, 1.58, 1.4, 1.26, 1.18][G.ti] - phase * 0.16; /* B2/B3 bosses breathe more: any of them can be drawn this early */
+      e.patT = ([1.7, 1.72, 1.58, 1.4, 1.26, 1.18][G.ti] - phase * 0.16) * (e.bt > 180 ? 0.72 : 1); /* B2/B3 bosses breathe more: any of them can be drawn this early */
       if (e.body && e.body.c.has('atk')) e.body.c.play('atk'); // (some original skill clips hide the body for a cut-in)
     }
     if (e.body && (e.body.c.clipName === 'idle' || e.body.c.clipName === 'move')) { if (e.body.c.clipName !== 'move' && e.body.c.has('move')) e.body.c.play('move', null, true); }
@@ -2701,11 +2718,12 @@
   }
   /* Scud: collision-safe rush, airborne crossfire, then a landing execution. */
   function startScud(P) {
+    clearWildShot(P);
     P.roll = null; P.dash = null; P.dodgeBuf = 0; P.wildShotEnd = 0;
     P.reloadT = 0; P.reloadGun = null; P.overdrive = 0; P.guardT = 0; P.emplaceGuard = 0;
     P.scud = { t: 0, a: P.aim, room: G.room, height: 0, shot: 0, hit: new Set(), k: 1 + 0.2 * upF(P), hands: [] };
     for (let i = 0; i < 2; i++) {
-      const hand = RIGS.makeHand('blacklilith', donorK('blacklilith'));
+      const hand = RIGS.makeHand('blacklilith', donorK('blacklilith'), null, 'native', i ? 'L' : 'R');
       if (hand) { P.scud.hands.push(hand); scene.add(hand.group); }
     }
     P.body.pivot.rotation.z = 0; P.body.c.play('idle'); P.ultT = 3.2;
@@ -2781,33 +2799,54 @@
     if (s.t >= 3.2) endScud(P);
   }
   /* Black Lilith: six alternating circular volleys from two opposite pistol positions. */
+  function clearWildShot(P) {
+    if (P.wildHands) { P.handRoot.remove(P.wildHands.outer); P.wildHands.c.dispose(); P.wildHands = null; }
+    P.wildShotEnd = 0;
+  }
+  function poseWildShot(P) {
+    const h = P.wildHands; if (!h) return;
+    const active = P.wildShotEnd > G.t && !P.dead;
+    h.outer.visible = active && !P.roll && !P.scud;
+    if (!active) return;
+    h.outer.position.set(P.x, P.y + 0.8, 0); h.outer.rotation.z = 0; h.outer.scale.set(1, 1, 1);
+    h.pair.forEach((part, i) => {
+      const a = P.wildAngle + i * Math.PI, recoil = Math.max(0, 1 - (G.t - P.wildFlashAt) / 0.06) * 0.08;
+      part.group.position.set(Math.cos(a) * (0.46 - recoil), Math.sin(a) * 0.24 - 0.12, 0);
+      part.group.rotation.z = a; part.group.scale.set(1, Math.cos(a) < 0 ? -1 : 1, 1);
+      part.c.setOrder(ORD(P.y) + 0.0006 + i * 0.00002);
+    });
+  }
   function wildShot(P) {
-    const room = G.room, base = P.aim, sectors = 12, volleys = 6;
+    clearWildShot(P);
+    const room = G.room, base = P.aim, pairs = 36;
     const preSup = new Set(G.enemies.filter(e => e.alive && e.supT > 0));
-    const rd = { d: Object.assign({}, GUNS.bl_dual, { dmg: GUNS.bl_dual.dmg * 2.5 * (1 + 0.2 * upE(P)), life: 0.26, size: 0.34, color: 0xffdf9a }) };
-    P.wildShotStart = G.t; P.wildShotEnd = G.t + 0.66;
-    for (let wave = 0; wave < volleys; wave++) FX.later(wave * 0.11, () => {
-      if (G.P !== P || P.dead || G.phase !== 'play' || G.room !== room) return;
-      const turn = base + wave * Math.PI / sectors;
-      for (let k = 0; k < sectors; k++) {
-        const angle = turn + k * TAU / sectors;
-        const hand = turn + (k < sectors / 2 ? 0 : Math.PI);
-        const x = P.x + Math.cos(hand) * 0.48, y = P.y + 0.7 + Math.sin(hand) * 0.35;
+    const rd = { d: Object.assign({}, GUNS.bl_dual, { dmg: GUNS.bl_dual.dmg * 2.5 * (1 + 0.2 * upE(P)), life: 0.26, size: 0.28, color: 0xffdf9a }) };
+    P.wildHands = makeDualPistols(); if (P.wildHands) P.handRoot.add(P.wildHands.outer);
+    const hands = P.wildHands;
+    P.wildShotStart = G.t; P.wildShotEnd = G.t + 0.66; P.wildAngle = base; P.wildFlashAt = G.t;
+    for (let shot = 0; shot < pairs; shot++) FX.later(shot * 0.66 / pairs, () => {
+      if (G.P !== P || P.dead || G.phase !== 'play' || G.room !== room || !(P.wildShotEnd > G.t)) return;
+      /* Jump between opposing directions rather than drawing expanding rings. */
+      const turn = base + (shot * 5 % 12) * TAU / 12;
+      P.wildAngle = turn; P.wildFlashAt = G.t;
+      for (let side = 0; side < 2; side++) {
+        const angle = turn + side * Math.PI, ca = Math.cos(angle), sa = Math.sin(angle);
+        const x = P.x + ca * 0.55, y = P.y + 0.68 + sa * 0.24;
         const bullet = spawnPBullet(P, rd, x, y, angle, 22);
-        if (bullet) { bullet.sup = 6.5; if (wave === volleys - 1) bullet.popSet = preSup; }
+        if (bullet) { bullet.sup = 6.5; if (shot >= pairs - 6) bullet.popSet = preSup; }
+        FX.muzzleFlash(x, y, angle, 0xffe7aa, 0.85);
+        if (shot % 2 === 0) FX.beam(x, y, x + ca * 1.3, y + sa * 1.3, 0.045, 0xffd36a, 0.07);
+        if (shot % 3 === 0) FX.particle({ x, y, vx: -sa * 2, vy: 1.4, life: 0.18, size: 0.08, size1: 0, color: 0xffd070, tex: FX.tex.dot });
       }
-      for (const angle of [turn, turn + Math.PI]) {
-        const x = P.x + Math.cos(angle) * 0.52, y = P.y + 0.7 + Math.sin(angle) * 0.35;
-        FX.muzzleFlash(x, y, angle, 0xffdf9a, 1.25);
-        FX.particle({ x, y, vx: Math.cos(angle + Math.PI / 2) * 2, vy: 1.4, life: 0.22, size: 0.1, size1: 0, color: 0xffd070, tex: FX.tex.dot });
-      }
-      P.recoil = 0.8; SFX.play('gun', 0.65);
-      if (G.opt.shake && wave % 2 === 0) FX.shake(0.045);
-      if (wave === volleys - 1) {
+      P.recoil = 0.8;
+      if (shot % 3 === 0) SFX.play('gun', 0.55);
+      if (G.opt.shake && shot % 9 === 0) FX.shake(0.035);
+      if (shot === pairs - 1) {
         blankWave(P.x, P.y + 0.5, 2.5, false);
-        FX.ring(P.x, P.y + 0.4, 0.3, 2.5, 0xffdf9a, 0.22);
+        FX.ring(P.x, P.y + 0.25, 0.2, 1.3, 0xffdf9a, 0.15);
       }
     });
+    FX.later(0.68, () => { if (P.wildHands === hands) clearWildShot(P); });
   }
   function wildShotClears(P, b, ox = b.x, oy = b.y) {
     if (P.dead || !(P.wildShotEnd > G.t)) return false;
@@ -3123,6 +3162,7 @@
       return;
     }
     if (P.scud) endScud(P);
+    clearWildShot(P);
     P.dead = true;
     G.slowT = 1.8;
     G.camFocus = { x: P.x, y: P.y + 0.7, t: 3.2 };
@@ -3775,7 +3815,7 @@
     }
     r.waveI = 0;
     spawnWave(r);
-    if (G.stageI != null && !r.guard && Math.random() < 0.1) spawnGolden(r); // 보물 철충: a rare jackpot runner
+    if (G.stageI != null && !r.guard && Math.random() < 0.06) spawnGolden(r); // 보물 철충: a rare jackpot runner
     if (G.ti >= 1 && !r.challenge && Math.random() < 0.45) {
       // arena hazard: steam vents that charge (red ring) and burst every few seconds
       const n = 2 + Math.floor(Math.random() * 2);
@@ -4192,7 +4232,7 @@
     G.lateRigs = [...new Set(Object.values(GUNS).filter((x) => !x.noLoot).map((x) => x.donor)), ...F.elites.map((k) => ELITES[k].rig)];
     // reset
     if (G.deadGun) { G.deadGun.h.c.dispose(); scene.remove(G.deadGun.h.outer); G.deadGun = null; }
-    if (G.P) { if (G.P.scud) endScud(G.P); if (G.P.hh && G.P.hh.castBody) { G.P.hh.castBody.c.dispose(); scene.remove(G.P.hh.castBody.root); } G.P.body.c.dispose(); scene.remove(G.P.body.root); G.P.guns.forEach((g) => g.hand && g.hand.c.dispose()); scene.remove(G.P.handRoot); FX.kill(G.P.shadow); if (G.P.odAura) FX.kill(G.P.odAura); if (G.P.shieldFx) G.P.shieldFx.forEach((s) => FX.kill(s)); killDrone(G.P); }
+    if (G.P) { clearWildShot(G.P); if (G.P.scud) endScud(G.P); if (G.P.hh && G.P.hh.castBody) { G.P.hh.castBody.c.dispose(); scene.remove(G.P.hh.castBody.root); } G.P.body.c.dispose(); scene.remove(G.P.body.root); G.P.guns.forEach((g) => g.hand && g.hand.c.dispose()); scene.remove(G.P.handRoot); FX.kill(G.P.shadow); if (G.P.odAura) FX.kill(G.P.odAura); if (G.P.shieldFx) G.P.shieldFx.forEach((s) => FX.kill(s)); killDrone(G.P); }
     // a retry straight from the result screen: drop the last run's floor and any pending FX.later callbacks
     FX.clear(); // (buildFloor below disposes the old floor itself)
     G.seed = (Math.random() * 1e9) >>> 0;
@@ -4252,6 +4292,7 @@
     UI.title();
   }
   function buildFloorCleanup() {
+    if (G.P) clearWildShot(G.P);
     if (G.P && G.P.scud) endScud(G.P);
     LEVEL.dispose(G.lv);
     G.props.forEach((p) => { if (p.mesh) killObj(p.mesh); if (p.glow) FX.kill(p.glow); });
