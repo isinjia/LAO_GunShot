@@ -383,6 +383,7 @@
   let cellFit = 0;
   function render() {
     cellFit = 0; render0();
+    { const o = el('#invOv'); if (o) o.classList.toggle('tipon', !!selItem); }
     const ov = el('#invOv'), mid = ov && ov.querySelector('.ivmid');
     if (mid && mid.clientWidth && mid.clientWidth < 10 * CELL + 4) { cellFit = Math.max(22, Math.floor((mid.clientWidth - 4) / 10)); render0(); cellFit = 0; }
   }
@@ -418,10 +419,10 @@
         <div class="ivlv"><small>아이템 레벨 합</small><b class="num">${Object.values(c.equip).reduce((n, o) => n + (o && o.ilvl ? o.ilvl : 0), 0)}</b><small>전투력 ${gearPower(st).toLocaleString()}</small><span class="ivmat" title="모든 대원 공용 · 장비 분해 · 작전 보상으로 획득 — 소켓 추가 · 소켓 비우기 · 보석 합성에 사용"><i></i>재료 (공용) <b class="num">${c.mats.toLocaleString()}</b></span></div>
         <button type="button" class="ivx" id="invClose" aria-label="닫기">닫기 <kbd>I</kbd></button></div>
       <div class="ivbody">
-        <div class="ivleft"><div class="ivdoll">${doll}</div><div class="ivstats"><small>장비 능력치 합계 · 작전 시작 시 적용</small><ul>${statLines(st) || '<li class="zero"><span>장착한 장비 없음</span><b>—</b></li>'}</ul></div></div>
+        <div class="ivleft"><div class="ivdoll"><i class="ivart" style="background-image:url(assets/ui/f_${c.hero}.webp)"></i>${doll}</div><div class="ivstats"><small>장비 능력치 합계 · 작전 시작 시 적용</small><ul>${statLines(st) || '<li class="zero"><span>장착한 장비 없음</span><b>—</b></li>'}</ul></div></div>
         <div class="ivmid"><div class="ivtabs">${['bag', 'stash', 'vault'].map((k) => `<button type="button" data-t="${k}" class="${tab === k ? 'on' : ''}${k === 'vault' ? ' vt' : ''}">${GNAME[k]} <small>${used(c[k])} / ${GRID[k][0] * GRID[k][1]}</small></button>`).join('')}</div>
           ${bagHtml(c[tab], GRID[tab][0], GRID[tab][1], tab)}${tab === 'vault' ? '<p class="ivvt">모든 대원이 함께 쓰는 창고 · <b>룬과 보석만</b> 보관할 수 있습니다</p>' : tab === 'stash' ? '<p class="ivvt">이 대원만 쓰는 창고 · 장비 · 룬 · 보석 보관</p>' : ''}</div>
-        <div class="ivtip">${tooltip(sel, c)}<div class="ivacts">${acts}</div></div>
+        <div class="ivtip">${sel ? '<button type="button" class="ivtipx" aria-label="정보 닫기">✕</button>' : ''}${tooltip(sel, c)}<div class="ivacts">${acts}</div></div>
       </div>`;
   }
   function find(c, id) {
@@ -589,6 +590,7 @@
       if (performance.now() < noClick && t.closest('.ivit, .ivslot')) return;
       const tb = t.closest('.ivtabs button'); if (tb) { tab = tb.dataset.t; SFX.play('uiPick', 0.3); return render(); }
       const ab = t.closest('[data-a]'); if (ab) return act(ab.dataset.a);
+      if (t.closest('.ivtipx') || (ov.classList.contains('tipon') && !t.closest('.ivtip') && !t.closest('.ivit, .ivslot'))) { selItem = null; socketing = null; SFX.play('uiPick', 0.3); return render(); } // compact: the details popup closes on ✕ / an outside tap
       const b = t.closest('.ivit, .ivslot');
       if (b) {
         const { c } = getChar(invChar); if (!c) return; norm(c);

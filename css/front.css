@@ -397,3 +397,37 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin: 0 1px; fo
 @media (max-height: 560px) and (min-aspect-ratio: 1/1) { #invOv .ivwin { zoom: 1 !important; width: 100vw; height: 100dvh; max-height: none; } #invOv .ivbody { grid-template-columns: minmax(170px, 0.75fr) minmax(0, 1.5fr) minmax(200px, 1fr); overflow: hidden; } #invOv .ivmid { min-width: 0; overflow: hidden; } #invOv .ivleft, #invOv .ivtip { overflow-y: auto; min-height: 0; } #invOv .ivslot { min-height: 0; } }
 @media (max-height: 560px) and (min-aspect-ratio: 1/1) { #invOv .ivdoll { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, 58px); gap: 6px; padding: 6px; } #invOv .ivh { padding: 6px 12px; } #invOv .ivbody { padding: 8px 10px; gap: 10px; } }
 @media (max-width: 900px) and (max-aspect-ratio: 1/1), (max-aspect-ratio: 1/1) { #invOv .ivbody { display: flex; flex-direction: column; } #invOv .ivbody > * { flex: none; } }
+
+/* ── compact inventory (phones, landscape and portrait): paper doll around the operator, bag beside it,
+   item details as a popup on tap (✕ or an outside tap closes it) ───────────────────────────────── */
+#invOv .ivart, #invOv .ivtipx { display: none; }
+@media (max-width: 900px), (max-height: 560px), (max-aspect-ratio: 1/1) {
+  #invOv .ivwin { zoom: 1 !important; width: 100vw; height: 100dvh; max-height: none; }
+  #invOv .ivh { padding: 6px 12px; } #invOv .ivlv small:not(:first-child) { display: none; }
+  #invOv .ivbody { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 12px; padding: 8px 12px 12px; overflow: hidden; align-items: stretch; }
+  #invOv .ivbody > * { min-width: 0; min-height: 0; }
+  #invOv .ivleft { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scrollbar-width: none; }
+  #invOv .ivdoll { position: relative; width: 100%; height: auto; padding: 6px; gap: 6px; flex: none;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.9fr) minmax(0, 1fr); grid-template-rows: repeat(5, minmax(0, 1fr)); aspect-ratio: 4 / 4.2;
+    grid-template-areas: "helm art weapon" "armor art amulet" "gloves art earring" "boots art ring1" ". art ring2"; }
+  #invOv .ivart { display: block; grid-area: art; align-self: stretch; background: center 20% / cover no-repeat; opacity: 0.95;
+    -webkit-mask-image: radial-gradient(ellipse 70% 72% at 50% 45%, #000 55%, transparent 100%); mask-image: radial-gradient(ellipse 70% 72% at 50% 45%, #000 55%, transparent 100%); }
+  #invOv .ivslot { min-height: 0; aspect-ratio: auto; } #invOv .ivslot span { font-size: 10px; }
+  #invOv .s_helm { grid-area: helm; } #invOv .s_armor { grid-area: armor; } #invOv .s_gloves { grid-area: gloves; } #invOv .s_boots { grid-area: boots; }
+  #invOv .s_weapon { grid-area: weapon; } #invOv .s_amulet { grid-area: amulet; } #invOv .s_earring { grid-area: earring; } #invOv .s_ring1 { grid-area: ring1; } #invOv .s_ring2 { grid-area: ring2; }
+  #invOv .ivmid { order: 0; overflow: hidden auto; min-height: 0; scrollbar-width: none; }
+  #invOv .ivtip { display: none; }
+  #invOv.tipon .ivtip { display: flex; flex-direction: column; position: fixed; z-index: 80; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: min(420px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); height: auto; overflow-y: auto; padding: 14px; background: #10131a;
+    border: 1px solid rgba(255, 216, 74, 0.5); box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.62), 0 12px 40px rgba(0, 0, 0, 0.6); animation: none; }
+  #invOv.tipon .ivtipx { display: grid; place-items: center; position: absolute; right: 8px; top: 8px; width: 36px; height: 36px; font-size: 18px; color: #fff; background: rgba(255, 255, 255, 0.08); border: 0; z-index: 1; }
+}
+@media (max-aspect-ratio: 1/1) {
+  #invOv .ivbody { display: flex; flex-direction: column; overflow-y: auto; }
+  #invOv .ivbody > * { flex: none; }
+  #invOv .ivleft { overflow: visible; } #invOv .ivdoll { max-width: 420px; margin: 0 auto; }
+  #invOv .ivmid { order: 1; overflow: visible; }
+  #invOv .ivleft { order: 0; }
+}
+@media (max-height: 560px) and (min-aspect-ratio: 1/1) { #invOv .ivstats { display: none; } #invOv .ivdoll { height: 100%; aspect-ratio: auto; } }
+@media (max-aspect-ratio: 1/1) { #invOv .ivleft { display: contents; } #invOv .ivdoll { order: 0; } #invOv .ivmid { order: 1; } #invOv .ivstats { order: 2; } }
