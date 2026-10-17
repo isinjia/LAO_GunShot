@@ -7,6 +7,17 @@
 // Saved in lao_rpg_chars (stage_ui.js owns the list); icons are the original equipment art (assets/equip).
 (function () {
   const KEY = 'lao_rpg_chars', BAG_W = 10, BAG_H = 4, STASH_W = 10, STASH_H = 8, MAX_LV = 60;
+  // the account vault is shared by every operator but takes only gems and runes; gear and 재료 stay with their operator
+  const VAULT_KEY = 'lao_rpg_vault', VAULT_W = 10, VAULT_H = 6;
+  const GRID = { bag: [BAG_W, BAG_H], stash: [STASH_W, STASH_H], vault: [VAULT_W, VAULT_H] };
+  const GNAME = { bag: '가방', stash: '개인 창고', vault: '계정 창고' };
+  const vaultOk = (it) => !!(it && (it.gem || it.rune));
+  // 재료: the operator's own currency — salvage gear for it, spend it on sockets and gem combines
+  const SALVAGE = { normal: 2, magic: 5, rare: 12, unique: 30, set: 30 };
+  const salvageOf = (it) => Math.round((SALVAGE[it.rar] || 2) * (1 + (it.ilvl || 1) / 20) + (it.rw ? 20 : 0));
+  const sockCost = (it) => 15 * (it.sockets + 1);
+  const UNSOCK = 30;
+  const combCost = (g) => 10 * (g + 1);
   const ICON = (n) => `assets/equip/${n}.webp`;
   // rarity: the icon tier (T1-T4) carries the original's colour plate
   const RAR = {
@@ -196,9 +207,15 @@
 
   // ── characters ──
   function load() { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && Array.isArray(v.list) ? v : { v: 1, list: [] }; } catch (e) { return { v: 1, list: [] }; } }
-  function saveAll(db) { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { /* no storage */ } }
-  function getChar(id) { const db = load(); return { db, c: db.list.find((x) => x.id === id) || null }; }
-  function norm(c) { c.lv = c.lv || 1; c.xp = c.xp || 0; c.equip = c.equip || {}; c.bag = Array.isArray(c.bag) ? c.bag : []; c.stash = Array.isArray(c.stash) ? c.stash : []; return c; }
+  function loadVault() { try { const v = JSON.parse(localStorage.getItem(VAULT_KEY) || 'null'); return v && Array.isArray(v.list) ? v.list.filter(vaultOk) : []; } catch (e) { return []; } }
+  function saveAll(db) {
+    try {
+      const ch = db.list.find((x) => Array.isArray(x.vault)); if (ch) localStorage.setItem(VAULT_KEY, JSON.stringify({ v: 1, list: ch.vault }));
+      localStorage.setItem(KEY, JSON.stringify(db, (k, v) => (k === 'vault' ? undefined : v))); // the vault lives in its own key
+    } catch (e) { /* no storage */ }
+  }
+  function getChar(id) { const db = load(); const c = db.list.find((x) => x.id === id) || null; if (c) c.vault = loadVault(); return { db, c }; }
+  function norm(c) { c.lv = c.lv || 1; c.xp = c.xp || 0; c.equip = c.equip || {}; c.bag = Array.isArray(c.bag) ? c.bag : []; c.stash = Array.isArray(c.stash) ? c.stash : []; c.mats = Math.max(0, Math.floor(Number(c.mats) || 0)); if (!Array.isArray(c.vault)) c.vault = loadVault(); return c; }
   // the character keeps only its gear: the level is the run's own (back to Lv.1 every sortie, like the weapons)
   const gearPower = (st) => Math.round(100 + (st.dmg || 0) * 4 + (st.hp || 0) * 30 + (st.armor || 0) * 40 + (st.crit || 0) * 5 + (st.rof || 0) * 3 + (st.speed || 0) * 2 + (st.skill || 0) * 2 + (st.pierce || 0) * 25 + (st.reload || 0) + (st.roll || 0));
   // grid placement: items carry x / y in their container
@@ -286,6 +303,7 @@
     const { db, c } = getChar(runChar); if (!c) return;
     norm(c);
     G.stats.charGear = G.runGear ? G.runGear.items : 0; // items picked up this run (already saved)
+    { const s = G.stats, dm = G.diff ? [1, 1.6, 2.4][['easy', 'normal', 'hard'].indexOf(G.diff.id)] : 1; const m = Math.round((s.kills * 0.5 + s.roomsCleared * 2 + s.bosses * 25 + (win ? 40 : 0)) * dm * (1 + (G.stageI || 0) * 0.3)); c.mats = Math.max(0, Math.floor(Number(c.mats) || 0)) + m; s.charMats = m; setTimeout(() => UI.toast(`재료 +${m} 획득`, 'gem'), 1500); }
     if (G.stats.charGear) setTimeout(() => UI.toast(`${esc(c.name)} — 이번 작전 장비 ${G.stats.charGear}개 회수 (보관 완료)`, 'gem'), 900);
     saveAll(db);
     runChar = null; applied = null;
@@ -326,7 +344,7 @@
     const sock = it.sockets ? `<div class="ivsock">${Array.from({ length: it.sockets }, (_, i) => { const s = it.socketed[i]; return `<i class="${s ? 'on' : ''}" title="${s ? esc(itemName(s)) : '빈 소켓'}" style="${s ? `background-image:url(${itemIcon(s)})` : ''}"></i>`; }).join('')}<small>소켓 ${it.socketed.length} / ${it.sockets}</small></div>` : '';
     return head(`${RAR[it.rar].name} · ${it.sub ? esc(it.sub) : B.name} · ${SLOTS.find((s) => s.id === B.slot || (B.slot === 'ring' && s.kind === 'ring')).name}`)
       + `<div class="ttb"><p class="slotl">장착 부위 <b>${SLOTS.find((s) => s.id === B.slot || (B.slot === 'ring' && s.kind === 'ring')).name}</b></p>${it.rw ? `<p class="rw">룬워드 「${esc(it.rw)}」</p>` : ''}<p class="meta">아이템 레벨 <b>${it.ilvl}</b>${it.set ? ` · <span class="set">${SETS[it.set].name}</span>` : ''}${worn ? ' · <span class="worn">장착 중</span>' : ''}</p>
-      ${sock}<ul>${statLines(st, other ? itemStats(other) : !worn ? {} : null)}</ul>${it.socketed && it.socketed.length ? `<small class="h">소켓 효과 (위 합계에 포함)</small><ul class="sockfx">${statLines(socketStats(it))}</ul>` : ''}${other ? `<p class="cmp">▲▼ 장착 중인 「${esc(itemName(other))}」과 비교</p>` : ''}</div>`;
+      ${sock}<ul>${statLines(st, other ? itemStats(other) : !worn ? {} : null)}</ul>${it.socketed && it.socketed.length ? `<small class="h">소켓 효과 (위 합계에 포함)</small><ul class="sockfx">${statLines(socketStats(it))}</ul>` : ''}${other ? `<p class="cmp">▲▼ 장착 중인 「${esc(itemName(other))}」과 비교</p>` : ''}<p class="cmp">분해 시 재료 +${salvageOf(it)}</p></div>`;
   }
   function bagHtml(list, W, H, which) {
     return `<div class="ivgrid" data-c="${which}" style="--w:${W};--h:${H};--cell:${CELL}px">${list.map((it) => `<button type="button" class="ivit r_${it.gem ? 'gem' : it.rune ? 'rune' : it.rw ? 'rw' : it.rar}${selItem && selItem.id === it.id ? ' on' : ''}" data-id="${it.id}" data-c="${which}" style="left:${it.x * CELL}px;top:${it.y * CELL}px;width:${it.w * CELL - 2}px;height:${it.h * CELL - 2}px;--rc:${itemColor(it)}" aria-label="${esc(itemName(it))}"><i style="background-image:url(${itemIcon(it)})"></i>${it.sockets ? `<em>${'●'.repeat(it.socketed.length)}${'○'.repeat(it.sockets - it.socketed.length)}</em>` : ''}</button>`).join('')}</div>`;
@@ -340,31 +358,37 @@
     const st = charStats(c);
     const doll = SLOTS.map((s) => { const it = c.equip[s.id]; return `<button type="button" class="ivslot s_${s.id}${it ? ' full' : ''}${selItem && isGear(selItem) && !Object.values(c.equip).some((o) => o && o.id === selItem.id) && slotOk(selItem, s.id) ? ' can' : ''}${selItem && it && selItem.id === it.id ? ' on' : ''}" data-slot="${s.id}" style="--rc:${it ? itemColor(it) : 'rgba(255,255,255,0.18)'}" aria-label="${s.name}${it ? ' — ' + esc(itemName(it)) : ''}">${it ? `<i style="background-image:url(${itemIcon(it)})"></i>` : ''}<span>${s.name}</span></button>`; }).join('');
     const sel = selItem;
-    const inBag = sel && (c.bag.some((o) => o.id === sel.id) || c.stash.some((o) => o.id === sel.id));
+    const where = sel ? (find(c, sel.id) || {}).where : null, inBag = where === 'bag' || where === 'stash' || where === 'vault';
     const equipped = sel && Object.values(c.equip).some((o) => o && o.id === sel.id);
-    const canCombine = sel && sel.gem && sel.grade < 2 && c.bag.concat(c.stash).filter((o) => o.gem === sel.gem && o.grade === sel.grade).length >= 3;
+    const canCombine = sel && sel.gem && sel.grade < 2 && c.bag.concat(c.stash, c.vault).filter((o) => o.gem === sel.gem && o.grade === sel.grade).length >= 3;
+    const gearSel = sel && isGear(sel), canSock = gearSel && !sel.rw && sel.sockets < baseOf(sel.base).sock, canUnsock = gearSel && sel.socketed && sel.socketed.length;
     const acts = !sel ? '' : [
       inBag && isGear(sel) ? '<button type="button" class="ia pri" data-a="equip">장착</button>' : '',
       equipped ? '<button type="button" class="ia" data-a="unequip">해제</button>' : '',
       inBag && (sel.gem || sel.rune) ? `<button type="button" class="ia pri${socketing ? ' on' : ''}" data-a="socket">${socketing ? '장비를 클릭하세요…' : '소켓에 박기'}</button>` : '',
-      canCombine ? '<button type="button" class="ia pri" data-a="combine">합성 3 → 1</button>' : '',
-      inBag ? `<button type="button" class="ia" data-a="move">${c.bag.some((o) => o.id === sel.id) ? '창고로' : '가방으로'}</button>` : '',
-      inBag ? '<button type="button" class="ia warn" data-a="drop">버리기</button>' : '',
+      canCombine ? `<button type="button" class="ia pri" data-a="combine">합성 3→1 · 재료 ${combCost(sel.grade)}</button>` : '',
+      canSock ? `<button type="button" class="ia" data-a="addsock">소켓 추가 · 재료 ${sockCost(sel)}</button>` : '',
+      canUnsock ? `<button type="button" class="ia" data-a="unsock">소켓 비우기 · 재료 ${UNSOCK}</button>` : '',
+      where === 'bag' ? '<button type="button" class="ia" data-a="move:stash">개인 창고로</button>' : '',
+      inBag && vaultOk(sel) && where !== 'vault' ? '<button type="button" class="ia" data-a="move:vault">계정 창고로</button>' : '',
+      where === 'stash' || where === 'vault' ? '<button type="button" class="ia" data-a="move:bag">가방으로</button>' : '',
+      gearSel && inBag ? `<button type="button" class="ia warn" data-a="salvage">분해 · 재료 +${salvageOf(sel)}</button>` : '',
+      inBag && !gearSel ? '<button type="button" class="ia warn" data-a="drop">버리기</button>' : '',
     ].join('');
     const used = (list) => list.reduce((n, o) => n + o.w * o.h, 0);
     ov.querySelector('.ivwin').innerHTML = `<div class="ivh"><i class="ivpt" style="background-image:url(assets/ui/f_${c.hero}.webp);--c:${H.color || '#888'}"></i>
         <div class="ivn"><small>INVENTORY · ${H.name || ''}</small><h3>${esc(c.name)}</h3></div>
-        <div class="ivlv"><small>장비 전투력</small><b class="num">${gearPower(st).toLocaleString()}</b><small>레벨은 매 작전 Lv.1에서 시작</small></div>
+        <div class="ivlv"><small>장비 전투력</small><b class="num">${gearPower(st).toLocaleString()}</b><span class="ivmat" title="장비 분해 · 작전 보상으로 획득 — 소켓 추가 · 소켓 비우기 · 보석 합성에 사용"><i></i>재료 <b class="num">${c.mats.toLocaleString()}</b></span></div>
         <button type="button" class="ivx" id="invClose" aria-label="닫기">닫기 <kbd>I</kbd></button></div>
       <div class="ivbody">
         <div class="ivleft"><div class="ivdoll">${doll}</div><div class="ivstats"><small>장비 능력치 합계 · 작전 시작 시 적용</small><ul>${statLines(st) || '<li class="zero"><span>장착한 장비 없음</span><b>—</b></li>'}</ul></div></div>
-        <div class="ivmid"><div class="ivtabs"><button type="button" data-t="bag" class="${tab === 'bag' ? 'on' : ''}">가방 <small>${used(c.bag)} / ${BAG_W * BAG_H}</small></button><button type="button" data-t="stash" class="${tab === 'stash' ? 'on' : ''}">창고 <small>${used(c.stash)} / ${STASH_W * STASH_H}</small></button></div>
-          ${tab === 'bag' ? bagHtml(c.bag, BAG_W, BAG_H, 'bag') : bagHtml(c.stash, STASH_W, STASH_H, 'stash')}</div>
+        <div class="ivmid"><div class="ivtabs">${['bag', 'stash', 'vault'].map((k) => `<button type="button" data-t="${k}" class="${tab === k ? 'on' : ''}${k === 'vault' ? ' vt' : ''}">${GNAME[k]} <small>${used(c[k])} / ${GRID[k][0] * GRID[k][1]}</small></button>`).join('')}</div>
+          ${bagHtml(c[tab], GRID[tab][0], GRID[tab][1], tab)}${tab === 'vault' ? '<p class="ivvt">모든 대원이 함께 쓰는 창고 · <b>룬과 보석만</b> 보관할 수 있습니다</p>' : tab === 'stash' ? '<p class="ivvt">이 대원만 쓰는 창고 · 장비 · 룬 · 보석 보관</p>' : ''}</div>
         <div class="ivtip">${tooltip(sel, c)}<div class="ivacts">${acts}</div></div>
       </div>`;
   }
   function find(c, id) {
-    for (const k of ['bag', 'stash']) { const it = c[k].find((o) => o.id === id); if (it) return { it, where: k }; }
+    for (const k of ['bag', 'stash', 'vault']) { const it = (c[k] || []).find((o) => o.id === id); if (it) return { it, where: k }; }
     for (const s in c.equip) if (c.equip[s] && c.equip[s].id === id) return { it: c.equip[s], where: 'equip', slot: s };
     return null;
   }
@@ -388,16 +412,41 @@
       if (!ok) return;
       const r2 = getChar(invChar); if (!r2.c) return; norm(r2.c); const f2 = find(r2.c, it.id); if (!f2) return;
       r2.c[f2.where] = r2.c[f2.where].filter((o) => o.id !== it.id); selItem = null; saveAll(r2.db); reapply(GAME.G); SFX.play('swing', 0.4); render(); return;
-    } else if (a === 'move') {
-      const to = f.where === 'bag' ? 'stash' : 'bag', W = to === 'bag' ? BAG_W : STASH_W, H = to === 'bag' ? BAG_H : STASH_H;
+    } else if (a.startsWith('move:')) {
+      const to = a.slice(5), [W, H] = GRID[to];
+      if (to === 'vault' && !vaultOk(it)) { SFX.play('fail', 0.4); return UI.toast('계정 창고에는 룬 · 보석만 보관할 수 있습니다', 'warn'); }
       const rest = c[f.where].filter((o) => o.id !== it.id);
-      if (!place(c[to], W, H, it)) return UI.toast(`${to === 'bag' ? '가방' : '창고'}이 가득 찼습니다`, 'warn');
+      if (!place(c[to], W, H, it)) return UI.toast(`${GNAME[to]}가 가득 찼습니다`, 'warn');
       c[f.where] = rest; tab = to; SFX.play('uiPick', 0.4);
     } else if (a === 'combine') {
-      const same = c.bag.concat(c.stash).filter((o) => o.gem === it.gem && o.grade === it.grade).slice(0, 3), ids = new Set(same.map((o) => o.id));
-      c.bag = c.bag.filter((o) => !ids.has(o.id)); c.stash = c.stash.filter((o) => !ids.has(o.id));
-      const up = { id: uid(), gem: it.gem, grade: it.grade + 1, w: 1, h: 1 }; stow(c, up); selItem = up;
-      SFX.play('rankUp', 0.7); UI.toast(`${itemName(up)} 합성`, 'gem');
+      const cost = combCost(it.grade);
+      if (c.mats < cost) { SFX.play('fail', 0.5); return UI.toast(`재료가 부족합니다 (${c.mats} / ${cost})`, 'warn'); }
+      const same = c.bag.concat(c.stash, c.vault).filter((o) => o.gem === it.gem && o.grade === it.grade).slice(0, 3), ids = new Set(same.map((o) => o.id));
+      c.bag = c.bag.filter((o) => !ids.has(o.id)); c.stash = c.stash.filter((o) => !ids.has(o.id)); c.vault = c.vault.filter((o) => !ids.has(o.id));
+      const up = { id: uid(), gem: it.gem, grade: it.grade + 1, w: 1, h: 1 };
+      const into = f.where === 'vault' ? (place(c.vault, VAULT_W, VAULT_H, up) ? 'vault' : stow(c, up)) : stow(c, up);
+      if (!into) { UI.toast('보관할 칸이 없습니다', 'warn'); return render(); }
+      c.mats -= cost; selItem = up; SFX.play('rankUp', 0.7); UI.toast(`${itemName(up)} 합성 · 재료 -${cost}`, 'gem');
+    } else if (a === 'addsock') {
+      const cost = sockCost(it);
+      if (c.mats < cost) { SFX.play('fail', 0.5); return UI.toast(`재료가 부족합니다 (${c.mats} / ${cost})`, 'warn'); }
+      c.mats -= cost; it.sockets++; SFX.play('reinforce', 0.6); UI.toast(`소켓 추가 — ${it.sockets}개 · 재료 -${cost}`, 'gem');
+    } else if (a === 'unsock') {
+      if (c.mats < UNSOCK) { SFX.play('fail', 0.5); return UI.toast(`재료가 부족합니다 (${c.mats} / ${UNSOCK})`, 'warn'); }
+      const back = it.socketed.map((x) => ({ id: uid(), w: 1, h: 1, ...x }));
+      const trial = { bag: c.bag.slice(), stash: c.stash.slice() }, tc = { bag: trial.bag, stash: trial.stash };
+      if (!back.every((b) => place(tc.bag, BAG_W, BAG_H, b) || place(tc.stash, STASH_W, STASH_H, b))) { SFX.play('fail', 0.5); return UI.toast('돌려받을 칸이 부족합니다', 'warn'); }
+      c.bag = tc.bag; c.stash = tc.stash; it.socketed = []; if (it.rw) { delete it.rw; delete it.rwStats; }
+      c.mats -= UNSOCK; SFX.play('uiEquip', 0.7); UI.toast(`보석 · 룬 ${back.length}개 회수 · 재료 -${UNSOCK}`, 'gem');
+    } else if (a === 'salvage') {
+      const gain = salvageOf(it), big = it.rar === 'unique' || it.rar === 'set' || it.rar === 'rare' || it.rw || (it.socketed && it.socketed.length);
+      if (big) {
+        const ok = window.STAGE_UI && STAGE_UI.confirm ? await STAGE_UI.confirm('장비 분해', `<b style="color:${itemColor(it)}">${esc(itemName(it))}</b>을(를) 분해해 <b>재료 ${gain}</b>를 얻습니다.${it.socketed && it.socketed.length ? '<br>박혀 있는 보석 · 룬도 함께 사라집니다.' : ''}`, '분해', { danger: true }) : true;
+        if (!ok) return;
+        const r2 = getChar(invChar); if (!r2.c) return; norm(r2.c); const f2 = find(r2.c, it.id); if (!f2) return;
+        r2.c[f2.where] = r2.c[f2.where].filter((o) => o.id !== it.id); r2.c.mats += gain; selItem = null; saveAll(r2.db); SFX.play('crate', 0.7); UI.toast(`분해 — 재료 +${gain}`, 'gem'); render(); return;
+      }
+      c[f.where] = c[f.where].filter((o) => o.id !== it.id); c.mats += gain; selItem = null; SFX.play('crate', 0.7); UI.toast(`분해 — 재료 +${gain}`, 'gem');
     } else if (a === 'socket') { socketing = socketing ? null : it.id; render(); return; }
     saveAll(db); reapply(GAME.G); render();
   }
@@ -463,7 +512,8 @@
     if (s) { if (!slotOk(d.it, s.dataset.slot)) { wrongSlot(d.it, s); return render(); } if (equipTo(c, f, s.dataset.slot)) { saveAll(db); reapply(GAME.G); } return render(); }
     if (tgtIt && tgtIt.dataset.id !== d.it.id && (d.it.gem || d.it.rune)) { const tg = find(c, tgtIt.dataset.id); if (tg) return socketInto(tg.it, d.it.id); }
     if (grid) {
-      const which = grid.dataset.c, W = which === 'bag' ? BAG_W : STASH_W, H = which === 'bag' ? BAG_H : STASH_H, r = grid.getBoundingClientRect();
+      const which = grid.dataset.c, [W, H] = GRID[which], r = grid.getBoundingClientRect();
+      if (which === 'vault' && !vaultOk(d.it)) { SFX.play('fail', 0.4); UI.toast('계정 창고에는 룬 · 보석만 보관할 수 있습니다', 'warn'); return render(); }
       const x = Math.round((e.clientX - r.left) / CELL - d.it.w / 2), y = Math.round((e.clientY - r.top) / CELL - d.it.h / 2);
       const list = c[which].filter((o) => o.id !== d.it.id);
       if (!fits(list, W, H, d.it, x, y)) { SFX.play('fail', 0.4); return render(); }
