@@ -30,7 +30,7 @@
     },
     {
       id: 'kheshig', name: 'T-4 케시크', title: '앵거 오브 호드 의무병', img: 'c_BR_Kheshig_N', gun: 'ct11', hp: 10, armor: 1, speed: 6.1, skate: true,
-      skill: 'deploy', skillName: '전술 배치', skillDesc: '[기폭→부여] 배치 충격파가 표식을 터뜨리고 다시 표식 — 근거리 포격 즉시 재사용, 6초간 공격력 +40% · 연사 +30% · 피격 1회 무효, 25 회복', color: '#ff8a5a', upF: 'u_deploy', upE: 'u_cqb',
+      skill: 'deploy', skillName: '전술 배치', skillDesc: '[기폭→부여] 배치 충격파가 표식을 터뜨리고 다시 표식 — 근거리 포격 즉시 재사용, 6초간 공격력 +40% · 연사 +30% · 모든 무기 탄약 소모 없음 · 피격 1회 무효, 25 회복', color: '#ff8a5a', upF: 'u_deploy', upE: 'u_cqb',
       sk2: { id: 'pointblank', name: '근거리 포격', icon: 'i_power', cd: 5, desc: '[부여] CT-11 3연발 큰 슬러그 — 가까울수록 피해 +28.5%, 넉백, 4초 표식(받는 피해 +50%)' },
       stats: { atk: 4, def: 4, mob: 3 }, desc: 'CT-11 자동 산탄총을 든 의무병. 근접 화력과 응급 처치로 버틴다.',
     },
@@ -53,7 +53,7 @@
   const HIDDEN = [
     {
       id: 'blacklilith', name: '블랙 리리스', title: '히든 · 쌍권총 전투 바이오로이드', img: 'c_HID_BlackLilith', gun: 'bl_dual', hp: 10, armor: 1, speed: 6.6, hidden: true,
-      skill: 'escort', skillName: '요인 경호', skillDesc: '[기폭] 6초간 피해 무효 2회 · 공격력 +30% · 자동 조준, 경호 드론이 적탄을 먹는다 — 1.2초마다 쏘는 탄이 제압된 적을 경직', color: '#c070ff', upF: 'u_escort', upE: 'u_dual',
+      skill: 'escort', skillName: '요인 경호', skillDesc: '[기폭] 6초간 피해 무효 2회 · 공격력 +30% · 자동 조준 · 모든 무기 탄약 소모 없음, 경호 드론이 적탄을 먹는다 — 1.2초마다 쏘는 탄이 제압된 적을 경직', color: '#c070ff', upF: 'u_escort', upE: 'u_dual',
       sk2: { id: 'dualburst', name: '듀얼 버스트', icon: 'i_research', cd: 6, desc: '[부여] 쌍권총 20연사 교차 — 맞은 적 6.5초 제압, 마지막 슬러그는 미리 제압돼 있던 적을 경직' },
       stats: { atk: 4, def: 3, mob: 5 }, desc: '쌍권총과 경호의 달인. 탄막 한가운데서 춤추듯 싸운다.',
     },
@@ -279,16 +279,16 @@
     // (램파리온 keeps the emplace / dash kit and its upgrades)
     { id: 'u_od', hero: 'ramparion', name: '천국과 지옥', icon: 'i_battle', max: 3, desc: 'HEAVEN AND HELL: 피해 +20%, 토네이도 속박 +0.5초' },
     { id: 'u_rush', hero: 'ramparion', name: '불타는 사자', icon: 'i_power', max: 3, desc: '브레스트 라이언: 쿨타임 -1.2초, 피해 +15%' },
-    // signature-weapon mastery: one per hero, rewards sticking with her own gun
-    { id: 'm_brownie', hero: 'brownie', name: '돌격소총 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%, 재장전 +15%' },
-    { id: 'm_leprechaun', hero: 'leprechaun', name: '기관총 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +12%, 탄창 +20%' },
-    { id: 'm_nymph', hero: 'nymph', name: '기관총 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%, 처치 시 회피 쿨타임 초기화(20%)' },
-    { id: 'm_gnome', hero: 'gnome', name: '유탄 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%, 폭발 범위 +10%' },
-    { id: 'm_constantia', hero: 'constantia', name: '정밀 사격 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%, 치명타 +5%' },
-    { id: 'm_kheshig', hero: 'kheshig', name: '산탄 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%' },
-    { id: 'm_blacklilith', hero: 'blacklilith', name: '쌍권총 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%' },
-    { id: 'm_lrl', hero: 'lrl', name: '마탄 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%' },
-    { id: 'm_ramparion', hero: 'ramparion', name: '어깨 포 숙련', icon: 'i_atk', max: 3, desc: '기본 무기 피해 +15%' },
+    // hero tactics: all weapons and skills retain the same conditional training bonuses
+    { id: 'm_brownie', hero: 'brownie', name: '전술 추격', icon: 'i_atk', max: 3, desc: '모든 무기·스킬: 제압·둔화·기절 대상 피해 +10%, 모든 무기 재장전 속도 +8%' },
+    { id: 'm_leprechaun', hero: 'leprechaun', name: '제압 교리', icon: 'i_atk', max: 3, desc: '모든 무기·스킬: 제압 대상 피해 +10%, 모든 무기 탄창 +10%' },
+    { id: 'm_nymph', hero: 'nymph', name: '기동 지원', icon: 'i_atk', max: 3, desc: '모든 무기·스킬: 제압·속박 대상 피해 +12%, 처치 시 회피 쿨타임 0.15초 감소(0.5초마다)' },
+    { id: 'm_gnome', hero: 'gnome', name: '표식 연쇄', icon: 'i_atk', max: 3, desc: '모든 무기·스킬: 표식 대상 피해 +10%, 표식 적 처치 시 주변에 피해 8의 폭발(1초마다)' },
+    { id: 'm_constantia', hero: 'constantia', name: '약점 포착', icon: 'i_atk', max: 3, desc: '모든 무기·스킬: 표식·속박 대상 피해 +16%' },
+    { id: 'm_kheshig', hero: 'kheshig', name: '근접 대응', icon: 'i_atk', max: 3, desc: '모든 무기·스킬: 거리 4 이내 대상 피해 +12%' },
+    { id: 'm_blacklilith', hero: 'blacklilith', name: '경호 전술', icon: 'i_atk', max: 3, desc: '모든 무기·스킬: 제압 대상 또는 경호 중 피해 +12%' },
+    { id: 'm_lrl', hero: 'lrl', name: '암흑 추적', icon: 'i_atk', max: 3, desc: '모든 무기·스킬: 실명 대상 피해 +16%' },
+    { id: 'm_ramparion', hero: 'ramparion', name: '돌파 교리', icon: 'i_atk', max: 3, desc: '모든 무기·스킬: 거리 3 이내 또는 속박·기절 대상 피해 +12%' },
   ];
 
   // ammo by gun family: a pickup only feeds guns of its own family, 10 % of that gun's reserve

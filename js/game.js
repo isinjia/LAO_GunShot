@@ -421,10 +421,26 @@
     G.stats && G.stats.guns.add(id);
     return g;
   }
-  // signature-weapon mastery (hero perk m_<hero>): level 0-3 while holding her own starting gun
-  const mastery = (P, g) => (P && g && g.id && g.id === P.hero.gun ? P.up['m_' + P.hero.id] || 0 : 0);
-  const masteryDmg = (P, g) => 1 + mastery(P, g) * (P.hero.id === 'leprechaun' ? 0.12 : 0.15);
-  const magSize = (g, P = G.P) => Math.max(1, Math.round(g.d.mag * (P ? P.mods.mag : 1) * (P && P.hero.id === 'leprechaun' ? 1 + mastery(P, g) * 0.2 : 1)));
+  /* Tactical training follows the hero across every weapon and skill. Keep the old perk IDs for saved run compatibility. */
+  const tactics = (P) => P ? Math.min(3, Math.max(0, P.up['m_' + P.hero.id] || 0)) : 0;
+  const freeAmmo = (P) => P.overdrive > 0 || P.focusT > 0;
+  function tacticalDamage(P, e) {
+    const lv = tactics(P); if (!lv || e.dummy) return 1;
+    let bonus = 0;
+    switch (P.hero.id) {
+      case 'brownie': if (e.supT > 0 || e.slowT > 0 || e.stun > 0) bonus = 0.10; break;
+      case 'leprechaun': if (e.supT > 0) bonus = 0.10; break;
+      case 'nymph': if (e.supT > 0 || e.rootT > 0) bonus = 0.12; break;
+      case 'gnome': if (e.markT > 0) bonus = 0.10; break;
+      case 'constantia': if (e.markT > 0 || e.rootT > 0) bonus = 0.16; break;
+      case 'kheshig': if (Math.hypot(e.x-P.x,e.y-P.y) <= 4) bonus = 0.12; break;
+      case 'blacklilith': if (e.supT > 0 || P.guardT > 0) bonus = 0.12; break;
+      case 'lrl': if (e.blindT > 0) bonus = 0.16; break;
+      case 'ramparion': if (e.rootT > 0 || e.stun > 0 || Math.hypot(e.x-P.x,e.y-P.y) <= 3) bonus = 0.12; break;
+    }
+    return 1 + lv * bonus;
+  }
+  const magSize = (g, P = G.P) => Math.max(1, Math.round(g.d.mag * (P ? P.mods.mag : 1) * (P && P.hero.id === 'leprechaun' ? 1 + tactics(P) * 0.1 : 1)));
   const maxAmmo = (g, P = G.P) => (g.infinite ? Infinity : Math.round(g.d.ammo * (P ? P.mods.ammo : 1)));
   function equip(P, i) {
     const cur = P.guns[P.gi];
@@ -713,6 +729,7 @@
     for (let n = 1; n <= 9; n++) if (INPUT.take('gun' + n) && n - 1 < P.guns.length && n - 1 !== P.gi && !P.roll) { equip(P, n - 1); SFX.play('uiPick', 0.7); P.emptyWarned = false; }
     // the gun in hand *after* any swap this frame (a stale reference used to start / finish a reload on the wrong gun)
     const g = curGun();
+    if (freeAmmo(P)) { P.reloadT = 0; P.reloadGun = null; }
     if (P.reloadT > 0 && P.reloadGun !== g) { P.reloadT = 0; P.reloadGun = null; } // a reload belongs to the gun that started it
     if (INPUT.take('reload')) startReload(P, g);
     if (P.reloadT > 0) {
@@ -739,15 +756,15 @@
     if (P.chargeT > 0) { P.chargeT -= dt; if (Math.random() < dt * 10) FX.particle({ x: P.x + rnd(-0.4, 0.4), y: P.y + rnd(0.2, 1.3), vy: 1.4, life: 0.4, size: 0.14, size1: 0, color: 0x9dff7a, tex: FX.tex.dot }); }
     if (INPUT.take('skill2') && !P.hh && !P.lrlCast) useSkill2();
     if (INPUT.held('fire') && !P.hh && !P.lrlCast && !P.roll && P.reloadT <= 0 && P.fireCd <= 0) {
-      if (g.d.noReload || g.mag > 0) fire(P, g);
+      if (g.d.noReload || freeAmmo(P) || g.mag > 0) fire(P, g);
       else if (g.ammo > 0) startReload(P, g);
       else { P.fireCd = 0.3; SFX.synth('empty'); if (!P.emptyWarned) { P.emptyWarned = true; UI.toast('탄약이 없습니다 — 무기를 교체하세요', 'warn'); UI.gunEmpty(); tip('ammo', '탄약 소진', INPUT.isTouch ? '교체 버튼으로 다른 무기로 바꾸세요. 기본 무기는 탄약이 무한합니다. 탄약 상자(초록)로 보충' : `1~9 / ${UI.K('swap')} / 휠로 다른 무기로 바꾸세요. 기본 무기는 탄약이 무한합니다. 빈 무기는 ${UI.K('interact')}로 버릴 수 있습니다(무기는 최대 3개)`); } }
     } else if (!INPUT.held('fire') && g.mag === 0 && g.ammo > 0 && P.reloadT <= 0) startReload(P, g);
   }
 
   function startReload(P, g) {
-    if (g.d.noReload || P.reloadT > 0 || g.mag >= magSize(g) || (!g.infinite && g.ammo <= 0)) return;
-    P.reloadT = g.d.reload / P.mods.reload / (P.hero.id === 'brownie' ? 1 + mastery(P, g) * 0.15 : 1);
+    if (g.d.noReload || freeAmmo(P) || P.reloadT > 0 || g.mag >= magSize(g) || (!g.infinite && g.ammo <= 0)) return;
+    P.reloadT = g.d.reload / P.mods.reload / (P.hero.id === 'brownie' ? 1 + tactics(P) * 0.08 : 1);
     P.reloadMax = P.reloadT; P.reloadGun = g;
     SFX.play('reloadIn');
   }
@@ -863,7 +880,7 @@
     const d = g.d;
     const rof = P.mods.rof * (P.overdrive > 0 ? P.odRof || 2 : 1) * (P.adrT > 0 && P.mods.adrenRof ? 1.3 : 1) * (P.ocT > 0 ? 1.25 : 1);
     P.fireCd = d.rate / rof;
-    if (!d.noReload && !(P.overdrive > 0 && g.infinite) && !(P.focusT > 0 && g.infinite)) g.mag--; // ultimates (and 기관총 사격) make the hero's own gun bottomless, not picked-up ones
+    if (!d.noReload && !freeAmmo(P)) g.mag--; /* Temporary firing buffs preserve ammunition on every equipped weapon. */
     P.recoil = 1;
     poseHand(P);
     const [mx, my] = P.muzzle || [P.x, P.y + 0.6];
@@ -898,7 +915,7 @@
     // a spent casing hops off the gun
     if (d.kind === 'bullet' && Math.random() < 0.7) { if (Math.random() < 0.35) SFX.play('shell', 0.35); } if (d.kind === 'bullet' && Math.random() < 0.7) FX.particle({ x: mx - Math.cos(a) * 0.3, y: my, vx: -Math.cos(a) * 1.5 + rnd(-0.5, 0.5), vy: rnd(1.5, 2.5), grav: 9, life: 0.4, size: 0.09, size1: 0.07, aspect: 1.6, color: 0xd8b04a, tex: FX.tex.dot, normal: true, order: ORD(P.y) + 0.01, spin: 12 });
   }
-  function critRoll(P, g) { return Math.random() < P.mods.crit + (P.hero.id === 'constantia' ? mastery(P, g) * 0.05 : 0) + (P.visorT > 0 ? 0.25 : 0); }
+  function critRoll(P, g) { return Math.random() < P.mods.crit + (P.visorT > 0 ? 0.25 : 0); }
   function spawnPBullet(P, g, x, y, ang, v) {
     const d = g.d;
     const big = d.kind === 'grenade' || d.kind === 'fireball';
@@ -908,8 +925,8 @@
     const core = FX.sprite({ x, y, size: own ? d.size * 0.9 : d.size * (big ? 0.38 : 0.22), aspect: own ? 1 : big ? 1 : 3, color: own ? d.color : 0xffffff, alpha: own ? 0.25 : 1, tex: FX.tex.glow, order: own ? L.PROJ - 0.1 : L.PROJ + 0.1, rot: ang - Math.PI / 2 });
     const crit = critRoll(P, g);
     const nb = {
-      x, y, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, life: d.life * (P.mods.velo > 1 ? 1.2 : 1), g: d, dmg: d.dmg * P.mods.dmg * masteryDmg(P, g) * (crit ? P.mods.critMul || 2 : 1), crit,
-      splashK: P.hero.id === 'gnome' ? 1 + mastery(P, g) * 0.1 : 1, mast: mastery(P, g),
+      x, y, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, life: d.life * (P.mods.velo > 1 ? 1.2 : 1), g: d, dmg: d.dmg * P.mods.dmg * (crit ? P.mods.critMul || 2 : 1), crit,
+      splashK: 1,
       visor: P.visorT > 0,
       pierce: (d.pierce || 0) + P.mods.pierce, hit: new Set(), s, core, kind: d.kind, t: 0,
     };
@@ -928,7 +945,7 @@
     else FX.ring(ex, ey, 0.2, 1.2, d.color, 0.3);
     spawnStatic(d.hit, ex, ey, 0.16);
     if (G.opt.shake && !d.shortLaser) FX.shake(0.2);
-    const crit = critRoll(P, g), dmg = d.dmg * P.mods.dmg * masteryDmg(P, g) * (crit ? P.mods.critMul || 2 : 1);
+    const crit = critRoll(P, g), dmg = d.dmg * P.mods.dmg * (crit ? P.mods.critMul || 2 : 1);
     for (const e of G.enemies) {
       if (!e.alive || e.spawnT > 0) continue;
       const ey2 = e.y + e.h * 0.42, px = e.x - x, py = ey2 - y;
@@ -940,7 +957,7 @@
   }
   function chainShot(P, g, x, y) {
     const d = g.d;
-    const crit = critRoll(P, g), dmg = d.dmg * P.mods.dmg * masteryDmg(P, g) * (crit ? P.mods.critMul || 2 : 1);
+    const crit = critRoll(P, g), dmg = d.dmg * P.mods.dmg * (crit ? P.mods.critMul || 2 : 1);
     let from = { x, y }, hit = new Set();
     const pts = [{ x, y }];
     for (let k = 0; k < d.chain + P.mods.pierce; k++) {
@@ -1256,6 +1273,7 @@
   function hurtEnemy(e, dmg, crit, kx, ky, snd) {
     if (!e.alive || e.spawnT > 0 || e.intro > 0) return;
     if (G.P && G.P.dead) return; // turrets, burn zones, late shells: nothing scores after the hero has fallen
+    dmg *= tacticalDamage(G.P, e);
     if (e.markT > 0) dmg *= 1.5;
     if (e.supT > 0) dmg *= 1.15 * (G.P && G.P.hero.id === 'leprechaun' ? 1.2 : G.P && G.P.hero.id === 'blacklilith' ? 1.29 : 1); // 제압 / 견제: a suppressed target takes more (레프리콘 +38 %, 블랙 리리스 +48 % in total)
     if (e.room) e.room.lastHitT = G.t;
@@ -1360,7 +1378,19 @@
     if (e.elite && Math.random() < 0.6) dropPickup(e.x, e.y, 'key');
     if (P.mods.overclock) P.ocT = 3;
     if (P.mods.vamp && Math.random() < 0.06 * (P.mods.vampX || 1) && P.hp < P.maxHp) { P.hp++; FX.ring(P.x, P.y + 0.6, 0.2, 1, 0xff4060, 0.4); SFX.play('reinforce', 0.5); }
-    if (P.hero.id === 'nymph' && mastery(P, curGun()) && Math.random() < 0.2) P.rollCd = 0;
+    const tl = tactics(P);
+    if (P.hero.id === 'nymph' && tl && !(P.tacticKillAt > G.t)) {
+      P.tacticKillAt = G.t + 0.5; P.rollCd = Math.max(0, P.rollCd - 0.15 * tl);
+    }
+    if (P.hero.id === 'gnome' && tl && e.markT > 0 && !(P.tacticKillAt > G.t)) {
+      P.tacticKillAt = G.t + 1;
+      const ex=e.x, ey=e.y+e.h*0.4, run=G.stats;
+      FX.later(0.08, () => {
+        if (G.P !== P || G.stats !== run || P.dead || G.phase !== 'play') return;
+        FX.explosion(ex,ey,0.8,0xffa040,false);
+        for (const other of G.enemies) if (other.alive && !other.dummy && other.spawnT <= 0 && Math.hypot(other.x-ex,other.y+other.h*0.4-ey) < 1.8+other.r) hurtEnemy(other,8*tl*P.mods.dmg,false,0,0,'hitB');
+      });
+    }
     if (P.up.p_leech && Math.random() < 0.05 && P.hp < P.maxHp) { P.hp++; FX.ring(P.x, P.y + 0.6, 0.2, 1.1, 0xff4060, 0.45); SFX.play('reinforce', 0.45); }
     if (P.up.p_chain && !e.boss && Math.random() < 0.4) {
       const ex = e.x, ey = e.y + e.h * 0.4;
