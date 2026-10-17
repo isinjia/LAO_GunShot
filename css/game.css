@@ -1474,3 +1474,33 @@ html:not([lang="ko"]) #pauseOv .seg :is(#optHudV,#optTbSizeV,#optTbAlphaV) { whi
 #rpgNewOv .rname { display: flex; align-items: center; gap: 10px; } #rpgNewOv .rname span { color: #ffd84a; } #rpgNewOv .rname input { flex: 1; padding: 8px 10px; font-size: 16px; color: #fff; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 4px; }
 #rpgNewOv .row { display: flex; gap: 8px; justify-content: center; }
 @media (max-width: 720px) { #modeOv .mcards { grid-template-columns: 1fr; } #modeOv .mcard { min-height: 0; } #rpgNewOv .rheroes { grid-template-columns: repeat(2, 1fr); } #rpgOv .requip div { grid-template-columns: repeat(3, 1fr); } }
+
+/* RPG inventory (equip.js) */
+#invOv { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 12px; background: rgba(0, 0, 0, 0.7); }
+#invOv[hidden] { display: none; }
+#invOv .ivwin { width: min(1120px, 100%); max-height: calc(100dvh - 24px); overflow: auto; padding: 14px 16px; background: rgba(12, 14, 20, 0.98); border: 1px solid rgba(255, 204, 0, 0.45); border-radius: 6px; color: #ddd; display: flex; flex-direction: column; gap: 10px; }
+#invOv .ivh { display: flex; align-items: center; gap: 14px; } #invOv .ivh h3 { margin: 0; color: #ffd84a; font-size: 20px; } #invOv .ivh h3 small { margin-left: 8px; font-size: 13px; color: rgba(255, 255, 255, 0.6); }
+#invOv .ivxp { position: relative; flex: 1; height: 16px; background: rgba(255, 255, 255, 0.08); border-radius: 8px; overflow: hidden; } #invOv .ivxp i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #3a8cff, #7fe3ff); }
+#invOv .ivxp span { position: relative; display: block; text-align: center; font-size: 11px; line-height: 16px; color: #fff; }
+#invOv .ivbody { display: grid; grid-template-columns: 250px auto minmax(220px, 1fr); gap: 14px; align-items: start; }
+#invOv .ivdoll { display: grid; grid-template-columns: repeat(3, 76px); grid-template-rows: 64px 96px 64px 52px; gap: 6px; grid-template-areas: 'helm amulet ring1' 'weapon armor gloves' 'ring2 belt boots' '. . .'; }
+#invOv .ivslot { position: relative; border: 1px solid var(--rc); background: rgba(255, 255, 255, 0.04); border-radius: 4px; cursor: pointer; padding: 0; }
+#invOv .ivslot i { position: absolute; inset: 3px; background: center / contain no-repeat; } #invOv .ivslot span { font-size: 11px; color: rgba(255, 255, 255, 0.35); }
+#invOv .ivslot.empty { border-style: dashed; } #invOv .ivslot.on { box-shadow: 0 0 0 2px #fff; }
+#invOv .s_helm { grid-area: helm; } #invOv .s_amulet { grid-area: amulet; } #invOv .s_ring1 { grid-area: ring1; } #invOv .s_weapon { grid-area: weapon; } #invOv .s_armor { grid-area: armor; } #invOv .s_gloves { grid-area: gloves; } #invOv .s_ring2 { grid-area: ring2; } #invOv .s_belt { grid-area: belt; } #invOv .s_boots { grid-area: boots; }
+#invOv .ivstats small { font-size: 12px; color: rgba(255, 255, 255, 0.5); } #invOv ul { margin: 4px 0 0; padding-left: 16px; font-size: 13px; line-height: 1.55; color: #9fd0ff; } #invOv ul li.h { list-style: none; margin-left: -16px; color: rgba(255, 255, 255, 0.45); font-size: 11px; }
+#invOv .ivtabs { display: flex; gap: 4px; margin-bottom: 6px; } #invOv .ivtabs button { padding: 4px 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: #ccc; border-radius: 3px; cursor: pointer; } #invOv .ivtabs button.on { border-color: #ffd84a; color: #ffd84a; }
+#invOv .ivgrid { position: relative; width: calc(var(--w) * 44px); height: calc(var(--h) * 44px); background-color: rgba(255, 255, 255, 0.03); background-image: linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px); background-size: 44px 44px; border: 1px solid rgba(255, 255, 255, 0.15); }
+#invOv .ivit { position: absolute; margin: 1px; padding: 0; border: 1px solid var(--rc); background: rgba(10, 12, 18, 0.85); border-radius: 3px; cursor: pointer; }
+#invOv .ivit i { position: absolute; inset: 2px; background: center / contain no-repeat; } #invOv .ivit em { position: absolute; right: 2px; bottom: 1px; font-style: normal; font-size: 10px; color: #fff; text-shadow: 0 0 3px #000; }
+#invOv .ivit.on { box-shadow: 0 0 0 2px #fff; z-index: 1; }
+#invOv .ivtip { padding: 10px 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 4px; min-height: 180px; }
+#invOv .ivtip > b { display: block; font-size: 17px; } #invOv .ivtip > small { display: block; font-size: 12px; color: rgba(255, 255, 255, 0.55); } #invOv .ivtip .bad { color: #ff5a4a; }
+#invOv .ivhint { font-size: 13px; color: rgba(255, 255, 255, 0.5); }
+#invOv .ivsock { display: flex; gap: 4px; margin: 6px 0; } #invOv .ivsock i { width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(0, 0, 0, 0.5) center / contain no-repeat; }
+#invOv .ivacts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; } #invOv .ivacts .btn { padding: 6px 12px; min-width: 0; height: auto; font-size: 13px; } #invOv .ivacts .btn.on { box-shadow: 0 0 0 2px #7fe3ff; }
+@media (max-width: 900px) { #invOv .ivbody { grid-template-columns: 1fr; } #invOv .ivgrid { transform-origin: 0 0; } }
+#btnInv { position: fixed; right: max(12px, env(safe-area-inset-right)); top: 120px; z-index: 30; padding: 6px 12px; font-size: 13px; font-weight: 700; color: #ffd84a; background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 204, 0, 0.5); border-radius: 4px; cursor: pointer; }
+#btnInv[hidden] { display: none; }
+#rpgOv .requip span.on { color: #ffd84a; border-style: solid; border-color: rgba(255, 204, 0, 0.5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#rpgOv .requip .btn { margin-top: 6px; }

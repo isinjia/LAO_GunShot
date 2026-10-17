@@ -45,10 +45,9 @@
     if (!stageOpen(p, sel)) sel = 0;
     if (!diffOpen(p, sel, diff)) diff = 0;
     const S = D.STAGES[sel], floors = D.stageFloors(sel);
-    const slots = ['무기 코어', '갑옷', '헬멧', '장갑', '신발', '벨트', '반지', '반지', '목걸이'];
     body.innerHTML = `<div class="rcol">
         <div class="rinfo" style="--c:${h.color}"><i style="background-image:${face(h)}"></i><div><b>${esc(curChar.name)}</b><small>Lv.${curChar.lv || 1} · ${h.name} · ${h.title}</small></div><button type="button" class="btn d" id="rpgDel">삭제</button></div>
-        <div class="requip"><small>장비 (준비 중)</small><div>${slots.map((s) => `<span>${s}</span>`).join('')}</div></div>
+        <div class="requip"><small>장착 장비 · 레벨 ${curChar.lv || 1} (EXP ${curChar.xp || 0} / ${window.EQUIP ? EQUIP.xpNeed(curChar.lv || 1) : '-'})</small><div>${(window.EQUIP ? EQUIP.SLOTS : []).map((s) => { const it = (curChar.equip || {})[s.id]; return it ? `<span class="on" title="${esc(EQUIP.itemName(it))}">${esc(EQUIP.itemName(it))}</span>` : `<span>${s.name}</span>`; }).join('')}</div><button type="button" class="btn d" id="rpgInv">인벤토리 (I)</button></div>
         <div id="stageList">${D.STAGES.map((s, i) => {
           const open = stageOpen(p, i), c = cleared(p, i);
           const stars = [0, 1, 2].map((k) => `<i class="${k < c ? 'on' : ''}" style="--c:${D.DIFFS[k].color}"></i>`).join('');
@@ -119,6 +118,7 @@
     $('#rpgBody').onclick = (e) => {
       const s = e.target.closest('.stg'), d = e.target.closest('.sdf');
       if (e.target.id === 'rpgDel') return delChar();
+      if (e.target.id === 'rpgInv') return window.EQUIP && EQUIP.open(true, curChar.id);
       if (e.target.id === 'stageGo') return go();
       if (s) { const i = +s.dataset.i; if (!stageOpen(prog(), i)) { SFX.play('fail', 0.4); return; } sel = i; diff = 0; renderRpg(); SFX.play('uiPick', 0.5); }
       if (d) { const k = +d.dataset.d; if (!diffOpen(prog(), sel, k)) { SFX.play('fail', 0.4); return; } diff = k; renderRpg(); SFX.play('uiPick', 0.5); }
@@ -144,6 +144,6 @@
     }).observe(title, { attributes: true, attributeFilter: ['hidden'] });
     show('mode');
   }
-  window.STAGE_UI = { init, show };
+  window.STAGE_UI = { init, show, cur: () => (!$('#rpgOv').hidden && curChar ? curChar.id : null), refresh: () => { if (!$('#rpgOv').hidden) { const c = chars().find((x) => curChar && x.id === curChar.id); if (c) curChar = c; renderRpg(); } } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

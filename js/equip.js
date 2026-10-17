@@ -1,0 +1,456 @@
+// RPG-mode equipment (오르카 작전 기록), Diablo II style:
+//  · items: slot base + item level (ilvl) + required level, rarity 일반 / 마법 / 레어 / 유니크 / 세트, random affixes
+//  · sockets: gems (6 kinds x 3 grades, 3 of a kind combine into the next grade) and runes (12); runes laid in order
+//    into a white (일반) item with exactly that many sockets complete a runeword
+//  · a 10 x 4 grid bag (items take 1x1 .. 2x3 cells) + a stash; drops fall on the floor in stage runs and are never lost
+//  · the character: level / XP from runs; gear only counts in RPG mode (the classic run never sees it)
+// Saved in lao_rpg_chars (stage_ui.js owns the list); icons are the original equipment art (assets/equip).
+(function () {
+  const KEY = 'lao_rpg_chars', BAG_W = 10, BAG_H = 4, STASH_W = 10, STASH_H = 8, MAX_LV = 60;
+  const ICON = (n) => `assets/equip/${n}.webp`;
+  // rarity: the icon tier (T1-T4) carries the original's colour plate
+  const RAR = {
+    normal: { name: '일반', color: '#d8d8d8', hex: 0xd8d8d8, t: 1 },
+    magic: { name: '마법', color: '#6a8cff', hex: 0x6a8cff, t: 2 },
+    rare: { name: '레어', color: '#ffd84a', hex: 0xffd84a, t: 3 },
+    unique: { name: '유니크', color: '#c8a050', hex: 0xd8a040, t: 4 },
+    set: { name: '세트', color: '#40e060', hex: 0x40e060, t: 4 },
+  };
+  // stats: what each key does in a run (applied as P.mods / HP / shields)
+  const STAT = {
+    dmg: { n: '공격력', f: (v) => `+${v}%` }, hp: { n: '체력', f: (v) => `+${v * 25}` }, armor: { n: '방어막', f: (v) => `+${v}` },
+    crit: { n: '치명타 확률', f: (v) => `+${v}%` }, rof: { n: '연사 속도', f: (v) => `+${v}%` }, speed: { n: '이동 속도', f: (v) => `+${v}%` },
+    skill: { n: '궁극기 충전', f: (v) => `+${v}%` }, reload: { n: '재장전 속도', f: (v) => `+${v}%` }, ammo: { n: '최대 탄약', f: (v) => `+${v}%` },
+    roll: { n: '회피 쿨타임', f: (v) => `-${v}%` }, gold: { n: '부품 획득', f: (v) => `+${v}%` }, vamp: { n: '흡혈 확률', f: (v) => `+${v}%` },
+    sk2: { n: '보조 스킬 쿨타임', f: (v) => `-${v}%` }, pierce: { n: '관통', f: (v) => `+${v}` },
+  };
+  // slots and their bases (원본 장비 이름): w x h cells, reqLv, sockets max, base stat (scaled by ilvl), icons
+  const SLOTS = [
+    { id: 'weapon', name: '무기 코어' }, { id: 'armor', name: '갑옷' }, { id: 'helm', name: '헬멧' }, { id: 'gloves', name: '장갑' }, { id: 'boots', name: '신발' },
+    { id: 'belt', name: '벨트' }, { id: 'ring1', name: '반지', kind: 'ring' }, { id: 'ring2', name: '반지', kind: 'ring' }, { id: 'amulet', name: '목걸이' },
+  ];
+  const BASES = [
+    { id: 'core_atk', slot: 'weapon', name: '공격 회로', w: 1, h: 3, req: 1, sock: 4, base: { dmg: 4 }, icon: 'Chip_Atk' },
+    { id: 'core_assault', slot: 'weapon', name: '돌격 OS', w: 1, h: 3, req: 12, sock: 4, base: { dmg: 6, rof: 3 }, icon: 'System_Assault' },
+    { id: 'core_sniper', slot: 'weapon', name: '저격 OS', w: 1, h: 3, req: 24, sock: 5, base: { dmg: 9, crit: 2 }, icon: 'System_Sniper' },
+    { id: 'core_antiarmor', slot: 'weapon', name: '대장갑 OS', w: 1, h: 3, req: 36, sock: 5, base: { dmg: 12, pierce: 1 }, icon: 'System_AntiArmor' },
+    { id: 'armor_alloy', slot: 'armor', name: '특수 합금 장갑', w: 2, h: 3, req: 1, sock: 3, base: { hp: 1 }, icon: 'Sub_SpAlloyArmor' },
+    { id: 'armor_space', slot: 'armor', name: '공간 장갑', w: 2, h: 3, req: 18, sock: 4, base: { hp: 2, armor: 1 }, icon: 'Sub_SpaceArmor' },
+    { id: 'armor_def', slot: 'armor', name: '방어 OS', w: 2, h: 3, req: 32, sock: 4, base: { hp: 3, armor: 1 }, icon: 'System_Defense' },
+    { id: 'helm_radar', slot: 'helm', name: '고급 레이더', w: 2, h: 2, req: 1, sock: 2, base: { crit: 2 }, icon: 'Sub_AdvRadar' },
+    { id: 'helm_observer', slot: 'helm', name: '관측 장비', w: 2, h: 2, req: 16, sock: 3, base: { crit: 3, hp: 1 }, icon: 'Sub_Observer' },
+    { id: 'helm_holo', slot: 'helm', name: '홀로그램 투영기', w: 2, h: 2, req: 30, sock: 3, base: { crit: 4, skill: 5 }, icon: 'Sub_Hologram' },
+    { id: 'glove_bullet', slot: 'gloves', name: '특수 소총탄', w: 2, h: 2, req: 1, sock: 2, base: { rof: 3 }, icon: 'Sub_SpRifleBullet' },
+    { id: 'glove_sight', slot: 'gloves', name: '특수 조준기', w: 2, h: 2, req: 14, sock: 2, base: { rof: 4, crit: 1 }, icon: 'Sub_SpSight' },
+    { id: 'glove_pierce', slot: 'gloves', name: '철갑탄', w: 2, h: 2, req: 28, sock: 3, base: { rof: 5, dmg: 3 }, icon: 'Sub_ArmorPierce' },
+    { id: 'boots_booster', slot: 'boots', name: '보조 부스터', w: 2, h: 2, req: 1, sock: 2, base: { speed: 3 }, icon: 'Sub_SubBooster' },
+    { id: 'boots_speed', slot: 'boots', name: '고속 OS', w: 2, h: 2, req: 15, sock: 2, base: { speed: 4, roll: 4 }, icon: 'System_Highspd' },
+    { id: 'boots_maneuver', slot: 'boots', name: '기동 OS', w: 2, h: 2, req: 30, sock: 3, base: { speed: 5, roll: 6 }, icon: 'System_Maneuver' },
+    { id: 'belt_energy', slot: 'belt', name: '에너지 팩', w: 2, h: 1, req: 1, sock: 1, base: { ammo: 8 }, icon: 'Sub_EnergyPack' },
+    { id: 'belt_kit', slot: 'belt', name: '검사 키트', w: 2, h: 1, req: 14, sock: 2, base: { ammo: 10, hp: 1 }, icon: 'Sub_ExamKit' },
+    { id: 'belt_stim', slot: 'belt', name: '전투 자극제', w: 2, h: 1, req: 28, sock: 2, base: { reload: 8, skill: 4 }, icon: 'Sub_Stimulant' },
+    { id: 'ring_cri', slot: 'ring', name: '치명 칩', w: 1, h: 1, req: 1, sock: 1, base: { crit: 2 }, icon: 'Chip_Cri' },
+    { id: 'ring_acc', slot: 'ring', name: '명중 칩', w: 1, h: 1, req: 8, sock: 1, base: { rof: 2 }, icon: 'Chip_Acc' },
+    { id: 'ring_spd', slot: 'ring', name: '기동 칩', w: 1, h: 1, req: 20, sock: 1, base: { speed: 2, roll: 3 }, icon: 'Chip_Spd' },
+    { id: 'amu_mark', slot: 'amulet', name: 'DS의 표식', w: 1, h: 1, req: 1, sock: 1, base: { skill: 5 }, icon: 'Sub_MarkOfDS' },
+    { id: 'amu_barrier', slot: 'amulet', name: '방어막 발생기', w: 1, h: 1, req: 18, sock: 1, base: { armor: 1, skill: 4 }, icon: 'Sub_Barrier' },
+    { id: 'amu_drone', slot: 'amulet', name: '정찰 드론', w: 1, h: 1, req: 34, sock: 2, base: { skill: 8, gold: 10 }, icon: 'Sub_SpyDrone' },
+  ];
+  // affixes: [stat, min, max] at ilvl 1, x(1 + ilvl/20) at depth
+  const PREFIX = [
+    { n: '날카로운', s: 'dmg', r: [3, 6] }, { n: '맹렬한', s: 'rof', r: [3, 6] }, { n: '단단한', s: 'hp', r: [1, 1] }, { n: '예리한', s: 'crit', r: [2, 4] },
+    { n: '충전된', s: 'skill', r: [4, 8] }, { n: '관통하는', s: 'pierce', r: [1, 1], lv: 20 }, { n: '흡혈의', s: 'vamp', r: [1, 2], lv: 15 },
+  ];
+  const SUFFIX = [
+    { n: '신속의', s: 'speed', r: [2, 5] }, { n: '보급의', s: 'ammo', r: [8, 15] }, { n: '장전의', s: 'reload', r: [5, 10] }, { n: '회피의', s: 'roll', r: [4, 8] },
+    { n: '수집가의', s: 'gold', r: [8, 15] }, { n: '보호의', s: 'armor', r: [1, 1], lv: 12 }, { n: '전술의', s: 'sk2', r: [4, 8] },
+  ];
+  // uniques (fixed names / stats) and one set
+  const UNIQUES = [
+    { id: 'u_lion', base: 'core_assault', name: '브레스트 라이언 코어', req: 15, stats: { dmg: 22, rof: 10, crit: 4 } },
+    { id: 'u_tyrant', base: 'core_antiarmor', name: '폭군의 OS', req: 40, stats: { dmg: 40, pierce: 2, skill: 15 } },
+    { id: 'u_bulwark', base: 'armor_space', name: '철벽의 장갑', req: 22, stats: { hp: 4, armor: 2, roll: 10 } },
+    { id: 'u_eye', base: 'helm_holo', name: '사이클롭스의 눈', req: 34, stats: { crit: 10, dmg: 12, skill: 12 } },
+    { id: 'u_wind', base: 'boots_maneuver', name: '질풍의 부스터', req: 30, stats: { speed: 14, roll: 20, rof: 6 } },
+    { id: 'u_ds', base: 'amu_mark', name: '드라큘라의 표식', req: 10, stats: { vamp: 4, skill: 12, dmg: 8 } },
+  ];
+  const SETS = { orca: { name: '오르카 친위대', bonus: { 2: { dmg: 10 }, 3: { hp: 2, armor: 1 }, 4: { skill: 20, speed: 8 } } } };
+  const SET_ITEMS = [
+    { id: 's_orca1', base: 'armor_alloy', set: 'orca', name: '오르카 친위대 흉갑', req: 6, stats: { hp: 2, dmg: 4 } },
+    { id: 's_orca2', base: 'helm_radar', set: 'orca', name: '오르카 친위대 레이더', req: 6, stats: { crit: 4 } },
+    { id: 's_orca3', base: 'glove_bullet', set: 'orca', name: '오르카 친위대 탄띠', req: 6, stats: { rof: 6 } },
+    { id: 's_orca4', base: 'boots_booster', set: 'orca', name: '오르카 친위대 부스터', req: 6, stats: { speed: 6 } },
+  ];
+  // gems: [weapon effect, armour (armor/helm/gloves/boots/belt) effect, jewel (ring/amulet) effect] per grade
+  const GEM_GRADE = ['조각난', '', '완벽한'];
+  const GEMS = {
+    ruby: { name: '루비', color: '#ff4a4a', icon: 'Chip_Atk', fx: [{ dmg: 3 }, { hp: 1 }, { dmg: 2 }], k: [1, 2, 3.5] },
+    sapphire: { name: '사파이어', color: '#4a8cff', icon: 'Chip_Def', fx: [{ skill: 4 }, { armor: 1 }, { skill: 3 }], k: [1, 1.5, 2.5] },
+    emerald: { name: '에메랄드', color: '#4adf6a', icon: 'Chip_Spd', fx: [{ rof: 3 }, { speed: 2 }, { roll: 4 }], k: [1, 2, 3] },
+    topaz: { name: '토파즈', color: '#ffd04a', icon: 'Chip_Acc', fx: [{ crit: 2 }, { gold: 8 }, { crit: 2 }], k: [1, 2, 3] },
+    amethyst: { name: '자수정', color: '#c06aff', icon: 'Chip_Cri', fx: [{ vamp: 1 }, { reload: 5 }, { sk2: 3 }], k: [1, 2, 3] },
+    diamond: { name: '다이아몬드', color: '#e8f4ff', icon: 'Chip_Hp', fx: [{ dmg: 2, crit: 1 }, { hp: 1 }, { dmg: 2, skill: 2 }], k: [1, 1.5, 2.5] },
+  };
+  // runes: low -> high (drop weight falls with the order); each has a weapon / armour / jewel effect
+  const RUNES = [
+    { id: 'alpha', name: '알파', fx: [{ dmg: 4 }, { hp: 1 }, { crit: 1 }] },
+    { id: 'beta', name: '베타', fx: [{ rof: 4 }, { speed: 2 }, { gold: 6 }] },
+    { id: 'gamma', name: '감마', fx: [{ crit: 3 }, { roll: 4 }, { skill: 3 }] },
+    { id: 'delta', name: '델타', fx: [{ reload: 8 }, { ammo: 10 }, { reload: 5 }] },
+    { id: 'epsilon', name: '엡실론', fx: [{ skill: 6 }, { armor: 1 }, { sk2: 4 }] },
+    { id: 'zeta', name: '제타', fx: [{ dmg: 7 }, { hp: 1 }, { dmg: 4 }] },
+    { id: 'eta', name: '에타', fx: [{ vamp: 2 }, { roll: 6 }, { vamp: 1 }] },
+    { id: 'theta', name: '세타', fx: [{ pierce: 1 }, { speed: 4 }, { crit: 3 }] },
+    { id: 'iota', name: '이오타', fx: [{ rof: 7 }, { hp: 2 }, { rof: 4 }] },
+    { id: 'kappa', name: '카파', fx: [{ dmg: 10 }, { armor: 1 }, { skill: 6 }] },
+    { id: 'lambda', name: '람다', fx: [{ crit: 6 }, { speed: 6 }, { dmg: 6 }] },
+    { id: 'omega', name: '오메가', fx: [{ dmg: 15, skill: 6 }, { hp: 3, armor: 1 }, { dmg: 8, crit: 4 }] },
+  ];
+  const RUNEWORDS = [
+    { name: '선봉', slots: ['weapon'], runes: ['alpha', 'beta'], stats: { dmg: 15, rof: 8 } },
+    { name: '수호', slots: ['armor', 'helm'], runes: ['epsilon', 'alpha', 'zeta'], stats: { hp: 3, armor: 2 } },
+    { name: '질주', slots: ['boots'], runes: ['beta', 'theta'], stats: { speed: 12, roll: 15 } },
+    { name: '포식', slots: ['weapon'], runes: ['eta', 'zeta', 'kappa'], stats: { dmg: 25, vamp: 4 } },
+    { name: '심판', slots: ['weapon'], runes: ['lambda', 'kappa', 'omega', 'iota'], stats: { dmg: 45, crit: 10, pierce: 2 } },
+    { name: '불굴', slots: ['armor'], runes: ['omega', 'iota', 'epsilon', 'zeta'], stats: { hp: 6, armor: 3, skill: 20 } },
+  ];
+  const classOf = (slot) => (slot === 'weapon' ? 0 : slot === 'ring' || slot === 'amulet' ? 2 : 1);
+  const baseOf = (id) => BASES.find((b) => b.id === id);
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const ri = (a, b) => Math.floor(rnd(a, b + 1));
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const uid = () => 'i' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const add = (o, s, k = 1) => { for (const key in s) o[key] = (o[key] || 0) + Math.round(s[key] * k * 10) / 10; return o; };
+
+  // ── item generation ──
+  function genItem(ilvl, minRar) {
+    const pool = BASES.filter((b) => b.req <= ilvl + 4);
+    const b = pick(pool);
+    // unique / set: 1.2 % from trash, more from elites / chests / bosses (minRar 0-3); otherwise the tier roll
+    const roll = Math.random() + (minRar || 0) * 0.15;
+    if (Math.random() < 0.012 + (minRar || 0) * 0.03) {
+      const u = UNIQUES.concat(SET_ITEMS).filter((x) => x.req <= ilvl + 4);
+      if (u.length) { const q = pick(u), B = baseOf(q.base); return { id: uid(), base: B.id, name: q.name, rar: q.set ? 'set' : 'unique', set: q.set || null, ilvl, req: q.req, stats: { ...q.stats }, base_: scaleBase(B, ilvl), sockets: Math.min(B.sock, ri(0, 1)), socketed: [], w: B.w, h: B.h }; }
+    }
+    const rar = roll > 0.92 ? 'rare' : roll > 0.58 ? 'magic' : 'normal';
+    const it = { id: uid(), base: b.id, name: b.name, rar, ilvl, req: Math.max(b.req, Math.floor(ilvl * 0.8)), stats: {}, base_: scaleBase(b, ilvl), sockets: 0, socketed: [], w: b.w, h: b.h };
+    const k = 1 + ilvl / 20;
+    const roll1 = (a) => { const v = rnd(a.r[0], a.r[1]) * (a.s === 'hp' || a.s === 'armor' || a.s === 'pierce' ? 1 : k); it.stats[a.s] = Math.round(((it.stats[a.s] || 0) + v) * 10) / 10; if (a.s === 'hp' || a.s === 'armor' || a.s === 'pierce') it.stats[a.s] = Math.round(it.stats[a.s]); };
+    const okA = (a) => !a.lv || a.lv <= ilvl;
+    if (rar === 'magic') {
+      const p = Math.random() < 0.7 ? pick(PREFIX.filter(okA)) : null, s = !p || Math.random() < 0.5 ? pick(SUFFIX.filter(okA)) : null;
+      if (p) roll1(p); if (s) roll1(s);
+      it.name = `${p ? p.n + ' ' : ''}${b.name}${s ? ' · ' + s.n.replace(/의$/, '') : ''}`;
+      it.sockets = Math.random() < 0.3 ? ri(1, Math.min(2, b.sock)) : 0;
+    } else if (rar === 'rare') {
+      const n = ri(3, Math.min(6, 3 + Math.floor(ilvl / 15)));
+      const all = PREFIX.concat(SUFFIX).filter(okA).sort(() => Math.random() - 0.5).slice(0, n);
+      all.forEach(roll1);
+      it.name = `${pick(['파멸', '강철', '심연', '폭풍', '여명', '혈흔', '서리', '황혼'])}의 ${pick(['송곳니', '외피', '맹세', '갈퀴', '파편', '심장', '눈동자', '날개'])}`;
+      it.sub = b.name;
+      it.sockets = Math.random() < 0.2 ? 1 : 0;
+    } else {
+      it.sockets = Math.random() < 0.55 ? ri(1, b.sock) : 0; // white items carry the sockets runewords need
+    }
+    return it;
+  }
+  function scaleBase(b, ilvl) { const k = 1 + ilvl / 25, o = {}; for (const s in b.base) o[s] = s === 'hp' || s === 'armor' || s === 'pierce' ? b.base[s] : Math.round(b.base[s] * k * 10) / 10; return o; }
+  function genGem(ilvl) { const g = pick(Object.keys(GEMS)), gr = Math.random() < Math.min(0.5, ilvl / 80) ? 1 : 0; return { id: uid(), gem: g, grade: gr, w: 1, h: 1 }; }
+  function genRune(ilvl) {
+    const top = Math.min(RUNES.length - 1, 2 + Math.floor(ilvl / 6));
+    let i = 0; while (i < top && Math.random() < 0.45) i++;
+    return { id: uid(), rune: RUNES[i].id, w: 1, h: 1 };
+  }
+  // ── naming / stats ──
+  const isGear = (it) => !!it.base;
+  function itemName(it) {
+    if (it.gem) { const G = GEMS[it.gem]; return `${GEM_GRADE[it.grade] ? GEM_GRADE[it.grade] + ' ' : ''}${G.name}`; }
+    if (it.rune) return `${RUNES.find((r) => r.id === it.rune).name} 룬`;
+    return it.rw ? `${it.rw}` : it.name;
+  }
+  const itemColor = (it) => (it.gem ? GEMS[it.gem].color : it.rune ? '#ff9a3a' : it.rw ? '#c8a050' : RAR[it.rar].color);
+  function itemIcon(it) {
+    if (it.gem) return ICON(`${GEMS[it.gem].icon}_T${it.grade + 1}`);
+    if (it.rune) { const i = RUNES.findIndex((r) => r.id === it.rune); return ICON(`${['Sub_AntiFire', 'Sub_AntiCold', 'Sub_AntiLightning', 'Sub_AntiBarrier', 'System_Normal', 'System_Exp', 'System_AntiTrooper', 'System_AntiAir'][i % 8]}_T${i < 4 ? 1 : i < 8 ? 2 : i < 11 ? 3 : 4}`); }
+    return ICON(`${baseOf(it.base).icon}_T${it.rw ? 4 : RAR[it.rar].t}`);
+  }
+  function socketStats(it) {
+    const o = {}, c = classOf(baseOf(it.base).slot);
+    (it.socketed || []).forEach((s) => { if (s.gem) add(o, GEMS[s.gem].fx[c], GEMS[s.gem].k[s.grade]); else if (s.rune) add(o, RUNES.find((r) => r.id === s.rune).fx[c]); });
+    return o;
+  }
+  function itemStats(it) {
+    if (!isGear(it)) return {};
+    const o = add(add({}, it.base_ || {}), it.stats || {});
+    add(o, socketStats(it));
+    if (it.rwStats) add(o, it.rwStats);
+    return o;
+  }
+  function checkRuneword(it) {
+    if (!isGear(it) || it.rar !== 'normal' || it.rw || it.socketed.length !== it.sockets || it.socketed.some((s) => !s.rune)) return;
+    const slot = baseOf(it.base).slot, seq = it.socketed.map((s) => s.rune).join(',');
+    const w = RUNEWORDS.find((r) => r.runes.join(',') === seq && r.slots.includes(slot === 'ring' ? 'ring' : slot));
+    if (w) { it.rw = w.name; it.rwStats = { ...w.stats }; return w; }
+  }
+
+  // ── characters ──
+  function load() { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && Array.isArray(v.list) ? v : { v: 1, list: [] }; } catch (e) { return { v: 1, list: [] }; } }
+  function saveAll(db) { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { /* no storage */ } }
+  function getChar(id) { const db = load(); return { db, c: db.list.find((x) => x.id === id) || null }; }
+  function norm(c) { c.lv = c.lv || 1; c.xp = c.xp || 0; c.equip = c.equip || {}; c.bag = Array.isArray(c.bag) ? c.bag : []; c.stash = Array.isArray(c.stash) ? c.stash : []; return c; }
+  const xpNeed = (lv) => Math.round(60 * Math.pow(lv, 1.55));
+  // grid placement: items carry x / y in their container
+  function fits(list, W, H, it, x, y, ignore) {
+    if (x < 0 || y < 0 || x + it.w > W || y + it.h > H) return false;
+    return !list.some((o) => o !== ignore && o.id !== (ignore && ignore.id) && x < o.x + o.w && o.x < x + it.w && y < o.y + o.h && o.y < y + it.h);
+  }
+  function place(list, W, H, it) {
+    for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) if (fits(list, W, H, it, x, y)) { it.x = x; it.y = y; list.push(it); return true; }
+    return false;
+  }
+  function stow(c, it) { if (place(c.bag, BAG_W, BAG_H, it)) return 'bag'; if (place(c.stash, STASH_W, STASH_H, it)) return 'stash'; return null; }
+  function charStats(c) {
+    const o = {};
+    o.dmg = (c.lv - 1) * 1; o.hp = Math.floor((c.lv - 1) / 6); // the level itself: +1 % damage per level, +25 HP every 6
+    const sets = {};
+    Object.values(c.equip).forEach((it) => { if (!it) return; add(o, itemStats(it)); if (it.set) sets[it.set] = (sets[it.set] || 0) + 1; });
+    for (const k in sets) { const S = SETS[k]; for (const n in S.bonus) if (sets[k] >= +n) add(o, S.bonus[n]); }
+    return o;
+  }
+
+  // ── run hooks ──
+  let runChar = null, applied = null;
+  function apply(P, st) {
+    const m = P.mods;
+    applied = { st, before: { dmg: m.dmg, rof: m.rof, crit: m.crit, speed: m.speed, skill: m.skill, reload: m.reload, ammo: m.ammo, rollCd: m.rollCd, sk2cd: m.sk2cd, pierce: m.pierce, maxHp: P.maxHp, armor: P.armor } };
+    m.dmg *= 1 + (st.dmg || 0) / 100; m.rof *= 1 + (st.rof || 0) / 100; m.crit += (st.crit || 0) / 100; m.speed *= 1 + (st.speed || 0) / 100;
+    m.skill *= 1 + (st.skill || 0) / 100; m.reload *= 1 + (st.reload || 0) / 100; m.ammo *= 1 + (st.ammo || 0) / 100; m.rollCd *= Math.max(0.4, 1 - (st.roll || 0) / 100);
+    P.gearGold = (st.gold || 0) / 100; P.gearVamp = (st.vamp || 0) / 100; m.sk2cd = (m.sk2cd || 1) * Math.max(0.5, 1 - (st.sk2 || 0) / 100); m.pierce = (m.pierce || 0) + (st.pierce || 0);
+    P.maxHp += Math.round(st.hp || 0); P.hp += Math.round(st.hp || 0); P.armor += Math.round(st.armor || 0);
+  }
+  function unapply(P) {
+    if (!applied) return;
+    const b = applied.before, m = P.mods;
+    // multiplicative mods are divided back out (other buffs taken during the run stay)
+    const st = applied.st;
+    m.dmg /= 1 + (st.dmg || 0) / 100; m.rof /= 1 + (st.rof || 0) / 100; m.crit -= (st.crit || 0) / 100; m.speed /= 1 + (st.speed || 0) / 100;
+    m.skill /= 1 + (st.skill || 0) / 100; m.reload /= 1 + (st.reload || 0) / 100; m.ammo /= 1 + (st.ammo || 0) / 100; m.rollCd /= Math.max(0.4, 1 - (st.roll || 0) / 100);
+    P.gearGold = 0; P.gearVamp = 0; m.sk2cd /= Math.max(0.5, 1 - (st.sk2 || 0) / 100); m.pierce -= (st.pierce || 0);
+    const hp = Math.round(st.hp || 0); P.maxHp -= hp; P.hp = Math.max(1, Math.min(P.maxHp, P.hp - hp)); P.armor = Math.max(0, P.armor - Math.round(st.armor || 0));
+    applied = null; void b;
+  }
+  function onRunStart(G) {
+    runChar = null; applied = null;
+    const id = G.runOpts && G.runOpts.charId;
+    if (!id) return;
+    const { c } = getChar(id); if (!c) return;
+    norm(c); runChar = id;
+    apply(G.P, charStats(c));
+    G.runGear = { items: 0, xp0: c.xp, lv0: c.lv };
+  }
+  function reapply(G) { if (!runChar || !G.P) return; const { c } = getChar(runChar); if (!c) return; unapply(G.P); apply(G.P, charStats(norm(c))); }
+  const ilvlNow = () => { const G = GAME.G; return 1 + (G.stageI || 0) * 9 + (G.diff ? ['easy', 'normal', 'hard'].indexOf(G.diff.id) * 5 : 0) + G.fi * 2; };
+  function drop(x, y, it) { if (GAME.dropGear) GAME.dropGear(x, y, it); }
+  function onKill(e) {
+    if (!runChar) return;
+    const P = GAME.G.P;
+    if (P && P.gearVamp && P.hp < P.maxHp && Math.random() < P.gearVamp) { P.hp++; SFX.play('reinforce', 0.4); } // 흡혈: a kill can mend half a heart
+    const lv = ilvlNow(), r = Math.random();
+    if (r < (e.elite ? 0.3 : 0.035)) drop(e.x, e.y, genItem(lv, e.elite ? 1 : 0));
+    else if (r < (e.elite ? 0.42 : 0.05)) drop(e.x, e.y, genGem(lv));
+    else if (r < (e.elite ? 0.5 : 0.058)) drop(e.x, e.y, genRune(lv));
+  }
+  function onChest(o) { if (runChar && Math.random() < 0.5 + o.rank * 0.15) drop(o.x + 0.8, o.y, genItem(ilvlNow(), o.rank)); }
+  function onBoss(x, y, mid) {
+    if (!runChar) return;
+    const lv = ilvlNow() + (mid ? 0 : 3);
+    for (let i = 0; i < (mid ? 2 : 3); i++) drop(x + (i - 1) * 1.6, y - 1.2, genItem(lv, mid ? 1 : 2));
+    drop(x, y - 2.4, genRune(lv + 4)); if (Math.random() < 0.6) drop(x + 1.6, y - 2.4, genGem(lv));
+  }
+  // picked up: straight into the character's save (never lost, win or lose)
+  function collect(it) {
+    if (!runChar) return true;
+    const { db, c } = getChar(runChar); if (!c) return true;
+    norm(c);
+    const where = stow(c, it);
+    if (!where) { UI.toast('가방과 창고가 가득 찼습니다', 'warn'); SFX.play('fail', 0.5); return false; }
+    saveAll(db);
+    if (GAME.G.runGear) GAME.G.runGear.items++;
+    SFX.play(it.rar === 'unique' || it.rar === 'set' ? 'pickSS' : 'uiEquip', 0.8);
+    UI.toast(`<span style="color:${itemColor(it)}">${esc(itemName(it))}</span> 획득${where === 'stash' ? ' (창고)' : ''}`, it.rar === 'unique' || it.rar === 'set' || it.rar === 'rare' ? 'gem' : '');
+    return true;
+  }
+  function onRunEnd(G, win) {
+    if (!runChar) return;
+    const { db, c } = getChar(runChar); if (!c) return;
+    norm(c);
+    const s = G.stats, xp = Math.round((s.kills * 2 + s.roomsCleared * 6 + s.bosses * 60 + (win ? 120 : 0)) * (G.diff ? [1, 1.6, 2.4][['easy', 'normal', 'hard'].indexOf(G.diff.id)] : 1) * (1 + (G.stageI || 0) * 0.4));
+    c.xp += xp; let ups = 0;
+    while (c.lv < MAX_LV && c.xp >= xpNeed(c.lv)) { c.xp -= xpNeed(c.lv); c.lv++; ups++; }
+    saveAll(db);
+    s.charXp = xp; s.charLv = c.lv; s.charUp = ups;
+    setTimeout(() => UI.toast(`${esc(c.name)} 경험치 +${xp}${ups ? ` · 레벨 업! Lv.${c.lv}` : ''}`, 'gem'), 900);
+    runChar = null; applied = null;
+  }
+  // ground sprite: the item's own icon
+  const texCache = {};
+  function tex(it) {
+    const url = itemIcon(it);
+    if (!texCache[url]) { const t = new THREE.TextureLoader().load(url); t.minFilter = THREE.LinearFilter; texCache[url] = t; }
+    return texCache[url];
+  }
+  const glow = (it) => (it.gem ? parseInt(GEMS[it.gem].color.slice(1), 16) : it.rune ? 0xff9a3a : RAR[it.rar].hex);
+
+  // ── inventory window (I) ──
+  let invChar = null, selItem = null, socketing = null, wasPaused = false, tab = 'bag';
+  const CELL = 44;
+  function el(q) { return document.querySelector(q); }
+  function statLines(st) { return Object.keys(st).filter((k) => st[k] && STAT[k]).map((k) => `<li>${STAT[k].n} ${STAT[k].f(st[k])}</li>`).join(''); }
+  function tooltip(it, c) {
+    if (!it) return '<p class="ivhint">아이템을 선택하세요. 젬·룬을 고른 뒤 「소켓에 박기」를 누르고 장비를 클릭하면 박힙니다.</p>';
+    const col = itemColor(it);
+    if (it.gem) { const G = GEMS[it.gem]; const k = G.k[it.grade]; return `<b style="color:${col}">${itemName(it)}</b><small>보석 · 등급 ${it.grade + 1}/3</small><ul><li class="h">무기</li>${statLines(add({}, G.fx[0], k))}<li class="h">방어구</li>${statLines(add({}, G.fx[1], k))}<li class="h">장신구</li>${statLines(add({}, G.fx[2], k))}</ul>`; }
+    if (it.rune) { const R = RUNES.find((r) => r.id === it.rune); return `<b style="color:${col}">${itemName(it)}</b><small>룬 · ${RUNES.indexOf(R) + 1}단계</small><ul><li class="h">무기</li>${statLines(R.fx[0])}<li class="h">방어구</li>${statLines(R.fx[1])}<li class="h">장신구</li>${statLines(R.fx[2])}</ul>`; }
+    const B = baseOf(it.base), st = itemStats(it), lowLv = c && c.lv < it.req;
+    const sock = it.sockets ? `<div class="ivsock">${Array.from({ length: it.sockets }, (_, i) => { const s = it.socketed[i]; return `<i title="${s ? esc(itemName(s)) : '빈 소켓'}" style="${s ? `background-image:url(${itemIcon(s)})` : ''}"></i>`; }).join('')}</div>` : '';
+    return `<b style="color:${col}">${esc(itemName(it))}</b>${it.rw ? `<small style="color:#c8a050">룬워드 · ${esc(it.name)}</small>` : ''}<small>${RAR[it.rar].name} ${it.sub ? esc(it.sub) : B.name} · ${SLOTS.find((s) => s.id === B.slot || (B.slot === 'ring' && s.kind === 'ring')).name}</small>
+      <small>아이템 레벨 ${it.ilvl} · <span class="${lowLv ? 'bad' : ''}">요구 레벨 ${it.req}</span>${it.set ? ` · <span style="color:#40e060">세트: ${SETS[it.set].name}</span>` : ''}</small>${sock}<ul>${statLines(st)}</ul>`;
+  }
+  function bagHtml(list, W, H, which) {
+    return `<div class="ivgrid" data-c="${which}" style="--w:${W};--h:${H}">${list.map((it) => `<button type="button" class="ivit${selItem && selItem.id === it.id ? ' on' : ''}" data-id="${it.id}" data-c="${which}" style="left:${it.x * CELL}px;top:${it.y * CELL}px;width:${it.w * CELL - 2}px;height:${it.h * CELL - 2}px;--rc:${itemColor(it)}"><i style="background-image:url(${itemIcon(it)})"></i>${it.sockets ? `<em>${it.socketed.length}/${it.sockets}</em>` : ''}</button>`).join('')}</div>`;
+  }
+  function render() {
+    const ov = el('#invOv'); if (!ov || ov.hidden) return;
+    const { c } = getChar(invChar); if (!c) { ov.hidden = true; return; }
+    norm(c);
+    const H = window.DATA.HEROES.find((h) => h.id === c.hero) || {};
+    const st = charStats(c), need = xpNeed(c.lv);
+    const doll = SLOTS.map((s) => { const it = c.equip[s.id]; return `<button type="button" class="ivslot s_${s.id}${it ? '' : ' empty'}${selItem && it && selItem.id === it.id ? ' on' : ''}" data-slot="${s.id}" style="--rc:${it ? itemColor(it) : '#444'}">${it ? `<i style="background-image:url(${itemIcon(it)})"></i>` : `<span>${s.name}</span>`}</button>`; }).join('');
+    const sel = selItem;
+    const inBag = sel && (c.bag.some((o) => o.id === sel.id) || c.stash.some((o) => o.id === sel.id));
+    const equipped = sel && Object.values(c.equip).some((o) => o && o.id === sel.id);
+    const canCombine = sel && sel.gem && sel.grade < 2 && c.bag.concat(c.stash).filter((o) => o.gem === sel.gem && o.grade === sel.grade).length >= 3;
+    const acts = !sel ? '' : [
+      inBag && isGear(sel) ? '<button type="button" class="btn" data-a="equip">장착</button>' : '',
+      equipped ? '<button type="button" class="btn d" data-a="unequip">해제</button>' : '',
+      inBag && (sel.gem || sel.rune) ? `<button type="button" class="btn${socketing ? ' on' : ''}" data-a="socket">${socketing ? '대상 장비 클릭…' : '소켓에 박기'}</button>` : '',
+      canCombine ? '<button type="button" class="btn" data-a="combine">합성 (3개 → 상위)</button>' : '',
+      inBag ? `<button type="button" class="btn d" data-a="move">${c.bag.some((o) => o.id === sel.id) ? '창고로' : '가방으로'}</button>` : '',
+      inBag ? '<button type="button" class="btn d" data-a="drop">버리기</button>' : '',
+    ].join('');
+    ov.querySelector('.ivwin').innerHTML = `<div class="ivh"><h3>${esc(c.name)}<small>Lv.${c.lv} · ${H.name || ''}</small></h3>
+        <div class="ivxp"><i style="width:${Math.min(100, c.xp / need * 100)}%"></i><span>${c.lv >= MAX_LV ? 'MAX' : `EXP ${c.xp} / ${need}`}</span></div>
+        <button type="button" class="btn d" id="invClose">닫기 (I)</button></div>
+      <div class="ivbody">
+        <div class="ivleft"><div class="ivdoll">${doll}</div><div class="ivstats"><small>장비 · 레벨 합계</small><ul>${statLines(st) || '<li>없음</li>'}</ul></div></div>
+        <div class="ivmid"><div class="ivtabs"><button type="button" data-t="bag" class="${tab === 'bag' ? 'on' : ''}">가방</button><button type="button" data-t="stash" class="${tab === 'stash' ? 'on' : ''}">창고</button></div>
+          ${tab === 'bag' ? bagHtml(c.bag, BAG_W, BAG_H, 'bag') : bagHtml(c.stash, STASH_W, STASH_H, 'stash')}</div>
+        <div class="ivtip">${tooltip(sel, c)}<div class="ivacts">${acts}</div></div>
+      </div>`;
+  }
+  function find(c, id) {
+    for (const k of ['bag', 'stash']) { const it = c[k].find((o) => o.id === id); if (it) return { it, where: k }; }
+    for (const s in c.equip) if (c.equip[s] && c.equip[s].id === id) return { it: c.equip[s], where: 'equip', slot: s };
+    return null;
+  }
+  function act(a) {
+    const { db, c } = getChar(invChar); if (!c || !selItem) return;
+    norm(c);
+    const f = find(c, selItem.id); if (!f) return;
+    const it = f.it;
+    const msg = (t, w) => { UI.toast(t, w || ''); };
+    if (a === 'equip') {
+      if (c.lv < it.req) { SFX.play('fail', 0.5); return msg(`요구 레벨 ${it.req} — 현재 Lv.${c.lv}`, 'warn'); }
+      const slot0 = baseOf(it.base).slot, slot = slot0 === 'ring' ? (!c.equip.ring1 ? 'ring1' : !c.equip.ring2 ? 'ring2' : 'ring1') : slot0;
+      c[f.where] = c[f.where].filter((o) => o.id !== it.id);
+      const old = c.equip[slot]; c.equip[slot] = it; delete it.x; delete it.y;
+      if (old && !stow(c, old)) { c.equip[slot] = old; stow(c, it); return msg('가방이 가득 찼습니다', 'warn'); }
+      SFX.play('uiEquip', 0.8);
+    } else if (a === 'unequip') {
+      if (!stow(c, it)) return msg('가방이 가득 찼습니다', 'warn');
+      delete c.equip[f.slot]; SFX.play('uiEquip', 0.6);
+    } else if (a === 'drop') {
+      if (!window.confirm(`${itemName(it)}을(를) 버릴까요?`)) return;
+      c[f.where] = c[f.where].filter((o) => o.id !== it.id); selItem = null;
+    } else if (a === 'move') {
+      const to = f.where === 'bag' ? 'stash' : 'bag', W = to === 'bag' ? BAG_W : STASH_W, H = to === 'bag' ? BAG_H : STASH_H;
+      const rest = c[f.where].filter((o) => o.id !== it.id);
+      if (!place(c[to], W, H, it)) return msg(`${to === 'bag' ? '가방' : '창고'}이 가득 찼습니다`, 'warn');
+      c[f.where] = rest; tab = to;
+    } else if (a === 'combine') {
+      const same = c.bag.concat(c.stash).filter((o) => o.gem === it.gem && o.grade === it.grade).slice(0, 3), ids = new Set(same.map((o) => o.id));
+      c.bag = c.bag.filter((o) => !ids.has(o.id)); c.stash = c.stash.filter((o) => !ids.has(o.id));
+      const up = { id: uid(), gem: it.gem, grade: it.grade + 1, w: 1, h: 1 }; stow(c, up); selItem = up;
+      SFX.play('rankUp', 0.7); msg(`${itemName(up)} 합성`, 'gem');
+    } else if (a === 'socket') { socketing = socketing ? null : it.id; render(); return; }
+    saveAll(db); reapply(GAME.G); render();
+  }
+  function socketInto(target) {
+    const { db, c } = getChar(invChar); if (!c) return;
+    norm(c);
+    const f = find(c, socketing), t = find(c, target.id); socketing = null;
+    if (!f || !t || !isGear(t.it)) return render();
+    if (t.it.socketed.length >= t.it.sockets) { SFX.play('fail', 0.5); UI.toast(t.it.sockets ? '빈 소켓이 없습니다' : '소켓이 없는 장비입니다', 'warn'); return render(); }
+    c[f.where] = c[f.where].filter((o) => o.id !== f.it.id);
+    const s = { gem: f.it.gem, grade: f.it.grade, rune: f.it.rune };
+    Object.keys(s).forEach((k) => s[k] == null && delete s[k]);
+    t.it.socketed.push(s);
+    const w = checkRuneword(t.it);
+    SFX.play(w ? 'pickSS' : 'uiEquip', 0.8);
+    UI.toast(w ? `룬워드 완성 — ${w.name}!` : `${itemName(f.it)} → ${itemName(t.it)}`, 'gem');
+    selItem = t.it; saveAll(db); reapply(GAME.G); render();
+  }
+  function open(on, charId) {
+    const ov = el('#invOv'); if (!ov) return;
+    const G = window.GAME && GAME.G;
+    if (on) {
+      invChar = charId || runChar || (window.STAGE_UI && STAGE_UI.cur && STAGE_UI.cur());
+      if (!invChar) { UI.toast('인벤토리는 오르카 작전 기록(RPG) 모드에서 사용합니다', 'warn'); return; }
+      selItem = null; socketing = null;
+      ov.hidden = false;
+      if (G && G.phase === 'play') { wasPaused = G.paused; G.paused = true; }
+      SFX.play('uiPick', 0.6); render();
+    } else {
+      ov.hidden = true; socketing = null;
+      if (G && G.phase === 'play') G.paused = wasPaused;
+      if (window.STAGE_UI && STAGE_UI.refresh) STAGE_UI.refresh();
+    }
+  }
+  function init() {
+    if (el('#invOv')) return;
+    const ov = document.createElement('div');
+    ov.id = 'invOv'; ov.hidden = true; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', '인벤토리');
+    ov.innerHTML = '<div class="ivwin"></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', (e) => {
+      const t = e.target;
+      if (t.id === 'invClose' || t === ov) return open(false);
+      const tb = t.closest('.ivtabs button'); if (tb) { tab = tb.dataset.t; return render(); }
+      const ab = t.closest('[data-a]'); if (ab) return act(ab.dataset.a);
+      const b = t.closest('.ivit, .ivslot');
+      if (b) {
+        const { c } = getChar(invChar); if (!c) return; norm(c);
+        const it = b.classList.contains('ivslot') ? c.equip[b.dataset.slot] : (find(c, b.dataset.id) || {}).it;
+        if (!it) return;
+        if (socketing && isGear(it)) return socketInto(it);
+        selItem = selItem && selItem.id === it.id ? null : it; socketing = null; render(); SFX.play('uiPick', 0.4);
+      }
+    });
+    // HUD button (in a stage run) and the I key
+    const hb = document.createElement('button');
+    hb.type = 'button'; hb.id = 'btnInv'; hb.textContent = '가방 (I)'; hb.hidden = true;
+    hb.onclick = () => open(true);
+    document.body.appendChild(hb);
+    setInterval(() => { const G = window.GAME && GAME.G; hb.hidden = !(G && G.phase === 'play' && runChar); }, 400);
+    window.addEventListener('keydown', (e) => {
+      if (e.code !== 'KeyI' || (e.target && /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+      const G = window.GAME && GAME.G; if (!G) return;
+      if (!ov.hidden) { open(false); e.preventDefault(); return; }
+      if ((G.phase === 'play' && runChar && !G.choosing) || (G.phase === 'title' && window.STAGE_UI && STAGE_UI.cur && STAGE_UI.cur())) { open(true); e.preventDefault(); }
+    }, true);
+    window.addEventListener('keydown', (e) => { if (!ov.hidden && e.code === 'Escape') { open(false); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+  }
+  window.EQUIP = { onRunStart, onKill, onChest, onBoss, onRunEnd, collect, tex, glow, reapply, open, charStats, xpNeed, genItem, genGem, genRune, itemName, SLOTS, RUNEWORDS, get runChar() { return runChar; } };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();

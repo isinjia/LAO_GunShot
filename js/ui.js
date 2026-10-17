@@ -31,6 +31,9 @@
   const GOAL = { hits: 12, time: 2100 }; // the result screen's 2nd / 3rd stars (also shown in pause and at deploy)
 
   function rankImg(r, big) { return `var(--s-${big ? 'rank' : 'rankb'}${Math.min(3, r)})`; }
+  // the run's goal in words: the farm's B6 command, or the stage (and difficulty) being played
+  function goalPlace() { const G = GAME.G; return G.stageI != null ? `${DATA.STAGES[G.stageI].name}` : '철혈 사령부'; }
+  function goalName() { const G = GAME.G, F = DATA.FLOORS; return G.stageI != null ? `${DATA.STAGES[G.stageI].name}(${F[F.length - 1].key}) 제압 · ${G.diff ? G.diff.name : ''}` : '철혈 사령부(B6) 제압'; }
   function portrait(h) { return `url(${window.IMG[h.img]})`; }
 
   // ── loading ────────────────────────────────────────────
@@ -216,7 +219,7 @@
   function pauseKeysHtml() {
     /* a two-column legend that wraps inside the dialog at any width */
     const rows = [['계속', '<kbd>Esc</kbd>'], ['조준 · 사격', `<kbd>마우스</kbd> · <kbd>왼쪽 버튼</kbd>/<kbd>${K('fire')}</kbd>`], ['회피', `<kbd>오른쪽 버튼</kbd> / ${INPUT.KEY.dodge.slice(0, 3).map((c) => `<kbd>${INPUT.keyName(c)}</kbd>`).join(' ')}`], ['이동', '<kbd>WASD</kbd> / 방향키'],
-      ['보조 스킬 · 궁극기', `<kbd>${K('skill2')}</kbd> · <kbd>${K('skill')}</kbd>`], ['무기 교체', `<kbd>1</kbd>~<kbd>9</kbd> / <kbd>${K('swap')}</kbd> / 휠(위·아래)`], ['재장전', `<kbd>${K('reload')}</kbd>`], ['상호작용 · 버리기', `<kbd>${K('interact')}</kbd>`], ['지도', `<kbd>${K('map')}</kbd> / <kbd>Tab</kbd>`]];
+      ['보조 스킬 · 궁극기', `<kbd>${K('skill2')}</kbd> · <kbd>${K('skill')}</kbd>`], ['무기 교체', `<kbd>1</kbd>~<kbd>3</kbd> / <kbd>${K('swap')}</kbd> / 휠(위·아래)`], ['재장전', `<kbd>${K('reload')}</kbd>`], ['상호작용 · 버리기', `<kbd>${K('interact')}</kbd>`], ['지도', `<kbd>${K('map')}</kbd> / <kbd>Tab</kbd>`]];
     const pad = [['이동 · 조준', '왼쪽 / 오른쪽 스틱'], ['사격 · 회피', '<kbd>RT</kbd> · <kbd>LT</kbd>/<kbd>A</kbd>'], ['궁극기 · 보조', '<kbd>RB</kbd> · <kbd>LB</kbd>'], ['상호작용 · 재장전 · 교체', '<kbd>B</kbd> · <kbd>X</kbd> · <kbd>Y</kbd>'], ['지도 · 메뉴', '<kbd>Back</kbd> · 십자키 + <kbd>A</kbd>']];
     const g = (list) => list.map(([a, b]) => `<span class="kl">${a}</span><span class="kv">${b}</span>`).join('');
     return `<div class="kgrid"><b class="kh">키보드 · 마우스</b>${g(rows)}<b class="kh">게임패드</b>${g(pad)}</div>`;
@@ -584,7 +587,7 @@
     // run-start messages are staggered (the first-run coach panel already covers the controls)
     if (!GAME.G.tut) toast(INPUT.isTouch ? '왼쪽 드래그 이동 · 조준 패드 드래그로 조준·사격' : `마우스 조준 · 좌클릭 사격 · 우클릭/${K('dodge')} 회피 · ${K('skill2')} 보조 스킬 · ${K('skill')} 궁극기`, '');
     keyLabels();
-    setTimeout(() => { if (GAME.G.phase === 'play' && GAME.G.stats && GAME.G.stats.time < 40 && !GAME.G.tut) toast(`작전 목표 — B6 제압 · 피격 ${GOAL.hits}회 이하 · ${GOAL.time / 60}분 이내 (별 3개)`, 'gem'); }, 6500);
+    setTimeout(() => { if (GAME.G.phase === 'play' && GAME.G.stats && GAME.G.stats.time < 40 && !GAME.G.tut) toast(`작전 목표 — ${goalName()} · 피격 ${GOAL.hits}회 이하 · ${GOAL.time / 60}분 이내 (별 3개)`, 'gem'); }, 6500);
   }
 
   // ── HUD ────────────────────────────────────────────────
@@ -756,7 +759,7 @@
       aw.className = ['', 'low', 'low', 'out'][state];
       if (state) {
         aw.t.textContent = state === 3 ? '탄약 없음' : '재장전 필요';
-        aw.k.textContent = state === 3 ? (INPUT.isTouch ? '교체' : `교체 1~9 · 버리기 ${K('interact')}`) : (INPUT.isTouch ? '장전' : K('reload'));
+        aw.k.textContent = state === 3 ? (INPUT.isTouch ? '교체' : `교체 1~3 · 버리기 ${K('interact')}`) : (INPUT.isTouch ? '장전' : K('reload'));
         void aw.offsetWidth; aw.classList.add('pop');
         if (!prev) SFX.synth('blip', 0.7);
       }
@@ -1173,7 +1176,7 @@
     const s = G.stats, tm = Math.floor(s.time), hitsOk = s.hits <= GOAL.hits, timeOk = s.time < GOAL.time;
     const g = (ok, label, v) => `<span class="${ok ? 'ok' : 'no'}"><i></i>${label}<b class="num">${v}</b></span>`;
     const gc = (label, v) => `<span class="cur"><i></i>${label}<b class="num">${v}</b></span>`; // in progress
-    return `<small>작전 목표 · 별 3개</small>${gc('철혈 사령부(B6) 제압', `현재 ${DATA.FLOORS[G.fi].key} / B6`)}${g(hitsOk, `피격 ${GOAL.hits}회 이하`, `${s.hits}회`)}${g(timeOk, `${GOAL.time / 60}분 이내`, `${Math.floor(tm / 60)}:${String(tm % 60).padStart(2, '0')}`)}`;
+    return `<small>작전 목표 · 별 3개</small>${gc(goalName(), `현재 ${DATA.FLOORS[G.fi].key} / ${DATA.FLOORS[DATA.FLOORS.length - 1].key}`)}${g(hitsOk, `피격 ${GOAL.hits}회 이하`, `${s.hits}회`)}${g(timeOk, `${GOAL.time / 60}분 이내`, `${Math.floor(tm / 60)}:${String(tm % 60).padStart(2, '0')}`)}`;
   }
   function pauseSkillsHtml(P) {
     const h = P.hero;
@@ -1245,21 +1248,21 @@
       hb.style.setProperty('--c', hero.color);
       hb.innerHTML = `<i style="background-image:${portrait(hero)}"></i><div><small>${win ? 'MISSION CLEAR' : 'RETREAT'}</small><b>${hero.name}</b><em>Lv.${P.lv} · ${FLOORS[fi].key} ${FLOORS[fi].name} · 강화 ${Object.values(P.up || {}).reduce((a, b) => a + b, 0)}개</em></div>`; }
     const where = `${FLOORS[fi].key} ${FLOORS[fi].name}`;
-    r.querySelector('.reason').textContent = win ? '철혈 사령부를 제압하고 무사히 귀환했습니다!' : s.cause === '작전 포기' ? `${where}에서 작전을 포기하고 귀환했습니다` : `${where}에서 작전 불능 — ${s.cause || '피격'}`; // an abort reads as a retreat, not a defeat
+    r.querySelector('.reason').textContent = win ? `${goalPlace()}을(를) 제압하고 무사히 귀환했습니다!` : s.cause === '작전 포기' ? `${where}에서 작전을 포기하고 귀환했습니다` : `${where}에서 작전 불능 — ${s.cause || '피격'}`; // an abort reads as a retreat, not a defeat
     const stars = win ? 1 + (s.hits <= GOAL.hits) + (s.time < GOAL.time) : 0;
     r.querySelectorAll('.stars i').forEach((st, i) => { st.className = i < stars ? 'on' : ''; st.style.animationDelay = (0.5 + i * 0.25) + 's'; });
     const mm = Math.floor(s.time / 60), ss = Math.floor(s.time % 60);
     const row = (ok, label, v) => `<div class="${ok ? 'ok' : ''}"><i></i>${label}<b>${v}</b></div>`;
     const rowNa = (label, v) => `<div class="na"><i></i>${label}<b>${v}</b></div>`; // not judged on a failed run (neither met nor missed)
     r.querySelector('.ml').innerHTML =
-      row(win, '철혈 사령부 제압', win ? '완료' : `${where}`) +
+      row(win, goalName(), win ? '완료' : `${where}`) +
       (win ? row(s.hits <= GOAL.hits, `피격 ${GOAL.hits}회 이하로 돌파`, `${s.hits}회`) : rowNa(`피격 ${GOAL.hits}회 이하로 돌파`, `피격 ${s.hits}회 · 완주 시 판정`)) +
       (win ? row(s.time < GOAL.time, `${GOAL.time / 60}분 이내 돌파`, `${mm}:${String(ss).padStart(2, '0')}`) : rowNa(`${GOAL.time / 60}분 이내 돌파`, `${mm}:${String(ss).padStart(2, '0')} · 완주 시 판정`));
     const hero = P.hero;
     const line = (label, v, f) => `<div class="ru"><div class="nm"><b>${label}</b></div><div class="v">${v}</div></div>${f != null ? `<div class="gauge"><i style="transform:scaleX(${Math.min(1, f)})"></i></div>` : ''}`;
     r.querySelector('.rteam').innerHTML =
       `<div class="ru hero"><span class="pf" style="background-image:${portrait(hero)}"></span><div class="nm"><b>${hero.name}</b><small>${hero.title}</small></div></div>` +
-      line('처치한 철충', s.kills) + line('가한 피해', Math.round(s.dmg).toLocaleString()) + line('제압한 구역', s.roomsCleared) + line('격파한 보스', `${s.bosses} / ${FLOORS.length}`) +
+      line('처치한 철충', s.kills) + line('가한 피해', Math.round(s.dmg).toLocaleString()) + line('제압한 구역', s.roomsCleared) + line('격파한 보스', `${s.bosses} / ${FLOORS.filter((f) => !f.boss || f.boss.length).length}`) +
       line('획득한 부품', s.gold) + line('획득 데이터 칩 (연구소)', `+${s.chips || 0}`) +
       (s.heat ? line('위험 등급', `${s.heat} (칩 +${s.heat * 25}%)`) : '') +
       (s.heatUp ? `<div class="rgun"><small>신규 개방</small><span style="--c:#ff5a4a">위험 등급 ${s.heatUp} — 타이틀에서 선택</span></div>` : '') +

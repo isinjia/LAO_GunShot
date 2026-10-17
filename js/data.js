@@ -300,7 +300,7 @@
     { id: 'p_armor', name: '보호막 생성기', icon: 'i_check', max: 2, desc: '방어막 +1 (피격 1회 무효)' },
     { id: 'p_chain', name: '연쇄 기폭', icon: 'i_battle', max: 1, desc: '처치한 적이 40% 확률로 폭발해 주변에 피해' },
     { id: 'p_leech', name: '흡혈 탄두', icon: 'i_nutrient', max: 1, desc: '처치 시 5% 확률로 체력 25 회복' },
-    { id: 'p_rollReload', name: '전술 재장전', icon: 'i_time', max: 1, desc: '회피하면 들고 있는 무기가 즉시 재장전' },
+    { id: 'p_rollReload', name: '전술 재장전', icon: 'i_time', max: 1, desc: '회피하면 들고 있는 무기의 탄창 30%를 즉시 채움' },
     { id: 'p_rollBlast', name: '회피 충격파', icon: 'i_power', max: 1, desc: '회피가 끝날 때 충격파 — 주변 적 피해, 적탄 소거' },
     { id: 'p_last', name: '최후의 저항', icon: 'i_skull', max: 1, desc: '체력 50 이하일 때 주는 피해 +40%' },
     // skill upgrades: each hero's ultimate (upF) and support skill (upE) from the original kit

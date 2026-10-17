@@ -139,7 +139,7 @@ $perk:p_hp:desc|Max health +50; heals 50|最大体力+50、50回復|最大生命
 $perk:p_armor:desc|Shield +1 (blocks one hit)|シールド+1（被弾1回無効）|护盾+1（抵挡1次伤害）|護盾+1（抵擋1次傷害）|Escudo +1 (bloquea un golpe)|Escudo +1 (bloqueia um acerto)|Щит +1 (блокирует 1 попадание)
 $perk:p_chain:desc|Kills have a 40% chance to cause a damaging explosion|撃破時40%で周囲に爆発ダメージ|击杀时40%概率范围爆炸|擊殺時40%機率範圍爆炸|40% de explosión al matar|40% de explosão ao eliminar|40% шанс взрыва при убийстве
 $perk:p_leech:desc|5% chance to heal 25 on a kill|撃破時5%で体力25回復|击杀时5%概率恢复25生命|擊殺時5%機率恢復25生命|5% de curar 25 al matar|5% de curar 25 ao eliminar|5% шанс лечения 25 при убийстве
-$perk:p_rollReload:desc|Dodging instantly reloads the equipped weapon|回避で装備武器を即装填|闪避立即装填当前武器|閃避立即裝填當前武器|Esquivar recarga el arma equipada|Esquivar recarrega a arma equipada|Уклонение мгновенно перезаряжает оружие
+$perk:p_rollReload:desc|Dodging instantly refills 30% of the equipped weapon's magazine|回避で装備武器の弾倉を30%即時補充|闪避立即补充当前武器30%弹匣|閃避立即補充當前武器30%彈匣|Esquivar recarga al instante el 30% del cargador|Esquivar recarrega na hora 30% do carregador|Уклонение мгновенно пополняет 30% магазина
 $perk:p_rollBlast:desc|Dodge ends with a damaging, bullet-clearing shockwave|回避終了時に衝撃波、周囲にダメージと敵弾消去|闪避结束时释放冲击波，伤害周围敌人并清弹|閃避結束時釋放衝擊波，傷害周圍敵人並清彈|Esquivar termina con una onda que daña y elimina balas|Esquiva termina com onda que causa dano e apaga balas|В конце уклонения — волна урона и удаления пуль
 $perk:p_last:desc|Damage +40% at 50 health or below|体力50以下でダメージ+40%|生命不高于50时伤害+40%|生命不高於50時傷害+40%|Daño +40% con 50 de salud o menos|Dano +40% com 50 de vida ou menos|Урон +40% при здоровье 50 или ниже
 화력 강화|Firepower Boost|火力強化|火力强化|火力強化|Potencia mejorada|Poder de fogo|Усиление огня

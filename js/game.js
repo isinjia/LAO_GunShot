@@ -356,6 +356,8 @@
   // the hero colour as a hex int, parsed once (was a new THREE.Color per particle)
   // whose voice: 램파리온 broken down to 램파트 speaks with Rampart's own lines
   function vid(P) { return P.form === 'rampart' ? 'rampart' : P.hero.id; }
+  // an ultimate is still running (its own clock, a lasting wall / spray / zone / bind / overdrive): no new charge meanwhile
+  function ultActive(P) { return P.ultT > 0 || P.ultHold > 0 || P.wallT > 0 || P.sprayT > 0 || (P.zone && P.zone.t > 0) || (P.overdrive > 0 && !(P.focusT > 0)); }
   function heroHex(P) { if (P.hex == null) P.hex = new THREE.Color(P.hero.color).getHex(); return P.hex; }
   // saved research levels, sanitised: known ids only, whole numbers clamped to each upgrade's max
   function metaLv() {
@@ -512,6 +514,7 @@
       }
     }
     if (P.ultT > 0) P.ultT -= dt;
+    if (P.ultHold > 0) P.ultHold -= dt;
     if (P.axeOut > 0) P.axeOut -= dt;
     if (P.lrlBeam > 0) P.lrlBeam -= dt;
     if (P.swingT > 0) P.swingT -= dt;
@@ -679,7 +682,7 @@
       const d = moving ? mv : P.lastDir;
       const l = Math.hypot(d[0], d[1]) || 1;
       P.roll = { t: 0, dx: d[0] / l, dy: d[1] / l };
-      if (P.up.p_rollReload) { const cg = P.guns[P.gi]; if (cg && cg.mag < magSize(cg) && (cg.infinite || cg.ammo > 0)) { const need = magSize(cg) - cg.mag, take = cg.infinite ? need : Math.min(need, cg.ammo); cg.mag += take; if (!cg.infinite) cg.ammo -= take; P.reloadT = 0; SFX.play('reloadOut', 0.7); } }
+      if (P.up.p_rollReload) { const cg = P.guns[P.gi]; if (cg && cg.mag < magSize(cg) && (cg.infinite || cg.ammo > 0)) { const need = Math.min(magSize(cg) - cg.mag, Math.max(1, Math.ceil(magSize(cg) * 0.3))), take = cg.infinite ? need : Math.min(need, cg.ammo); cg.mag += take; if (!cg.infinite) cg.ammo -= take; if (cg.mag >= magSize(cg)) P.reloadT = 0; /* 30 % of the magazine per dodge, not a full reload */ SFX.play('reloadOut', 0.7); } }
       P.iframe = Math.max(P.iframe, BAL.rollIframe * (P.mods.ghost ? 1.5 : 1));
       P.rolled = (P.rolled || 0) + 1;
       if (G.room && G.room.active && G.ebul.length) P.rolledCombat = (P.rolledCombat || 0) + 1;
@@ -764,7 +767,7 @@
     if (INPUT.held('fire') && !P.hh && !P.lrlCast && !P.roll && P.reloadT <= 0 && P.fireCd <= 0) {
       if (g.d.noReload || freeAmmo(P) || g.mag > 0) fire(P, g);
       else if (g.ammo > 0) startReload(P, g);
-      else { P.fireCd = 0.3; SFX.synth('empty'); if (!P.emptyWarned) { P.emptyWarned = true; UI.toast('탄약이 없습니다 — 무기를 교체하세요', 'warn'); UI.gunEmpty(); tip('ammo', '탄약 소진', INPUT.isTouch ? '교체 버튼으로 다른 무기로 바꾸세요. 기본 무기는 탄약이 무한합니다. 탄약 상자(초록)로 보충' : `1~9 / ${UI.K('swap')} / 휠로 다른 무기로 바꾸세요. 기본 무기는 탄약이 무한합니다. 빈 무기는 ${UI.K('interact')}로 버릴 수 있습니다(무기는 최대 3개)`); } }
+      else { P.fireCd = 0.3; SFX.synth('empty'); if (!P.emptyWarned) { P.emptyWarned = true; UI.toast('탄약이 없습니다 — 무기를 교체하세요', 'warn'); UI.gunEmpty(); tip('ammo', '탄약 소진', INPUT.isTouch ? '교체 버튼으로 다른 무기로 바꾸세요. 기본 무기는 탄약이 무한합니다. 탄약 상자(초록)로 보충' : `1~3 / ${UI.K('swap')} / 휠로 다른 무기로 바꾸세요. 기본 무기는 탄약이 무한합니다. 빈 무기는 ${UI.K('interact')}로 버릴 수 있습니다(무기는 최대 3개)`); } }
     } else if (!INPUT.held('fire') && g.mag === 0 && g.ammo > 0 && P.reloadT <= 0) startReload(P, g);
   }
 
@@ -1309,7 +1312,7 @@
     const P = G.P;
     SFX.play(crit ? 'hitB' : snd || 'hitM', crit ? 0.8 : 0.5, panOf(e.x));
     const wasReady = P.skill >= 100;
-    if (!(P.ultT > 0 || (P.overdrive > 0 && !(P.focusT > 0)))) P.skill = Math.min(100, P.skill + dmg * 0.075 * P.mods.skill * (e.boss ? 0.7 : 1)); // no charge while the ultimate runs
+    if (!ultActive(P)) P.skill = Math.min(100, P.skill + dmg * 0.075 * P.mods.skill * (e.boss ? 0.7 : 1)); // no charge while the ultimate runs
     if (!wasReady && P.skill >= 100) { tip('ult', `궁극기 — ${P.hero.skillName}`, `${P.hero.skillDesc} · 적에게 피해를 줄수록 다시 충전됩니다`); SFX.play('rankUp', 0.7); UI.toast(`궁극기 준비 완료 — ${P.hero.skillName} (${INPUT.isTouch ? '스킬 버튼' : UI.K('skill')})`, 'gem'); FX.ring(P.x, P.y + 0.8, 0.3, 1.8, heroHex(P), 0.5); }
     // fast guns: hits on one enemy merge into one number every 0.15 s (crits pop at once)
     if (G.opt.dmg) {
@@ -1363,6 +1366,7 @@
     if (silent) { e.noReward = true; } else {
       G.stats.kills++;
       if (!e.boss) gainXp(e.elite ? 10 : 3 + G.ti);
+      if (window.EQUIP) EQUIP.onKill(e);
       if (e.room && e.room.chMode === 'hunt' && e.room.active) e.room.chKills = (e.room.chKills || 0) + 1;
     }
     const cy = e.y + e.h * 0.4;
@@ -1933,6 +1937,7 @@
       spawnChest(r.cx - 3, r.cy + 1.5, Math.min(3, 2 + (G.ti >= 2 ? 1 : 0)), true);
       dropPickup(r.cx + 3, r.cy + 1.5, G.ti >= 2 ? 'half' : 'heart'); // deeper floors heal less: wounds carry into the next floor
       spawnExit(r.cx, r.cy + 1.5);
+      if (window.EQUIP) EQUIP.onBoss(r.cx, r.cy, FLOORS[G.fi].mid);
       SFX.music(G.fi < FLOORS.length - 1 ? 'aftermath' : 'ending');
       SFX.play('win');
       UI.banner('clear', `${e.def.name} 격파`, G.fi < FLOORS.length - 1 ? '승강기를 타고 다음 구역으로 이동하세요' : (G.stageI != null ? `${DATA.STAGES[G.stageI].name} 제압 — 승강기로 귀환하세요` : '철혈 사령부 제압 — 승강기로 귀환하세요'));
@@ -2138,6 +2143,7 @@
       case 'snare': {
         // 콘스탄챠 S2 · 발목 잡기 (with 보리): the target and everything near it is pinned (이동 불가), marked and slowed to act
         const [tx, ty] = aimPoint(P, 6.5), R = 3.2, dur = 4 + upF(P);
+        P.ultHold = dur + 0.3; // no ultimate charge while the bind holds
         { const [x0, y0] = muzzleOf(P); FX.beam(x0, y0, tx, ty, 0.06, 0xd0b8ff, 0.3); FX.muzzleFlash(x0, y0, a, 0xb08cff, 1.6); }
         FX.ring(tx, ty, R, 0.3, 0xb08cff, 0.3); // the target circle closes in before it bites
         boriRun(P, tx, ty, 0.3, 0.9); // 보리 gallops out to the spot and pins it
@@ -2981,12 +2987,12 @@
   }
   function addPickup(x, y, kind, val) {
     const sz = kind === 'gold' ? 0.42 : 0.62;
-    const m = spriteMesh(pickupTex(kind), sz, sz);
+    const m = spriteMesh(kind === 'gear' ? EQUIP.tex(val) : pickupTex(kind), kind === 'gear' ? 0.85 : sz, kind === 'gear' ? 0.85 : sz);
     m.position.set(x, y + 0.3, 0);
     scene.add(m);
     const a = Math.random() * TAU, v = rnd(1.5, 3.5);
     const p = { x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, kind, val, m, t: 0, r: 0.3 };
-    p.glow = FX.sprite({ x, y, size: 0.9, color: (kind.startsWith('ammo_') && AMMO[kind.slice(5)] ? AMMO[kind.slice(5)].hex : 0) || { gold: 0xffcc00, heart: 0xff3355, half: 0xff3355, key: 0xffdd55, armor: 0x2bc4ff, ammo: 0xaaff66 }[kind] || 0xffffff, alpha: 0.25, tex: FX.tex.glow, order: 5 });
+    p.glow = FX.sprite({ x, y, size: kind === 'gear' ? 1.4 : 0.9, color: kind === 'gear' ? EQUIP.glow(val) : (kind.startsWith('ammo_') && AMMO[kind.slice(5)] ? AMMO[kind.slice(5)].hex : 0) || { gold: 0xffcc00, heart: 0xff3355, half: 0xff3355, key: 0xffdd55, armor: 0x2bc4ff, ammo: 0xaaff66 }[kind] || 0xffffff, alpha: 0.25, tex: FX.tex.glow, order: 5 });
     if (G.pickups.length > 150) { /* a ceiling on loose pickups: the oldest loose parts are banked straight away */
       const i = G.pickups.findIndex((q) => q.kind === 'gold');
       if (i >= 0) { const q = G.pickups[i]; G.pickups.splice(i, 1); if (G.P) { G.P.gold += q.val; G.stats.gold += q.val; } killObj(q.m); FX.kill(q.glow); }
@@ -3018,12 +3024,13 @@
   function collect(p) {
     const P = G.P;
     switch (p.kind) {
-      case 'gold': { const v = P.mods.magnet ? Math.ceil(p.val * 1.25) : p.val; P.gold += v; G.stats.gold += v; } SFX.play(Math.random() < 0.5 ? 'coin' : 'uiCoin', 0.8); FX.particle({ x: p.x, y: p.y + 0.4, vy: 1.5, life: 0.4, size: 0.3, size1: 0.1, color: 0xffd34d, tex: FX.tex.glow }); return true;
+      case 'gold': { const v = Math.ceil((P.mods.magnet ? p.val * 1.25 : p.val) * (1 + (P.gearGold || 0))); P.gold += v; G.stats.gold += v; } SFX.play(Math.random() < 0.5 ? 'coin' : 'uiCoin', 0.8); FX.particle({ x: p.x, y: p.y + 0.4, vy: 1.5, life: 0.4, size: 0.3, size1: 0.1, color: 0xffd34d, tex: FX.tex.glow }); return true;
       case 'heart': case 'half':
         if (P.hp >= P.maxHp) return false;
         P.hp = Math.min(P.maxHp, P.hp + (p.kind === 'heart' ? 2 : 1));
         SFX.play('reinforce'); FX.ring(P.x, P.y + 0.6, 0.2, 1.2, 0xff4060, 0.4); UI.toast(p.kind === 'heart' ? '체력 +50' : '체력 +25', 'gem'); if (p.kind === 'heart') SFX.voice(vid(P), 'Repair'); return true;
       case 'armor': P.armor++; SFX.play('ice'); UI.toast('방어막 +1', 'gem'); return true;
+      case 'gear': return EQUIP.collect(p.val);
       case 'key': P.keys++; SFX.play('uiEquip', 0.8); UI.toast('열쇠 획득', 'gem'); return true;
       default: {
         if (!p.kind.startsWith('ammo_')) return true;
@@ -3079,6 +3086,7 @@
     SFX.play(o.rank >= 2 ? 'genSS' : 'genS'); SFX.play('uiEquip', 0.7);
     if (o.rank >= 2) SFX.voice(vid(P), 'PresentGet');
     FX.summonBurst(o.x, o.y + 0.5, Math.min(4, o.rank + 1), RANKS[o.rank].hex);
+    if (window.EQUIP) EQUIP.onChest(o);
     const loot = rollLoot(o.rank + (P.mods.lucky && Math.random() < 0.35 ? 1 : 0));
     if (loot.kind === 'gold') { dropPickup(o.x, o.y, 'gold', 30); return; }
     spawnPedestal(o.x, o.y, loot);
@@ -3731,7 +3739,7 @@
       const away = Math.hypot(P.x - r.cx, P.y - r.cy) < 2.6 ? [r.cx + (P.x < r.cx ? 3 : -3), r.cy] : [r.cx, r.cy];
       spawnChest(away[0], away[1], Math.min(3, 1 + (G.ti >= 2 ? 1 : 0) + (Math.random() < 0.25 ? 1 : 0)), true);
       dropPickup(away[0], away[1] - 1, 'gold', 10 + G.ti * 4);
-      if (!(P.ultT > 0 || P.overdrive > 0)) P.skill = Math.min(100, P.skill + 20 * P.mods.skill);
+      if (!ultActive(P)) P.skill = Math.min(100, P.skill + 20 * P.mods.skill);
       return;
     }
     UI.banner('room', '구역 제압 완료', '');
@@ -3745,7 +3753,7 @@
     else if (roll < 0.47 - G.ti * 0.015) dropPickup(r.cx, r.cy, 'armor');
     else if (roll < 0.58) spawnChest(r.cx, r.cy, 0, true);
     dropPickup(r.cx, r.cy, 'gold', Math.round((4 + G.ti * 2) * (G.P.mods.lucky ? 1.5 : 1))); /* 행운의 참치 counts here too */
-    if (!(P.ultT > 0 || P.overdrive > 0)) P.skill = Math.min(100, P.skill + 8 * P.mods.skill);
+    if (!ultActive(P)) P.skill = Math.min(100, P.skill + 8 * P.mods.skill);
   }
   function startBoss(r) {
     const key = G.bossKeys[G.fi];
@@ -3853,7 +3861,7 @@
     {
       const lines = INPUT.isTouch
         ? [['이동', '왼쪽 화면 드래그'], ['조준 · 사격', '조준 패드를 누른 채 드래그'], ['회피', '구르는 동안 무적'], ['스킬 · 보조', '스킬 / 보조 버튼']]
-        : [['조준 · 사격', '마우스 이동 · 왼쪽 버튼'], ['이동', 'W A S D / 방향키'], ['회피', `오른쪽 버튼 / ${UI.K('dodge').toUpperCase()}`], ['궁극기 · 보조 스킬', `${UI.K('skill')} · ${UI.K('skill2')}`], ['교체 · 재장전 · 상호작용', `1~9 · ${UI.K('reload')} · ${UI.K('interact')}`], ['전술 지도', UI.K('map').toUpperCase()]];
+        : [['조준 · 사격', '마우스 이동 · 왼쪽 버튼'], ['이동', 'W A S D / 방향키'], ['회피', `오른쪽 버튼 / ${UI.K('dodge').toUpperCase()}`], ['궁극기 · 보조 스킬', `${UI.K('skill')} · ${UI.K('skill2')}`], ['교체 · 재장전 · 상호작용', `1~3 · ${UI.K('reload')} · ${UI.K('interact')}`], ['전술 지도', UI.K('map').toUpperCase()]];
       const tex = canvasTex('guide' + (INPUT.isTouch ? 't' : 'k') + '2' + lines.map((l) => l[1]).join(), 1024, 470, (g, w, h) => {
         g.textAlign = 'left'; g.textBaseline = 'middle';
         const big = INPUT.isTouch; /* phones: four lines at a larger size, readable on a small screen */
@@ -4015,6 +4023,7 @@
     G.stats = { kills: 0, dmg: 0, rooms: 0, roomsCleared: 0, gold: 0, shots: 0, hits: 0, blanks: 0, skills: 0, items: 0, bosses: 0, guns: new Set(), time: 0, cause: '', src: {} };
     if (G.rollRing) { G.rollRing.dispose(); G.sk2Ring.dispose(); G.rollRing = G.sk2Ring = null; }
     G.P = newPlayer(heroIdx);
+    if (window.EQUIP) EQUIP.onRunStart(G); // RPG mode: the character's gear and level
     clearShow();
     if (G.showDeco) { G.showDeco.bg.visible = G.showDeco.plat.visible = false; G.showDeco.glow.hidden = true; }
     G.phase = 'play';
@@ -4050,6 +4059,7 @@
       m.v = 2;
       localStorage.setItem('lao_rogue_meta', JSON.stringify(m));
     } catch (e) { /* no storage */ }
+    if (window.EQUIP) EQUIP.onRunEnd(G, win);
     G.phase = win ? 'win' : 'dead';
     SFX.music(null);
     if (win) { SFX.play('win'); const run = G.stats; setTimeout(() => { if (G.phase === 'win' && G.stats === run) SFX.music('ending'); }, 2500); } // a quick retry keeps its own music
@@ -4673,6 +4683,7 @@
     get scene() { return scene; }, get renderer() { return renderer; }, get camera() { return camera; },
     curGun, magSize, maxAmmo, sk2Cool, applyItem, giveGun, spawnPedestal, hurtPlayer, refreshHints: () => refreshHints(), canvasRect: () => rectOf(), redraw: () => { frozenDrawn = false; }, recolorBullets: () => recolorBullets(), skipTutorial: () => tutorialEnd(true), rebuildGuide: () => rebuildGuide(),
     choosePerk, xpNeed, teleportTo,
+    dropGear: (x, y, it) => addPickup(x, y, 'gear', it), applyGear: () => window.EQUIP && EQUIP.reapply(G),
     debug: { sim, xp: (n) => gainXp(n), spawnEnemy, killAll: () => G.enemies.forEach((e) => { if (e.alive) { e.hp = 0; killEnemy(e); } }), give: (id) => giveGun(G.P, id), item: (id) => applyItem(G.P, id), next: nextFloor, tp: (type) => { const r = G.lv.rooms.find((x) => x.type === type); if (r) { G.P.x = r.cx; G.P.y = r.y0 + 1.2; } } },
   };
 })();
