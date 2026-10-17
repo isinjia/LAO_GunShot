@@ -146,7 +146,7 @@
     const b = pick(pool);
     // unique / set: 1.2 % from trash, more from elites / chests / bosses (minRar 0-3); otherwise the tier roll
     const roll = Math.random() + (minRar || 0) * 0.15;
-    if (forceU || Math.random() < 0.0045 + (minRar || 0) * 0.015) {
+    if (forceU || Math.random() < 0.003 + (minRar || 0) * 0.015) {
       const u = UNIQUES.concat(SET_ITEMS).filter((x) => x.req <= ilvl + 4);
       if (u.length) { const q = pick(u), B = baseOf(q.base); return { id: uid(), base: B.id, name: q.name, rar: q.set ? 'set' : 'unique', set: q.set || null, ilvl, req: q.req, stats: { ...q.stats }, base_: scaleBase(B, ilvl), sockets: Math.min(B.sock, ri(0, 1)), socketed: [], w: B.w, h: B.h }; }
     }
@@ -298,7 +298,7 @@
     if (P && P.gearVamp && P.hp < P.maxHp && Math.random() < P.gearVamp) { P.hp++; SFX.play('reinforce', 0.4); } // 흡혈: a kill can mend half a heart
     const lv = ilvlNow(), r = Math.random();
     if (e.golden) { // 보물 철충 jackpot
-      for (let i = 0; i < 4; i++) drop(e.x + Math.cos(i * 1.6) * 1.2, e.y + Math.sin(i * 1.6) * 1.2, genItem(lv + 2, i ? 2 : 3, i === 0 && Math.random() < 0.25));
+      for (let i = 0; i < 4; i++) drop(e.x + Math.cos(i * 1.6) * 1.2, e.y + Math.sin(i * 1.6) * 1.2, genItem(lv + 2, i ? 2 : 3, i === 0 && Math.random() < 0.2));
       drop(e.x, e.y + 1.4, genGem(lv + 4)); drop(e.x + 1, e.y - 1, genGem(lv + 4)); drop(e.x - 1, e.y - 1, genRune(lv + 6));
       const db = load(), c = db.list.find((x) => x.id === runChar); if (c) { const A = loadAcct(); localStorage.setItem(VAULT_KEY, JSON.stringify({ v: 1, list: A.list, mats: A.mats + 40 })); }
       UI.banner('clear', '보물 철충 처치!', '장비 4 · 보석 2 · 룬 1 · 재료 +40'); SFX.play('pickSS', 1);
@@ -312,7 +312,7 @@
   function onBoss(x, y, mid) {
     if (!runChar) return;
     const lv = ilvlNow() + (mid ? 0 : 3);
-    for (let i = 0; i < (mid ? 1 : 2); i++) drop(x + (i - 1) * 1.6, y - 1.2, genItem(lv, mid ? 1 : 2, Math.random() < 0.03));
+    for (let i = 0; i < (mid ? 1 : 2); i++) drop(x + (i - 1) * 1.6, y - 1.2, genItem(lv, mid ? 1 : 2, Math.random() < 0.02));
     drop(x, y - 2.4, genRune(lv + 4)); if (Math.random() < 0.6) drop(x + 1.6, y - 2.4, genGem(lv));
   }
   // picked up: straight into the character's save (never lost, win or lose)

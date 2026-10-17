@@ -400,7 +400,7 @@
         h.cd = (h.cd || 0) - dt; h.inT = inside ? (h.inT || 0) + dt : 0; // a step in is free: the burn starts after 0.6 s on it
         if (inside && h.inT > 0.6) {
           if (Math.random() < dt * 10) FX.particle({ x: P.x + rnd(-0.3, 0.3), y: P.y + 0.15, vy: rnd(0.6, 1.4), life: 0.45, size: 0.22, size1: 0, color: H.col, tex: FX.tex.glow, alpha: 0.85 });
-          if (h.cd <= 0 && P.iframe <= 0 && !P.roll) { h.cd = H.every * (G.diff && G.diff.id === 'hard' ? 0.85 : 1); hurtPlayer(H.name, H.dmg); } // hazards wear you down but never land the killing blow
+          if (h.cd <= 0 && P.iframe <= 0 && !P.roll) { h.cd = H.every * (G.diff && G.diff.id === 'hard' ? 0.85 : 1); if (G.fi > 0 || P.hp > 1 || P.armor > 0) hurtPlayer(H.name, H.dmg); } // hazards wear you down but never land the killing blow
         }
       }
       if (H.period && h.room === rid) { // power pads: charge (sparks), then discharge — the iron bugs standing on them get it too
@@ -409,7 +409,7 @@
         if (ph > H.period - H.warn && Math.random() < dt * 14) FX.particle({ x: h.x + rnd(-h.rx, h.rx) * 0.8, y: h.y + rnd(-h.ry, h.ry) * 0.8, life: 0.25, size: 0.35, size1: 0.6, frames: FX.sheets.bolt, color: H.col, alpha: 0.85 });
         if (h.lastPh != null && ph < h.lastPh) {
           FX.ring(h.x, h.y + 0.1, 0.2, Math.max(h.rx, h.ry) * 1.3, H.col, 0.3); SFX.play('elec', 0.35);
-          if (inside && P.iframe <= 0 && !P.roll) hurtPlayer(H.name, H.dmg);
+          if (inside && P.iframe <= 0 && !P.roll && (G.fi > 0 || P.hp > 1 || P.armor > 0)) hurtPlayer(H.name, H.dmg);
           for (const e of G.enemies) if (e.alive && !e.boss && ((e.x - h.x) / h.rx) ** 2 + ((e.y - h.y) / h.ry) ** 2 < 1) { hurtEnemy(e, 40, false, 0, 0, 'hitE'); e.stun = Math.max(e.stun || 0, 0.6); }
         }
         h.lastPh = ph;
@@ -417,7 +417,7 @@
     }
   }
   // the difficulty's HP bonus eases off in later stages: their own tiers and the gear gate already raise the bar there
-  function diffHp() { const k = G.diff.hp - 1; return (1 + k) * (1 + (G.stageI >= 3 ? 0.16 : 0.12) * (G.stageI || 0)); }
+  function diffHp() { const k = G.diff.hp - 1; return (1 + k) * (1 + (G.fi === 0 ? 0.12 : G.stageI >= 4 ? 0.2 : G.stageI >= 3 ? 0.16 : 0.12) * (G.stageI || 0)) * (G.stageI === 2 ? 0.8 : 1) * (G.stageI === 4 && G.fi > 0 ? 1.08 : 1) * (G.stageI === 3 && G.fi !== 2 ? 1.1 : 1); }
   // 보물 철충 (the stage mode's golden goblin): a gilded runner that never fights back, flees the hero and slips away after
   // 14 s; brought down in time it bursts into a jackpot (equip.js onKill: rare+ gear, gems, runes, 재료)
   function spawnGolden(r) {
@@ -425,7 +425,7 @@
     const p = freeSpot(r.cx + rnd(-3, 3), r.cy + rnd(-2, 2), r); if (!p) return;
     const e = spawnEnemy(pool.includes('pupp') ? 'pupp' : pool[0], p[0], p[1]);
     if (!e) return;
-    e.golden = true; e.goldT = 15; e.maxHp = e.hp = Math.max(e.maxHp * 6, 260 * (1 + G.ti * 0.6)) * (G.diff ? diffHp() : 1); e.r *= 1.15;
+    e.golden = true; e.goldT = G.diff && G.diff.id === 'hard' ? 18 : G.diff && G.diff.id === 'normal' ? 16 : 15; e.maxHp = e.hp = Math.max(e.maxHp * 6, 260 * (1 + G.ti * 0.6)) * (G.diff ? (1 + 0.5 * (diffHp() - 1)) * (G.diff.id === 'hard' ? 0.8 : G.diff.id === 'normal' ? 0.9 : 1) : 1); e.r *= 1.15;
     e.room = r; G.stats.golden = (G.stats.golden || 0) + 1;
     UI.banner('room', '보물 철충 출현!', '14초 안에 처치하면 대량의 장비'); SFX.play('rankUpSS', 0.8);
     FX.ring(e.x, e.y + 0.5, 0.3, 3.5, 0xffd040, 0.5);
@@ -439,7 +439,7 @@
       UI.toast('보물 철충이 도망쳤습니다', 'warn'); G.stats.goldenLost = (G.stats.goldenLost || 0) + 1; e.hp = 0; killEnemy(e, true); return;
     }
     if (e.stun > 0) { e.stun -= dt; return; }
-    const dx = e.x - P.x, dy = e.y - P.y, d = Math.hypot(dx, dy) || 1, sp = 4.2 * (e.slowT > 0 ? 0.5 : 1);
+    const dx = e.x - P.x, dy = e.y - P.y, d = Math.hypot(dx, dy) || 1, sp = 3.8 * (e.slowT > 0 ? 0.5 : 1);
     const wob = Math.sin(e.t * 3) * 0.6; // a zig-zag dash away from the hero
     LEVEL.move(e, (dx / d - dy / d * wob) * sp * dt, (dy / d + dx / d * wob) * sp * dt);
     e.face = dx >= 0 ? 1 : -1;
@@ -1333,7 +1333,7 @@
   function spawnEnemy(defKey, x, y, opts = {}) {
     const def = ENEMIES[defKey] || ELITES[defKey] || BOSSES[defKey];
     const F = FLOORS[G.fi];
-    const hpMul = (G.diff ? diffHp() * (opts.boss && FLOORS[G.fi].mid ? 0.8 : opts.boss ? 1.1 : 1) : 1) * (opts.boss ? FLOOR_BOSS_HP[G.ti] * clamp(def.hp / 1300, 0.8, G.ti <= 2 ? 1.0 : 1.25) / def.hp : F.hpMul * (1 + G.stats.roomsCleared * 0.005)) * (1 + (G.heat || 0) * 0.15);
+    const hpMul = (G.diff ? diffHp() * (opts.boss && FLOORS[G.fi].mid ? 0.8 : opts.boss ? [1, 1.1, 1.25][['easy', 'normal', 'hard'].indexOf(G.diff.id)] : 1) : 1) * (opts.boss ? FLOOR_BOSS_HP[G.ti] * clamp(def.hp / 1300, 0.8, G.ti <= 2 ? 1.0 : 1.25) / def.hp : F.hpMul * (1 + G.stats.roomsCleared * 0.005)) * (1 + (G.heat || 0) * 0.15);
     const e = {
       key: defKey, def, x, y, r: def.r, h: def.h, hp: def.hp * hpMul, maxHp: def.hp * hpMul, alive: true, spawnT: opts.boss ? 0 : 0.9,
       fireT: rnd(0.8, 1.6) * (def.rate || 2), t: 0, vx: 0, vy: 0, kx: 0, ky: 0, flash: 0, face: -1, seq: [], state: 'idle', stun: 0,
@@ -1525,7 +1525,7 @@
   const BSPD = [0.95, 0.98, 1.0, 1.03, 1.07, 1.1]; // enemy bullet speed per floor
   const DENS = [0.44, 0.6, 0.7, 0.96, 1.2, 1.4]; // boss bullet density per floor
   // stage mode threat: easy final bosses breathe, hard packs +30 % bullets, +4 %/stage
-  function threat() { if (!G.diff) return 1; return [0.85, 1.0, 1.3][['easy', 'normal', 'hard'].indexOf(G.diff.id)] * (1 + 0.04 * (G.stageI || 0)) * (FLOORS[G.fi] && FLOORS[G.fi].mid ? 0.85 : G.fi === FLOORS.length - 1 ? 1.15 : 1); }
+  function threat() { if (!G.diff) return 1; return [0.85, 1.0, 1.3][['easy', 'normal', 'hard'].indexOf(G.diff.id)] * (1 + 0.04 * (G.stageI || 0)) * (FLOORS[G.fi] && FLOORS[G.fi].mid ? (FLOORS[G.fi].bossKey === 'nightqueen' ? 0.7 : FLOORS[G.fi].bossKey === 'executioner' && G.diff.id === 'hard' ? 0.72 : 0.85) : G.fi === FLOORS.length - 1 ? [1, 1.05, 1.2][['easy', 'normal', 'hard'].indexOf(G.diff.id)] : 1); }
   // enemy bullets keep to warm / violet hues so they never read as the player's yellow-cyan tracers
   const EB_COL = { n: 0xff2d6a, o: 0xff3fb8, b: 0xb06bff, y: 0xff5fe0, p: 0xc35bff }; /* every enemy shot sits in the pink-violet family: warm amber belongs to the player */
   // high-contrast option: one saturated magenta family, larger dark rim (red-green / blue-yellow safe)
@@ -1546,7 +1546,7 @@
     if (G.ebul.length > 640) return null; // a high ceiling: patterns are density-scaled, so this only guards runaway cases
     const cb = G.opt.cbBullets, col = (cb ? EB_CB : EB_COL)[o.c || 'n'], size = o.size || 0.3;
     const b = {
-      x, y, vx: Math.cos(ang) * speed * BSPD[G.ti] * (G.diff ? G.diff.bspd : 1) * (1 + (G.heat || 0) * 0.04), vy: Math.sin(ang) * speed * BSPD[G.ti] * (G.diff ? G.diff.bspd : 1) * (1 + (G.heat || 0) * 0.04), r: size * 0.55, life: o.life || 6, t: 0,
+      x, y, vx: Math.cos(ang) * speed * BSPD[G.ti] * (G.diff ? G.diff.bspd * (G.stageI === 4 && (G.fi === 2 || G.fi === 3) ? 1.05 : 1) : 1) * (1 + (G.heat || 0) * 0.04), vy: Math.sin(ang) * speed * BSPD[G.ti] * (G.diff ? G.diff.bspd * (G.stageI === 4 && (G.fi === 2 || G.fi === 3) ? 1.05 : 1) : 1) * (1 + (G.heat || 0) * 0.04), r: size * 0.55, life: o.life || 6, t: 0,
       src: G.shooter, acc: o.acc || 0, homing: o.homing || 0, curve: o.curve || 0, delay: o.delay || 0,
       ol: FX.sprite({ x, y, size: size * (cb ? 2.4 : 2.15), color: cb ? 0x000000 : 0x0c0208, alpha: cb ? 1 : 0.92, tex: FX.tex.dot, normal: true, order: L.PROJ + 0.9 }),
       s: FX.sprite({ x, y, size: size * 2.3, color: col, alpha: 0.95, tex: FX.tex.glow, order: L.PROJ + 1 }),
@@ -1832,7 +1832,7 @@
       // firing
       e.fireT -= dt;
       if (e.fireT <= 0 && seeP && dist < 13 && e.state !== 'charge' && e.state !== 'wind' && def.ai !== 'kamikaze') {
-        e.fireT = def.rate * rnd(0.85, 1.2) * [0.9, 0.84, 0.84, 0.72, 0.63, 0.57][G.ti] * (G.diff ? G.diff.rate : 1) * (1 - (G.heat || 0) * 0.05); // later floors fire faster again (the curve keeps rising to B6)
+        e.fireT = def.rate * rnd(0.85, 1.2) * [0.9, 0.84, 0.84, 0.72, 0.63, 0.57][G.ti] * (G.diff ? (G.fi === 0 ? Math.max(G.diff.rate, 0.75) : G.diff.rate) : 1) * (1 - (G.heat || 0) * 0.05); // later floors fire faster again (the curve keeps rising to B6)
         if (def.ai !== 'charger' || Math.random() < 0.5) {
           G.shooter = def.name; PATTERNS[def.fire](e);
           if (e.body && e.body.c.has('atk')) e.body.c.play('atk');
@@ -1905,7 +1905,7 @@
     if (!P.dead && P.iframe <= 0 && Math.hypot(P.x - e.x, P.y - e.y) < e.r + P.r) hurtPlayer(def.name, G.ti >= 2 ? 2 : 1);
     // enrage after 180 s: faster patterns, but its plating burns away (0.6 %/s) so an under-geared run can't soft-lock
     e.bt = (e.bt || 0) + dt;
-    if (e.bt > 150) { if (!e.enraged) { e.enraged = true; UI.toast('보스 폭주 — 장갑이 붕괴합니다', 'warn'); } e.hp -= e.maxHp * 0.006 * dt; if (e.hp <= 0) { killEnemy(e); return; } }
+    if (e.bt > 120) { if (!e.enraged) { e.enraged = true; UI.toast('보스 폭주 — 장갑이 붕괴합니다', 'warn'); } e.hp -= e.maxHp * 0.006 * dt; if (e.hp <= 0) { killEnemy(e); return; } }
     // patterns
     e.patT = (e.patT || 1.5) - dt;
     if (e.patT <= 0 && !e.dash && !e.seq.length) {
@@ -1915,7 +1915,7 @@
       if (p === e.lastPat && Math.random() < 0.7) p = pats[(pats.indexOf(p) + 1) % Math.min(pats.length, 2 + phase * 2)];
       e.lastPat = p;
       BOSS_PAT[p](e, phase);
-      e.patT = ([1.7, 1.72, 1.58, 1.4, 1.26, 1.18][G.ti] - phase * 0.16) * (e.bt > 150 ? 0.72 : 1); /* B2/B3 bosses breathe more: any of them can be drawn this early */
+      e.patT = ([1.7, 1.72, 1.58, 1.4, 1.26, 1.18][G.ti] - phase * 0.16) * (e.bt > 120 ? 0.72 : 1); /* B2/B3 bosses breathe more: any of them can be drawn this early */
       if (e.body && e.body.c.has('atk')) e.body.c.play('atk'); // (some original skill clips hide the body for a cut-in)
     }
     if (e.body && (e.body.c.clipName === 'idle' || e.body.c.clipName === 'move')) { if (e.body.c.clipName !== 'move' && e.body.c.has('move')) e.body.c.play('move', null, true); }
@@ -2056,7 +2056,7 @@
   // dmg in half-hearts: trash bullets 1, heavy hits (boss body slams, explosions) 2 — armor still soaks one whole hit
   function hurtPlayer(src, dmg = 1) {
     dmg = Math.max(1, Math.min(4, Math.round(Number(dmg)) || 1)); src = String(src || '알 수 없는 공격');
-    if (G.diff && G.fi >= 2 && dmg === 1 && !/바닥|구역|균열|웅덩이|패드/.test(src) && Math.random() < ({ normal: 0.1, hard: 0.6 }[G.diff.id] || 0) + (G.diff.id === 'easy' ? 0 : 0.05 * (G.stageI || 0))) dmg = 2; // 보통 / 어려움: some hits bite for two, more each stage (hazards never)
+    if (G.diff && G.fi >= 2 && dmg === 1 && !/바닥|구역|균열|웅덩이|패드|램파트/.test(src) && Math.random() < ({ normal: 0.15, hard: 0.55 }[G.diff.id] || 0) + (G.diff.id === 'easy' ? 0 : 0.05 * (G.stageI || 0) + (G.stageI === 4 && G.fi >= 3 ? 0.1 : 0))) dmg = 2; // 보통 / 어려움: some hits bite for two, more each stage (hazards never)
     if (G.P) G.P.beats = 0; // a new hit re-arms the low-health heartbeat
     const P = G.P;
     if (!P || P.dead || P.scud || P.iframe > 0 || G.phase !== 'play') return;
@@ -3978,7 +3978,7 @@
       const pool = F.enemies;
       const list = [];
       for (let i = 0; i < n; i++) list.push(pool[Math.floor(Math.random() * pool.length)]);
-      if (F.elites.length && w === waves - 1 && (r.guard && !(G.diff && G.fi === 0) || Math.random() < (0.4 + G.ti * 0.1) * (G.diff && G.diff.id === 'hard' ? 1.8 : 1) * (G.diff && G.fi === 0 ? 0.5 : 1))) { list.splice(0, 2, F.elites[Math.floor(Math.random() * F.elites.length)]); }
+      if (F.elites.length && w === waves - 1 && (r.guard && !(G.diff && G.fi === 0) || Math.random() < (0.4 + G.ti * 0.1) * (G.diff && G.diff.id === 'hard' ? 1.8 : 1) * (G.diff && G.fi === 0 ? 0.5 : G.diff && G.fi === 2 ? (G.stageI >= 3 ? 0.65 : 0.8) : 1) * (G.stageI === 4 ? 1.2 : 1))) { list.splice(0, 2, F.elites[Math.floor(Math.random() * F.elites.length)]); }
       // the last two floors can field an elite pair
       if (F.elites.length && G.ti >= 2 && w === 0 && waves > 1 && Math.random() < (G.ti >= 4 ? 0.4 : 0.25)) /* mid floors meet a second elite now and then */ { list.splice(0, 2, F.elites[Math.floor(Math.random() * F.elites.length)]); }
       r.waves.push(list);
@@ -4411,6 +4411,7 @@
     G.stats = { kills: 0, dmg: 0, rooms: 0, roomsCleared: 0, gold: 0, shots: 0, hits: 0, blanks: 0, skills: 0, items: 0, bosses: 0, guns: new Set(), time: 0, cause: '', src: {} };
     if (G.rollRing) { G.rollRing.dispose(); G.sk2Ring.dispose(); G.rollRing = G.sk2Ring = null; }
     G.P = newPlayer(heroIdx);
+    if (G.stageI != null) { const id = G.P.hero.id; if (id === 'brownie' || id === 'nymph') { G.P.maxHp++; G.P.hp++; if (id === 'nymph') G.P.mods.dmg *= 1.25; } else if (id === 'leprechaun') { G.P.armor = 0; G.P.maxHp = Math.max(1, G.P.maxHp - 1); G.P.hp = Math.min(G.P.hp, G.P.maxHp); } } // stage-mode hero parity (classic numbers untouched)
     if (window.EQUIP) EQUIP.onRunStart(G); // RPG mode: the character's gear and level
     clearShow();
     if (G.showDeco) { G.showDeco.bg.visible = G.showDeco.plat.visible = false; G.showDeco.glow.hidden = true; }
