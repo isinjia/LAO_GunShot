@@ -6,10 +6,10 @@ from PIL import Image
 F = "E:/LAO_Google_QA/Assets/AssetBundleResourceSub/Texture/FullbodyImg/"
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "ui")
 M = {"brownie": "FullbodyIMG_BR_Brownie_N", "leprechaun": "FullbodyIMG_BR_Leprechaun_N", "nymph": "FullbodyIMG_BR_Nymph_N",
-     "kheshig": "FullbodyIMG_BR_Kheshig_N", "gnome": "FullbodyIMG_BR_Gnome_N", "constantia": "../../Character_2D/2DModel_3P_ConstantiaS2_NS1/FullbodyIMG_3P_ConstantiaS2_NS1",
+     "kheshig": "FullbodyIMG_BR_Kheshig_N", "gnome": "FullbodyIMG_BR_Gnome_N", "constantia": "FullbodyIMG_3P_ConstantiaS2_NS0",
      "blacklilith": "FullbodyIMG_3P_BlackLilith_N"}
 # hand-picked crops where the auto head finder is fooled (weapons / parts above the head): head centre x, top y, height (fractions of the figure box)
-CROP = {"nymph": (0.62, 0.0, 0.36), "kheshig": (0.2, 0.0, 0.36), "constantia": (0.5, 0.0, 0.32)}
+CROP = {"nymph": (0.62, 0.0, 0.36), "kheshig": (0.2, 0.0, 0.36)}
 
 
 def head_x(a, y0, y1):
