@@ -5,7 +5,7 @@ from PIL import Image
 
 F = "E:/LAO_Google_QA/Assets/AssetBundleResourceSub/Texture/FullbodyImg/"
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "ui")
-# constantia: her base (maid) outfit only exists as a parts atlas in the original, so she keeps the in-game portrait
+# constantia: assets/ui/fb_constantia.webp is cropped by hand from the base-outfit art the user supplied (not built here)
 M = {"brownie": "FullbodyIMG_BR_Brownie_N", "leprechaun": "FullbodyIMG_BR_Leprechaun_N", "nymph": "FullbodyIMG_BR_Nymph_N",
      "kheshig": "FullbodyIMG_BR_Kheshig_N", "gnome": "FullbodyIMG_BR_Gnome_N",
      "blacklilith": "FullbodyIMG_3P_BlackLilith_N"}

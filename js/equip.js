@@ -381,7 +381,7 @@
   }
   // the bag grid always fits its column: render, measure the column, re-render with a cell that fits (phones, landscape or portrait)
   let cellFit = 0;
-  const FULLBODY = ['brownie', 'leprechaun', 'nymph', 'kheshig', 'gnome', 'blacklilith']; // original full-body art (assets/ui/fb_*.webp, build: tools/build_fullbody.py)
+  const FULLBODY = ['brownie', 'leprechaun', 'nymph', 'kheshig', 'gnome', 'constantia', 'blacklilith']; // original full-body art (assets/ui/fb_*.webp, build: tools/build_fullbody.py)
   function render() {
     cellFit = 0; render0();
     { const o = el('#invOv'); if (o) o.classList.toggle('tipon', !!selItem); }
