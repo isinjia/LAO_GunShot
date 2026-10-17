@@ -13,3 +13,12 @@ const normalize=game.slice(game.indexOf('    heroIdx = Math.floor(Number(heroIdx
 const deploy=new Function('heroIdx','ALLH','HEROES','UI','const G={};'+normalize+';return G.heroIdx;');
 const index=c.HEROES.length+c.DATA.HIDDEN.indexOf(black),all=[...c.HEROES,...c.DATA.HIDDEN];assert.equal(deploy(index,all,c.HEROES,c),index);run('blackLilithUnlocked=false');assert.equal(deploy(index,all,c.HEROES,c),0);
 console.log('PASS: cheat activation required; Korean keyboard sequence/English alias; automatic selection; deployment guard; random availability stays disabled.');
+
+run('cheatsOn=false;blackLilithUnlocked=false;forcedHidden=null');
+assert.equal(c.applyTitleCode('블랙리리스'),'치트를 먼저 활성화하세요');
+assert.equal(c.hiddenAllowed(black),false);
+assert.equal(c.applyTitleCode('치트활성화'),'치트 활성화');
+assert.equal(c.applyTitleCode('블랙 리리스'),'블랙 리리스 선택 완료');
+assert.equal(c.hiddenAllowed(black),true);
+assert.equal(c.applyTitleCode('unrecognized'),'');
+console.log('PASS: actual Korean text input, whitespace normalization, unlock order and unknown codes.');

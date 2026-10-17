@@ -267,6 +267,12 @@
         else if (e.code === 'Enter' || e.code === 'Space') pickMode(modeFocus ? 'rpg' : 'farm');
         else if (e.code === 'Digit1') pickMode('farm'); else if (e.code === 'Digit2') pickMode('rpg');
         e.preventDefault(); e.stopImmediatePropagation();
+      } else if (e.code === 'Escape' && !e.repeat) {
+        const modalOpen = ['pauseOv', 'labOv', 'notesOv'].some(id => { const ov = document.getElementById(id); return ov && !ov.hidden; });
+        const typing = e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName);
+        if (modalOpen || typing || window.INPUT && INPUT.capture) return;
+        show('mode'); sfx('uiPick', 0.5);
+        e.preventDefault(); e.stopImmediatePropagation();
       }
     }, true);
     // every return to the title lands on the mode select, or back on the RPG hub after a stage run

@@ -88,6 +88,7 @@
       };
     });
     initHeroTouch();
+    initTitleCode();
     $('#btnStart').onclick = start;
     // title settings: the pause menu's option panel on its own (volume, keys, accessibility, touch layout)
     $('#btnSet').onclick = () => openSettings(true);
@@ -366,6 +367,36 @@
     const codes = [CHEAT_ON, ...RAMP_CODES, ...LILITH_CODES]; // either code, cheats on or not (치트활성화 typed again must not start a sortie)
     for (let n = Math.min(cheatBuf.length, 20); n >= 2; n--) { const tail = cheatBuf.slice(-n); if (codes.some((q) => n <= q.length && tail.every((c, i) => c === q[i]))) return true; }
     return false;
+  }
+  function applyTitleCode(text) {
+    const value = String(text || '').normalize('NFKC').replace(/\s/g, '').toLowerCase();
+    if (value === '치트활성화' || value === 'clxmghkftjdghk') {
+      cheatsOn = true; cheatBuf = [];
+      try { sessionStorage.setItem('lao_rogue_cheats', '1'); } catch (e) { /* ignore */ }
+      SFX.play('rankUp', 0.8); return '치트 활성화';
+    }
+    if (value === '블랙리리스' || value === 'blacklilith' || value === 'qmfforflfltm') {
+      if (!cheatsOn) return '치트를 먼저 활성화하세요';
+      blackLilithUnlocked = true; cheatBuf = []; forceHidden('blacklilith', true);
+      return '블랙 리리스 선택 완료';
+    }
+    return '';
+  }
+  function initTitleCode() {
+    const panel = document.createElement('details'); panel.id = 'titleCodePanel';
+    panel.innerHTML = '<summary>코드 입력</summary><form><input id="titleCode" aria-label="코드 입력" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="64"><button type="submit">입력</button></form><small role="status" aria-live="polite"></small>';
+    const keys = document.getElementById('titleKeys'); keys.parentNode.insertBefore(panel, keys);
+    const input = panel.querySelector('input'), status = panel.querySelector('small');
+    const apply = explicit => {
+      const result = applyTitleCode(input.value);
+      if (result) { status.textContent = result; input.value = ''; }
+      else if (explicit) status.textContent = '코드를 확인하세요';
+    };
+    input.addEventListener('input', e => { if (!e.isComposing) apply(false); });
+    input.addEventListener('compositionend', () => apply(false));
+    input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') input.blur(); });
+    panel.querySelector('form').onsubmit = e => { e.preventDefault(); apply(true); };
+    panel.addEventListener('toggle', () => { if (panel.open) input.focus(); });
   }
   function touchHeroDirection(dir) {
     if (!dir || GAME.G.phase !== 'title' || el.title.hidden || !$('#labOv').hidden || settingsOpen()) return false;

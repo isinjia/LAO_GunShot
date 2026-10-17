@@ -34,16 +34,20 @@
   const HAND_ART = /_hand(_|$)|bandage/i;
   // part: undefined = hand + gun as drawn in the source rig, 'gun' = only the weapon, 'hand' = only the hand art
   // (the orientation is always solved from the whole subtree, so a cut hand keeps its grip angle on a +x barrel)
-  function makeHand(id, k, clip, part, side) {
+  function makeHand(id, k, clip, part, side, gripPose) {
     const spec = RIGS[id];
     if (!spec || !spec.hand || !SD.ready(id)) return null;
     const c = SD.create(id);
     c.play(clip || spec.clip || 'idle');
     if (spec.t) { c.time = spec.t; c.apply(); c.render(); }
-    const hi = c.nodeIndex(spec.hand);
+    if (id === 'blacklilith' && part === 'native' && gripPose === 'front') {
+      const base = c.nodeIndex('BL_parts_hand_r_base'), front = c.nodeIndex('BL_parts_hand_r_1');
+      if (base >= 0 && front >= 0) { c.A[base] = 0; c.A[front] = 1; c.worldPass(); c.render(); }
+    }
+    const hi = c.nodeIndex(part === 'native'  && side === 'L' && spec.handL ? spec.handL : spec.hand);
     if (hi < 0) { c.dispose(); return null; }
     // part 'hand' also brings the left hand (handL), kept where the idle pose puts it relative to the right wrist
-    const li = part && part !== 'gun' && spec.handL ? c.nodeIndex(spec.handL) : -1;
+    const li = part && part !== 'gun' && part !== 'native' && spec.handL ? c.nodeIndex(spec.handL) : -1;
     c.setOnly((p, n, i) => i === hi || i === li);
     const inMain = (node) => node >= hi && node < c.tpl.end[hi];
     const inSide = (ri) => !side || (side === 'R') === inMain(tp.rends[ri].node);
@@ -53,7 +57,7 @@
     // (spec.front names the pieces that wrap over the weapon, e.g. the Steel Line fist: knuckles in front, back of the hand behind)
     const isBack = (ri) => { const n = tp.data.nodes[tp.rends[ri].node].n || ''; return spec.front ? !spec.front.test(n) : /(^|_)[LR]B_|_B(_|$)/.test(n); };
     const skipArt = (ri) => spec.skip && spec.skip.test(tp.data.nodes[tp.rends[ri].node].n || '');
-    const keepPart = (ri) => !part || (part === 'grip' ? !skipArt(ri) && (inMain(tp.rends[ri].node) || isHandArt(ri)) : part === 'gun' ? !isHandArt(ri) && !skipArt(ri) : isHandArt(ri) && inSide(ri) && (part === 'hand' || part === 'handAll' || (part === 'handB') === isBack(ri)));
+    const keepPart = (ri) => !part || part === 'native' || (part === 'grip' ? !skipArt(ri) && (inMain(tp.rends[ri].node) || isHandArt(ri)) : part === 'gun' ? !isHandArt(ri) && !skipArt(ri) : isHandArt(ri) && inSide(ri) && (part === 'hand' || part === 'handAll' || (part === 'handB') === isBack(ri)));
     const rawPart = [];
     // visible art corners in rig space, relative to the wrist
     const hx = W[o + 9], hy = W[o + 10];
@@ -108,6 +112,26 @@
     return { group, c, muzzle: [mx, my], len: mx - x0, box: [x0, y0, mx, y1] };
   }
 
+  /* A frozen source arm segment, normalized from its shoulder/elbow toward the next joint. */
+  function makeArmSegment(id, k, side, lower) {
+    if (!SD.ready(id)) return null;
+    const c = SD.create(id); c.play('idle');
+    const suffix = side === 'L' ? 'l' : 'r';
+    const hi = c.nodeIndex('arm_' + suffix + (lower ? '_down' : '_up'));
+    const end = c.nodeIndex(lower ? 'hand_' + suffix : 'arm_' + suffix + '_down');
+    if (hi < 0 || end < 0) { c.dispose(); return null; }
+    const tp = c.tpl, W = c.W, a = hi * 12, b = end * 12;
+    const x = W[a + 9], y = W[a + 10], dx = W[b + 9] - x, dy = W[b + 10] - y;
+    const angle = -Math.atan2(dy, dx), cs = Math.cos(angle), sn = Math.sin(angle);
+    const keep = new RegExp('^BL_parts_arm_' + suffix + (lower ? '_down' : '_up') + '(?:_[fb])?$');
+    c.mask = new Uint8Array(tp.rends.length);
+    tp.rends.forEach((r, i) => { c.mask[i] = keep.test(tp.data.nodes[r.node].n) ? 0 : 1; }); c.render();
+    c.root.scale.set(k, k, 1); c.root.rotation.z = angle;
+    c.root.position.set(-(cs * x - sn * y) * k, -(sn * x + cs * y) * k, 0);
+    const group = new THREE.Group(); group.add(c.root);
+    return { group, c, len: Math.max(0.01, Math.hypot(dx, dy) * k) };
+  }
+  RIGS.makeArmSegment = makeArmSegment;
   RIGS.makeHand = makeHand;
   window.RIGS = RIGS;
 })();

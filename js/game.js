@@ -267,11 +267,11 @@
   // the weapon is cut from its donor rig without the donor's hand; the holder's own hands (from heroId's rig) are
   // floated onto it Gungeon-style: one on the grip, one under the barrel. Without heroId (pickups) it's the bare gun.
   function makeDualPistols() {
-    const parts = ['R', 'L'].map(side => RIGS.makeHand('blacklilith', donorK('blacklilith'), null, 'native', side));
+    const parts = ['R', 'R'].map((side, i) => RIGS.makeHand('blacklilith', donorK('blacklilith'), null, 'native', side, i === 1 ? 'front' : null));
     if (parts.some(h => !h)) { parts.forEach(h => h && h.c.dispose()); return null; }
-    const outer = new THREE.Group(), mounts = [[0.12, -0.16], [-0.38, -0.03]];
-    parts.forEach((h, i) => { h.group.position.x += mounts[i][0]; h.group.position.y += mounts[i][1]; outer.add(h.group); });
-    const muzzles = parts.map((h, i) => [h.muzzle[0] + mounts[i][0], h.muzzle[1] + mounts[i][1]]);
+    const outer = new THREE.Group(), mounts = [[0.42, -0.08], [-0.28, 0.05]];
+    parts.forEach((h, i) => { h.gripFlip = i === 0 ? -1 : 1; h.group.scale.y = h.gripFlip; h.group.position.x += mounts[i][0]; h.group.position.y += mounts[i][1]; outer.add(h.group); });
+    const muzzles = parts.map((h, i) => [h.muzzle[0] + mounts[i][0], h.muzzle[1] * h.gripFlip + mounts[i][1]]);
     return { outer, pair: parts, muzzles, muzzle: muzzles[0], len: Math.max(...parts.map(h => h.len)), box: parts[0].box,
       c: { setOrder: o => parts.forEach((h, i) => h.c.setOrder(o + (1 - i) * 0.00002)),
         setOpacity: a => parts.forEach(h => h.c.setOpacity(a)), dispose: () => parts.forEach(h => h.c.dispose()) } };
@@ -312,7 +312,8 @@
           palm.c.dispose();
         }
       }
-      if (g.alignGrip) {
+      const lilithCannon = gunId === 'cannon' && heroId === 'blacklilith';
+      if (g.alignGrip || lilithCannon) {
         /* Match the holder's palm centers to this weapon's original grip and support hand. */
         const center = (id, k, side) => {
           const hand = RIGS.makeHand(id, k, null, 'handAll', side);
@@ -321,7 +322,7 @@
           return [(x0+x1)/2, (y0+y1)/2];
         };
         const dk=donorK(g.donor)*(g.scale||1);
-        const right=center(g.donor,dk,'R'), left=center(g.donor,dk,'L'), palm=center(heroId,hk,'R');
+        const right=center(g.donor,dk,'R'), left=lilithCannon ? [g.hold.l[0],g.hold.l[1]+0.06] : center(g.donor,dk,'L'), palm=center(heroId,hk,'R');
         const gripOffset=g.gripOffset||[0,0];
         hold={r:[right[0]-palm[0]+gripOffset[0],right[1]-palm[1]+gripOffset[1]],l:left,centers:true};
       }
@@ -818,7 +819,7 @@
       const c = Math.cos(P.aim);
       if (Math.abs(c) > 0.08) P.face = c < 0 ? -1 : 1;
     }
-    setFace(P.body, P.face);
+    setFace(P.body, P.wildShotEnd > G.t ? P.wildFace : P.face);
 
     // weapon actions
     if (INPUT.take('swap') && P.guns.length > 1 && !P.roll) { equip(P, P.gi + 1); SFX.play('uiPick', 0.7); P.emptyWarned = false; }
@@ -1089,7 +1090,6 @@
     const P = G.P;
     for (let i = G.pbul.length - 1; i >= 0; i--) {
       const b = G.pbul[i];
-      if (wildShotClears(P, b)) { popEB(b); ebRemove(i); continue; }
       b.t += dt; b.life -= dt;
       // homing chip: steer gently toward the nearest enemy
       const homeK = (P.mods.homing || 0) + (b.visor ? 3 : 0); // 전술 조준 모드: strongly guided rounds
@@ -1133,6 +1133,7 @@
           const dx = e.x - b.x, dy = clamp(b.y, lo, hi) - b.y, rr = e.r + 0.12;
           if (dx * dx + dy * dy > rr * rr) continue;
           b.hit.add(e);
+          if (b.scud) markScudTarget(e, b.scud);
           const sp = Math.hypot(b.vx, b.vy) || 1;
           if (b.kind === 'grenade' || b.kind === 'fireball') { dead = true; break; }
           if (b.popSet && b.popSet.has(e)) popStatus(e, b.dmg, 'sup'); // 듀얼 버스트 finale: only targets suppressed before the cast
@@ -1155,13 +1156,15 @@
               c.s.sz = c.s.size *= 0.7; c.core.sz = c.core.size *= 0.7;
             }
           }
-          FX.hit(b.x, b.y, b.g.color, 0.7);
+          if (b.scud) {
+            if (!(e.scudImpactAt > G.t)) { e.scudImpactAt=G.t+.065; FX.scudImpact(e.x,e.y+e.h*.45,Math.atan2(b.vy,b.vx)); }
+          } else FX.hit(b.x, b.y, b.g.color, 0.7);
           if (b.g.hit) spawnStatic(b.g.hit, b.x, b.y, 0.1);
           if (b.pierce-- <= 0) { dead = true; break; }
         }
       }
       if (b.kind === 'fireball' && Math.random() < 0.8) FX.particle({ x: b.x + rnd(-0.1, 0.1), y: b.y + rnd(-0.1, 0.1), life: 0.35, size: 0.5, size1: 0.1, color: Math.random() < 0.5 ? 0xff5a1f : 0xffc050, tex: FX.tex.glow });
-      else if (Math.random() < 0.5) FX.trail(b.x, b.y, b.g.color, b.g.size * 0.35);
+      else if (!b.noTrail && Math.random() < 0.5) FX.trail(b.x, b.y, b.g.color, b.g.size * 0.35);
       if (dead) {
         if (b.kind === 'grenade' || b.kind === 'fireball') explodeP(b);
         FX.kill(b.s); FX.kill(b.core);
@@ -1372,7 +1375,7 @@
   }
 
   function hurtEnemy(e, dmg, crit, kx, ky, snd) {
-    if (!e.alive || e.spawnT > 0 || e.intro > 0) return;
+    if (!e.alive || e.scudPending || e.spawnT > 0 || e.intro > 0) return;
     if (G.P && G.P.dead) return; // turrets, burn zones, late shells: nothing scores after the hero has fallen
     dmg *= tacticalDamage(G.P, e);
     if (e.markT > 0) dmg *= 1.5;
@@ -1412,7 +1415,7 @@
       { e.dmgAcc = (e.dmgAcc || 0) + dmg; e.dmgCrit = e.dmgCrit || crit; if (!(e.dmgT > 0)) e.dmgT = e.boss ? 0.9 : 0.35; } // every hit (crits too) merges into one number per window: no piles
     }
     // (the boss bar refreshes on its own 120 ms timer: no DOM write per hit)
-    if (e.hp <= 0) killEnemy(e);
+    if (e.hp <= 0 && !holdScudDeath(e)) killEnemy(e);
   }
   // 연쇄 방전기: a spark jumps from the struck enemy to the nearest other one
   function arcChain(src, dmg) {
@@ -1452,6 +1455,7 @@
     for (let i = n; i < edgeLay.children.length; i++) if (!edgeLay.children[i].hidden) edgeLay.children[i].hidden = true;
   }
   function killEnemy(e, silent) {
+    if (!e.alive || (e.scudPending && holdScudDeath(e))) return;
     e.alive = false;
     if (e.dummy) silent = true; // training targets are not kills
     if (e.dmgAcc && G.opt.dmg) { UI.dmg(e.x, e.y + e.h * 0.8, e.dmgAcc, false); e.dmgAcc = 0; }
@@ -1464,9 +1468,12 @@
     const cy = e.y + e.h * 0.4;
     if (e.boss) return bossDeath(e);
     if (e.elite && !silent) G.slowT = Math.max(G.slowT || 0, 0.12); /* a short hit-stop on elite kills */
-    FX.deathFx(e.x, cy, false);
-    FX.explosion(e.x, cy, e.elite ? 1.0 : 0.55, 0xff7a3a, e.elite);
-    spawnStatic('simple_explosion', e.x, cy, e.elite ? 0.2 : 0.13);
+    if (e.scudDetonate) { e.scudDetonate=false; FX.scudDetonate(e.x,cy,e.h); }
+    else {
+      FX.deathFx(e.x, cy, false);
+      FX.explosion(e.x, cy, e.elite ? 1.0 : 0.55, 0xff7a3a, e.elite);
+      spawnStatic('simple_explosion', e.x, cy, e.elite ? 0.2 : 0.13);
+    }
     SFX.play(e.elite ? 'expM' : 'expS', e.elite ? 1 : 0.6, panOf(e.x));
     SFX.play(e.elite ? 'dieL' : e.h >= 1.6 ? 'dieM' : 'dieS', 0.8, panOf(e.x));
     if (G.opt.shake) FX.shake(e.elite ? 0.3 : 0.08);
@@ -1573,6 +1580,7 @@
       if (!b) continue; // a blank / death cleared the list during this pass
       if (b.pass === pass) continue; // a splice mid-pass shifted an already-moved bullet down: never step it twice
       b.pass = pass;
+      if (wildShotClears(P, b)) { popEB(b, true); ebRemove(i); continue; }
       b.t += dt;
       if (b.delay > 0) { b.delay -= dt; if (b.delay <= 0) { const cbm = G.opt.cbBullets; b.s.alpha = cbm ? 0.32 : 0.95; b.core.alpha = 1; b.ol.alpha = cbm ? 1 : 0.92; } else continue; }
       b.life -= dt;
@@ -1585,7 +1593,7 @@
       if (b.acc) { const sp = Math.hypot(b.vx, b.vy), k = Math.max(0.2, (sp + b.acc * dt) / (sp || 1)); b.vx *= k; b.vy *= k; }
       const ox = b.x, oy = b.y;
       b.x += b.vx * dt; b.y += b.vy * dt;
-      if (wildShotClears(P, b, ox, oy)) { popEB(b); ebRemove(i); continue; }
+      if (wildShotClears(P, b, ox, oy)) { popEB(b, true); ebRemove(i); continue; }
       const t = LEVEL.tile(b.x, b.y - 0.3);
       const door = LEVEL.cur.closed && LEVEL.cur.closed.has(Math.floor(b.y - 0.3) * LEVEL.cur.W + Math.floor(b.x));
       let dead = b.life <= 0 || t === LEVEL.WALL || t === LEVEL.VOID || door;
@@ -1698,6 +1706,7 @@
     for (let i = G.enemies.length - 1; i >= 0; i--) {
       const e = G.enemies[i];
       if (!e.alive) { G.enemies.splice(i, 1); continue; }
+      if (e.scudPending) continue;
       e.t += dt;
       if (e.spawnT > 0) {
         e.spawnT -= dt;
@@ -2050,7 +2059,7 @@
     if (G.diff && G.fi >= 2 && dmg === 1 && !/바닥|구역|균열|웅덩이|패드/.test(src) && Math.random() < ({ normal: 0.1, hard: 0.6 }[G.diff.id] || 0) + (G.diff.id === 'easy' ? 0 : 0.05 * (G.stageI || 0))) dmg = 2; // 보통 / 어려움: some hits bite for two, more each stage (hazards never)
     if (G.P) G.P.beats = 0; // a new hit re-arms the low-health heartbeat
     const P = G.P;
-    if (!P || P.dead || P.iframe > 0 || G.phase !== 'play') return;
+    if (!P || P.dead || P.scud || P.iframe > 0 || G.phase !== 'play') return;
     G.stats.src[src] = (G.stats.src[src] || 0) + 1;
     if (GOD) { G.stats.hits++; P.iframe = 0.5; return; }
     if (P.gearBlock && Math.random() < P.gearBlock) { P.iframe = 0.35; FX.ring(P.x, P.y + 0.6, 0.2, 1.1, 0x9fe8ff, 0.25); SFX.play('shield', 0.5); G.stats.blocked = (G.stats.blocked || 0) + 1; return; } // gear: 피격 무효 확률
@@ -2074,12 +2083,12 @@
     if (P.mods.thorn) { blankWave(P.x, P.y + 0.5, 3.5, false); }
     if (P.hp <= 0) playerDeath(src);
   }
-  function blankWave(x, y, radius, full) {
-    FX.ring(x, y, 0.3, radius, 0x9fe8ff, 0.5, 1);
-    FX.particle({ x, y, life: 0.35, size: 1, size1: radius * 1.3, color: 0x6fd8ff, tex: FX.tex.glow, alpha: 0.22 }); /* a soft cyan wash: the player stays visible under it */
+  function blankWave(x, y, radius, full, quiet = false) {
+    if (!quiet) FX.ring(x, y, 0.3, radius, 0x9fe8ff, 0.5, 1);
+    if (!quiet) FX.particle({ x, y, life: 0.35, size: 1, size1: radius * 1.3, color: 0x6fd8ff, tex: FX.tex.glow, alpha: 0.22 }); /* a soft cyan wash: the player stays visible under it */
     for (let i = G.ebul.length - 1; i >= 0; i--) {
       const b = G.ebul[i];
-      if (full || Math.hypot(b.x - x, b.y - y) < radius) { popEB(b); ebRemove(i); }
+      if (full || Math.hypot(b.x - x, b.y - y) < radius) { popEB(b,quiet); ebRemove(i); }
     }
     for (const e of G.enemies) {
       if (!e.alive || e.spawnT > 0) continue;
@@ -2720,137 +2729,294 @@
     dirs.forEach((d0) => { for (let i = 0; i < 6; i++) { const b = spawnPBullet(P, rd, P.x, P.y + 0.6, d0 + (i / 5 - 0.5) * 0.4, 22); if (b) b.popSupAny = true; } FX.muzzleFlash(P.x + Math.cos(d0) * 0.5, P.y + 0.6 + Math.sin(d0) * 0.5, d0, 0xc070ff, 2); });
     FX.ring(P.x, P.y + 0.6, 0.3, 2.2, 0xc070ff, 0.3); SFX.play('gun', 0.8);
   }
-  /* Scud: collision-safe rush, airborne crossfire, then a landing execution. */
+  /* Scud: forward gunfire, inverted horizontal crossfire, landing gesture and execution. */
+  const SCUD_TIME = { ground: 0.25, leap: 2.25, air: 2.55, descend: 4.25, land: 4.55, execute: 5.15, end: 6.8 };
+  function markScudTarget(e, s) {
+    if (!s || s.releasing || G.P.scud !== s || !e.alive || e.dummy) return;
+    e.scudMark = s; s.targets.add(e);
+  }
+  function holdScudDeath(e) {
+    const s = e.scudMark;
+    if (!s || s.releasing || !G.P || G.P.scud !== s || e.dummy) return false;
+    e.scudPending = true; e.hp = 0; e.kx = e.ky = 0;
+    e.tele = null; if (e.seq) e.seq.length = 0;
+    if (e.body) { const c=e.body.c; c.play(c.has('hit') ? 'hit' : 'idle'); c.fadeD=0; c.pinFade=null; c.apply(); c.render(); }
+    s.pending.add(e); return true;
+  }
+  function releaseScudTargets(P, s) {
+    s.releasing = true;
+    for (const e of s.targets) {
+      if (e.scudMark !== s) continue;
+      const pending = e.scudPending;
+      e.scudMark = null; e.scudPending = false;
+      if (pending && e.alive) { e.scudDetonate=!!s.finished && !P.dead && G.phase==='play' && G.room===s.room; killEnemy(e, P.dead || G.phase !== 'play' || G.room !== s.room); }
+    }
+    s.targets.clear(); s.pending.clear();
+  }
   function startScud(P) {
     clearWildShot(P);
-    P.roll = null; P.dash = null; P.dodgeBuf = 0; P.wildShotEnd = 0;
+    P.roll = null; P.dash = null; P.dodgeBuf = 0;
     P.reloadT = 0; P.reloadGun = null; P.overdrive = 0; P.guardT = 0; P.emplaceGuard = 0;
-    P.scud = { t: 0, a: P.aim, room: G.room, height: 0, shot: 0, hit: new Set(), k: 1 + 0.2 * upF(P), hands: [] };
-    for (let i = 0; i < 2; i++) {
-      const hand = RIGS.makeHand('blacklilith', donorK('blacklilith'), null, 'native', i ? 'L' : 'R');
-      if (hand) { P.scud.hands.push(hand); scene.add(hand.group); }
+    const s = P.scud = { t: 0, a: P.aim, room: G.room, height: 0, groundShot: 0, shot: 0,
+      targets: new Set(), pending: new Set(), bodyMask: P.body.c.mask ? P.body.c.mask.slice() : null, bodySpeed: P.body.c.speed == null ? 1 : P.body.c.speed, k: 1 + 0.2 * upF(P), rig: makeDualPistols(), hands: [] };
+    if (s.rig) {
+      s.hands = s.rig.pair; scene.add(s.rig.outer);
+      s.arms = ['R','L'].map(side => [false,true].map(lower => RIGS.makeArmSegment('blacklilith', donorK('blacklilith'), side, lower)));
+      s.arms.flat().forEach(a => { if (a) s.rig.outer.add(a.group); });
     }
-    P.body.pivot.rotation.z = 0; P.body.c.play('idle'); P.ultT = 3.2;
-    P.iframe = Math.max(P.iframe, 3.3);
-    FX.ring(P.x, P.y + 0.3, 0.3, 2.2, 0xc070ff, 0.2); SFX.play('charge');
+    P.body.pivot.rotation.z = 0; P.body.flip.rotation.y = 0; P.body.c.play('idle');
+    P.ultT = SCUD_TIME.end; P.iframe = Math.max(P.iframe, SCUD_TIME.end + 0.1);
+    SFX.play('charge');
   }
   function endScud(P) {
     const s = P.scud; if (!s) return;
-    for (const h of s.hands) { scene.remove(h.group); h.c.dispose(); }
-    P.scud = null; P.ultT = 0; P.body.pivot.rotation.z = 0;
+    releaseScudTargets(P, s);
+    if (s.rig) { scene.remove(s.rig.outer); s.rig.c.dispose(); }
+    (s.arms || []).flat().forEach(a => { if (a) a.c.dispose(); });
+    P.scud = null; P.ultT = 0; P.body.pivot.rotation.z = 0; P.body.flip.rotation.y = 0;
+    setFace(P.body,P.face || (Math.cos(s.a)<0?-1:1));
+    P.body.c.mask = s.bodyMask; P.body.c.speed = s.bodySpeed;
     P.body.root.position.set(P.x, P.y, 0); P.body.c.play('idle'); P.moving = false;
     P.iframe = Math.max(P.iframe, 0.25); P.fireCd = Math.max(P.fireCd, 0.15);
     P.guns.forEach(g => { if (g.hand) g.hand.outer.visible = P.guns[P.gi] === g; });
   }
   function scudFinish(P, s) {
-    const damage = 180 * s.k * P.mods.dmg;
-    for (const e of G.enemies) {
-      if (!e.alive || e.spawnT > 0 || Math.hypot(e.x - P.x, e.y - P.y) > 6 + e.r || !LEVEL.los(P.x, P.y + 0.2, e.x, e.y + 0.2)) continue;
-      hurtEnemy(e, damage, true, 0, 0, 'hitB');
-      if (e.alive && e.supT > 0) popStatus(e, damage, 'sup');
-      FX.beam(P.x, P.y + 0.7, e.x, e.y + e.h * 0.42, 0.12, 0xffdf9a, 0.18);
+    /* Only the stored lethal victims explode; survivors take no new finishing damage. */
+    releaseScudTargets(P, s);
+    blankWave(P.x, P.y + 0.5, 6, false, true);
+    SFX.play('hitB', 0.9); if (G.opt.shake) FX.shake(0.18);
+  }
+  function scudGrip(P, side) {
+    const s=P.scud,T=SCUD_TIME, sign=side ? -1 : 1;
+    let x=sign*0.44, y=0.90, angle=side ? Math.PI : 0;
+    if (s.t < T.leap) {
+      angle=s.a; x=(side ? -0.12 : 0.28)+Math.cos(angle)*0.15;
+      y=0.91+side*0.10;
+    } else if (s.t >= T.land) {
+      const f=Math.min(1,(s.t-T.land)/(T.execute-T.land));
+      x=sign*(0.42-0.22*f);y=0.94-0.20*f;
+      angle=side ? Math.PI+f*1.25 : -f*1.25;
     }
-    blankWave(P.x, P.y + 0.5, 6, false);
-    FX.ring(P.x, P.y + 0.2, 0.4, 6, 0xffdf9a, 0.35);
-    SFX.play('expM', 0.7); SFX.play('land', 0.8);
-    if (G.opt.shake) FX.shake(0.18);
+    const h=s.hands[side],flip=(Math.cos(angle)<0?-1:1)*(h && h.gripFlip || 1),m=h?h.muzzle:[0.35,0],k=0.82;
+    return { x,y,angle,flip, mx:P.x+x+(Math.cos(angle)*m[0]-Math.sin(angle)*m[1]*flip)*k,
+      my:P.y+s.height+y+(Math.sin(angle)*m[0]+Math.cos(angle)*m[1]*flip)*k };
+  }
+  function poseScud(P) {
+    const s=P.scud;if(!s.rig)return;
+    s.rig.outer.visible = s.t < SCUD_TIME.land;
+    s.rig.outer.position.set(P.x,P.y+s.height,0);
+    s.hands.forEach((h,i)=>{
+      const p=scudGrip(P,i);h.group.position.set(p.x,p.y,0);h.group.rotation.z=p.angle;
+      h.group.scale.set(0.82,0.82*p.flip,1);h.c.setOrder(ORD(P.y)+0.001+i*0.00002);
+      const sign=i?-1:1;
+      const shoulder=[sign*0.17,0.98], elbow=[(shoulder[0]+p.x)/2,(shoulder[1]+p.y)/2+sign*0.10];
+      const points=[shoulder,elbow,[p.x,p.y]];
+      (s.arms[i]||[]).forEach((arm,j)=>{if(!arm)return;
+        const a=points[j],b=points[j+1],dx=b[0]-a[0],dy=b[1]-a[1];
+        arm.group.position.set(a[0],a[1],0);arm.group.rotation.z=Math.atan2(dy,dx);
+        arm.group.scale.set(Math.hypot(dx,dy)/arm.len,1,1);arm.c.setOrder(ORD(P.y)+0.0007+i*0.00002);
+      });
+    });
+  }
+  function scudGroundContains(P,e,p) {
+    /* The visible E muzzle flame extends about 2.4 units, widest near its centre. */
+    const ca=Math.cos(p.angle),sa=Math.sin(p.angle),dx=e.x-p.mx,dy=e.y+e.h*.45-p.my;
+    const along=dx*ca+dy*sa,across=Math.abs(-dx*sa+dy*ca),reach=2.4;
+    const width=.22+.5*Math.sin(Math.max(0,Math.min(1,along/reach))*Math.PI);
+    return along>=-e.r && along<=reach+e.r && across<=width+e.r && LEVEL.los(p.mx,p.my-.3,e.x,e.y+.2);
+  }
+  function scudHit(P,s,e) {
+    if(!e.alive || e.scudPending || e.spawnT>0 || e.intro>0)return;
+    const hp=e.hp,previous=e.scudMark;
+    markScudTarget(e,s);
+    hurtEnemy(e,18*s.k*P.mods.dmg,false,0,0,'hitS');
+    if(e.hp<hp || e.scudPending) {
+      e.supT=Math.max(e.supT || 0,4);
+      if(!(e.scudImpactAt>G.t)){e.scudImpactAt=G.t+.065;FX.scudImpact(e.x,e.y+e.h*.45,Math.atan2(e.y-P.y,e.x-P.x));}
+    } else if(previous!==s && e.scudMark===s) {
+      /* An immune enemy that took zero damage is not part of the aerial follow-up. */
+      e.scudMark=previous || null;s.targets.delete(e);
+    }
+  }
+  function scudVolley(P, airborne) {
+    const s=P.scud,grips=[scudGrip(P,0),scudGrip(P,1)];
+    if(airborne) {
+      for(const e of s.targets)scudHit(P,s,e);
+    } else {
+      for(const e of G.enemies) {
+        if(!e.alive || e.scudPending || e.spawnT>0 || e.intro>0)continue;
+        if(grips.some(p=>scudGroundContains(P,e,p)))scudHit(P,s,e);
+      }
+    }
+    grips.forEach((p,side)=>FX.wildMuzzle(p.mx,p.my,p.angle,(airborne?s.shot:s.groundShot)*4,side));
+    SFX.play('gun',0.65);
   }
   function updateScud(P, dt) {
-    const s = P.scud;
-    if (P.dead || G.phase !== 'play' || G.room !== s.room) { endScud(P); return; }
-    s.t += dt; P.ultT = Math.max(0, 3.2 - s.t); P.iframe = Math.max(P.iframe, 0.15);
-    P.sk2Cd = Math.max(0, P.sk2Cd - dt);
-    if (s.t < 0.3) {
-      LEVEL.move(P, Math.cos(s.a) * 15 * dt, Math.sin(s.a) * 15 * dt);
-      for (const e of G.enemies) {
-        if (!e.alive || e.spawnT > 0 || s.hit.has(e) || Math.hypot(e.x - P.x, e.y - P.y) > 1.6 + e.r || !LEVEL.los(P.x, P.y + 0.2, e.x, e.y + 0.2)) continue;
-        s.hit.add(e); hurtEnemy(e, 65 * s.k * P.mods.dmg, false, 0, 0, 'hitB');
-        if (e.alive) { e.supT = Math.max(e.supT || 0, 5); if (!e.boss) e.stun = Math.max(e.stun || 0, 0.7); }
-      }
-      FX.particle({ x: P.x, y: P.y + 0.6, life: 0.18, size: 1.3, size1: 0.2, color: 0xc070ff, tex: FX.tex.glow, alpha: 0.35 });
-    } else if (s.t < 2.8) {
-      const mv = INPUT.moveVec(); LEVEL.move(P, mv[0] * P.hero.speed * P.mods.speed * 0.4 * dt, mv[1] * P.hero.speed * P.mods.speed * 0.4 * dt);
+    const s=P.scud,T=SCUD_TIME;
+    if(P.dead || G.phase!=='play' || G.room!==s.room){endScud(P);return;}
+    s.t+=dt;P.ultT=Math.max(0,(s.endAt || T.end)-s.t);P.iframe=Math.max(P.iframe,0.15);P.sk2Cd=Math.max(0,P.sk2Cd-dt);
+    const oldX=P.x,oldY=P.y;
+    if(s.t<T.descend) {
+      const mv=INPUT.moveVec(), speed=P.hero.speed*P.mods.speed*(s.t<T.leap?1:0.4);
+      LEVEL.move(P,mv[0]*speed*dt,mv[1]*speed*dt);
     }
-    s.height = s.t < 0.3 ? 0 : s.t < 0.65 ? Math.sin(Math.min(1, (s.t - 0.3) / 0.35) * Math.PI / 2) * 1.4 : s.t < 2.65 ? 1.4 : Math.max(0, 1 - (s.t - 2.65) / 0.35) * 1.4;
-    P.body.pivot.rotation.z = s.t > 0.3 && s.t < 2.85 ? Math.sin(s.t * 12) * 0.22 : 0;
-    if (s.t >= 0.6 && s.shot < 18) {
-      const due = Math.min(18, Math.floor((s.t - 0.6) / 0.12) + 1);
-      while (s.shot < due) {
-        const turn = s.a + s.shot * Math.PI * 0.37;
-        const rd = { d: Object.assign({}, GUNS.bl_dual, { dmg: 9 * s.k, life: 0.4, size: 0.32, color: 0xffdf9a }) };
-        const targets = G.enemies.filter(e => e.alive && e.spawnT <= 0 && Math.hypot(e.x - P.x, e.y - P.y) < 7 && LEVEL.los(P.x, P.y + 0.2, e.x, e.y + 0.2));
-        for (let k = 0; k < 12; k++) {
-          const a = turn + k * TAU / 12, x = P.x + Math.cos(a) * 0.5, y = P.y + 0.65;
-          const b = spawnPBullet(P, rd, x, y, a, 23); if (b) b.sup = 4;
-          if (k % 6 === 0) FX.muzzleFlash(x, y + s.height, a, 0xffdf9a, 1.5);
-        }
-        for (let side = 0; side < 2 && targets.length; side++) {
-          const e = targets[(s.shot * 2 + side) % targets.length];
-          const x = P.x + Math.cos(turn + side * Math.PI) * 0.55, y = P.y + 0.7 + s.height;
-          FX.beam(x, y, e.x, e.y + e.h * 0.42, 0.045, 0xffdf9a, 0.08);
-          hurtEnemy(e, 8 * s.k * P.mods.dmg, false, 0, 0, 'hitS');
-        }
-        SFX.play('gun', 0.6); if (G.opt.shake && s.shot % 3 === 0) FX.shake(0.035);
-        s.shot++;
-      }
+    P.moving=Math.hypot(P.x-oldX,P.y-oldY)>0.00001;
+    if (!s.gesture) {
+      const clip=s.t<T.leap && P.moving && P.body.c.has('move')?'move':'idle';
+      if(P.body.c.clipName!==clip)P.body.c.play(clip);
     }
-    for (let i = 0; i < s.hands.length; i++) {
-      const h = s.hands[i], a = s.a + s.t * 11 + i * Math.PI;
-      h.group.position.set(P.x + Math.cos(a) * 0.65, P.y + 0.75 + s.height + Math.sin(a) * 0.3, 0);
-      h.group.rotation.z = a; h.group.scale.set(1, i ? -1 : 1, 1); h.c.setOrder(ORD(P.y) + 0.001);
+    const rise=Math.max(0,Math.min(1,(s.t-T.leap)/(T.air-T.leap))),fall=Math.max(0,Math.min(1,(s.t-T.descend)/(T.land-T.descend)));
+    s.height=s.t<T.leap?0:s.t<T.air?Math.sin(rise*Math.PI/2)*1.6:s.t<T.descend?1.6:(1-fall)*1.6;
+    P.body.pivot.rotation.z=s.t<T.leap?0:s.t<T.air?Math.PI*rise:s.t<T.descend?Math.PI:Math.PI*(1-fall);
+    const spin=Math.cos((s.t-T.air)*TAU*2.4);
+    P.body.flip.rotation.y=s.t>=T.air && s.t<T.descend?Math.acos((spin<0?-1:1)*Math.max(0.35,Math.abs(spin))):0;
+    setFace(P.body,P.face || (Math.cos(s.a)<0?-1:1));
+    const groundDue=Math.min(30,Math.max(0,Math.floor((s.t-T.ground)/((T.leap-T.ground)/30))+1));
+    while(s.groundShot<groundDue){scudVolley(P,false);s.groundShot++;}
+    const airDue=Math.min(28,Math.max(0,Math.floor((s.t-T.air)/((T.descend-T.air)/28))+1));
+    while(s.shot<airDue){scudVolley(P,true);s.shot++;}
+    if(s.t>=T.land && !s.gesture){
+      s.gesture=true;
+      /* Restore the original animated arms and guns for the full source victory motion. */
+      P.body.c.setMask(null);P.body.c.speed=s.bodySpeed*2;P.body.c.play(P.body.c.has('win')?'win':'idle');
+      s.winDuration=P.body.c.clip && P.body.c.clip.dur || 3.0833;
+      s.endAt=T.land+(s.winDuration-1/60)/(s.bodySpeed*2)+0.7;
+      SFX.play('land',0.6);
     }
-    if (s.t >= 3 && !s.finished) { s.finished = true; scudFinish(P, s); }
-    if (s.t >= 3.2) endScud(P);
+    if (s.gesture && !s.winHeld && P.body.c.clipName==='win' && s.t>=T.land+(s.winDuration-1/60)/(s.bodySpeed*2)) {
+      const c=P.body.c;
+      c.time=Math.max(0,s.winDuration-1/60);c.speed=0;c.fadeD=0;c.pinFade=null;c.apply();c.render();
+      s.winHeld=true;s.endAt=s.t+0.7;
+    }
+    poseScud(P);
+    if(s.winHeld && !s.finished){s.finished=true;scudFinish(P,s);}
+    if(s.t>=(s.endAt || T.end))endScud(P);
   }
-  /* Black Lilith: six alternating circular volleys from two opposite pistol positions. */
+  /* Black Lilith: close-range paired pistol fire with independent arm poses. */
+  /* Wrist positions stay attached to the shoulders; these are poses, not an orbit. */
+  const WILD_POSES = [
+    [[0.38,0.90,0],[-0.30,1.10,Math.PI]],
+    [[0.16,1.12,Math.PI/2],[-0.16,0.80,-Math.PI/2]],
+    [[0.26,1.07,Math.PI/4],[-0.30,0.85,-3*Math.PI/4]],
+    [[-0.08,0.98,Math.PI],[0.15,0.92,0]],
+    [[-0.26,1.10,3*Math.PI/4],[0.30,0.85,-Math.PI/4]],
+    [[0.16,0.80,-Math.PI/2],[-0.16,1.12,Math.PI/2]],
+  ];
+  /* A fresh shuffled sweep for each hand on every cast; short bursts share a readable pose. */
+  function makeWildPoses(count = 24) {
+    const shuffle = () => {
+      const a = Array.from({ length: 12 }, (_, i) => i);
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+    const hand = () => {
+      let sectors = []; while (sectors.length < count) sectors = sectors.concat(shuffle());
+      return sectors.slice(0, count);
+    };
+    const hands = [hand(), hand()];
+    return hands[0].map((_, beat) => hands.map((sectors, side) => {
+      const angle = sectors[beat] * TAU / 12 + (Math.random() - 0.5) * 0.24;
+      return [(side ? -0.17 : 0.17) + Math.cos(angle) * 0.20, 0.98 + Math.sin(angle) * 0.14, angle];
+    }));
+  }
+  function clearWildGhosts(P) {
+    for (const ghost of P.wildGhosts || []) {
+      P.handRoot.remove(ghost.group);
+      ghost.group.traverse(o => { if (o.isMesh) { (Array.isArray(o.material) ? o.material : [o.material]).forEach(m=>m.dispose()); o.geometry.dispose(); } });
+    }
+    P.wildGhosts = [];
+  }
   function clearWildShot(P) {
-    if (P.wildHands) { P.handRoot.remove(P.wildHands.outer); P.wildHands.c.dispose(); P.wildHands = null; }
-    P.wildShotEnd = 0;
+    clearWildGhosts(P);
+    if (P.wildHands) {
+      P.handRoot.remove(P.wildHands.outer); P.wildHands.c.dispose();
+      (P.wildHands.arms || []).flat().forEach(a => { if (a) a.c.dispose(); });
+      P.wildHands = null;
+    }
+    P.wildShotEnd = 0; P.wildToken = null; P.wildPoses = null;
+  }
+  function wildGrip(P, side, beat, recoil = 0) {
+    const poses = P.wildPoses || WILD_POSES;
+    const p = poses[Math.min(poses.length - 1, Math.max(0, beat))][side], face = P.wildFace || 1;
+    const angle = face < 0 ? Math.PI - p[2] : p[2], ca = Math.cos(angle), sa = Math.sin(angle);
+    const x = p[0] * face - ca * recoil, y = p[1] - sa * recoil;
+    const hand = P.wildHands && P.wildHands.pair[side], scale = 0.82;
+    const flip = (ca < 0 ? -1 : 1) * (hand && hand.gripFlip || 1), m = hand ? hand.muzzle : [0.35,0];
+    return { x, y, angle, flip, scale, mx: P.x + x + (ca * m[0] - sa * m[1] * flip) * scale, my: P.y + y + (sa * m[0] + ca * m[1] * flip) * scale };
   }
   function poseWildShot(P) {
     const h = P.wildHands; if (!h) return;
     const active = P.wildShotEnd > G.t && !P.dead;
     h.outer.visible = active && !P.roll && !P.scud;
     if (!active) return;
-    h.outer.position.set(P.x, P.y + 0.8, 0); h.outer.rotation.z = 0; h.outer.scale.set(1, 1, 1);
+    const ghosts = P.wildGhosts || (P.wildGhosts = []);
+    for (let j=ghosts.length-1;j>=0;j--) {
+      const ghost=ghosts[j], f=(G.t-ghost.t)/0.09;
+      if (f>=1) {
+        P.handRoot.remove(ghost.group);
+        ghost.group.traverse(o=>{if(o.isMesh){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose());o.geometry.dispose();}});ghosts.splice(j,1);
+      } else ghost.group.traverse(o=>{if(o.isMesh)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.opacity=ghost.alpha*(1-f));});
+    }
+    if (h.poseBeat != null && h.poseBeat !== P.wildBeat) {
+      const group=h.outer.clone(true);
+      group.traverse(o=>{if(o.isMesh){
+        const tint=m=>{const c=m.clone();c.onBeforeCompile=m.onBeforeCompile;c.customProgramCacheKey=m.customProgramCacheKey;c.color.setHex(0xffd573);c.transparent=true;c.opacity=0.32;c.depthWrite=false;return c;};
+        o.material=Array.isArray(o.material)?o.material.map(tint):tint(o.material);o.geometry=o.geometry.clone();o.renderOrder-=0.0002;
+      }});
+      P.handRoot.add(group);ghosts.push({group,t:G.t,alpha:0.32});
+    }
+    h.poseBeat=P.wildBeat;
+    h.outer.position.set(P.x, P.y, 0); h.outer.rotation.z = 0; h.outer.scale.set(1, 1, 1);
     h.pair.forEach((part, i) => {
-      const a = P.wildAngle + i * Math.PI, recoil = Math.max(0, 1 - (G.t - P.wildFlashAt) / 0.06) * 0.08;
-      part.group.position.set(Math.cos(a) * (0.46 - recoil), Math.sin(a) * 0.24 - 0.12, 0);
-      part.group.rotation.z = a; part.group.scale.set(1, Math.cos(a) < 0 ? -1 : 1, 1);
-      part.c.setOrder(ORD(P.y) + 0.0006 + i * 0.00002);
+      const recoil = Math.max(0, 1 - (G.t - P.wildFlashAt) / 0.045) * 0.035;
+      const p = wildGrip(P, i, P.wildBeat || 0, recoil);
+      part.group.position.set(p.x, p.y, 0); part.group.rotation.z = p.angle;
+      part.group.scale.set(p.scale, p.scale * p.flip, 1); part.c.setOrder(ORD(P.y) + 0.0006 + i * 0.00002);
+      const shoulder = [(i ? -0.17 : 0.17) * P.wildFace, 1.02];
+      const dx = p.x - shoulder[0], dy = p.y - shoulder[1], len = Math.hypot(dx,dy) || 1;
+      const elbow = [(shoulder[0]+p.x)/2 - dy/len*0.13, (shoulder[1]+p.y)/2 + dx/len*0.13];
+      const points = [shoulder, elbow, [p.x,p.y]];
+      (h.arms[i] || []).forEach((arm,j) => {
+        if (!arm) return;
+        const a=points[j],b=points[j+1],vx=b[0]-a[0],vy=b[1]-a[1];
+        arm.group.position.set(a[0],a[1],0); arm.group.rotation.z=Math.atan2(vy,vx);
+        arm.group.scale.set(Math.hypot(vx,vy)/arm.len,1,1); arm.c.setOrder(ORD(P.y)+0.00035+i*0.00002+j*0.00001);
+      });
     });
   }
   function wildShot(P) {
     clearWildShot(P);
-    const room = G.room, base = P.aim, pairs = 36;
+    const room = G.room, duration = 2, shotInterval = 1.32 / 288, pairs = Math.ceil(duration / shotInterval);
     const preSup = new Set(G.enemies.filter(e => e.alive && e.supT > 0));
     const rd = { d: Object.assign({}, GUNS.bl_dual, { dmg: GUNS.bl_dual.dmg * 2.5 * (1 + 0.2 * upE(P)), life: 0.26, size: 0.28, color: 0xffdf9a }) };
     P.wildHands = makeDualPistols(); if (P.wildHands) P.handRoot.add(P.wildHands.outer);
-    const hands = P.wildHands;
-    P.wildShotStart = G.t; P.wildShotEnd = G.t + 0.66; P.wildAngle = base; P.wildFlashAt = G.t;
-    for (let shot = 0; shot < pairs; shot++) FX.later(shot * 0.66 / pairs, () => {
-      if (G.P !== P || P.dead || G.phase !== 'play' || G.room !== room || !(P.wildShotEnd > G.t)) return;
-      /* Jump between opposing directions rather than drawing expanding rings. */
-      const turn = base + (shot * 5 % 12) * TAU / 12;
-      P.wildAngle = turn; P.wildFlashAt = G.t;
+    if (P.wildHands) {
+      P.wildHands.arms = ['R','L'].map(side => [false,true].map(lower => RIGS.makeArmSegment('blacklilith', donorK('blacklilith'), side, lower)));
+      P.wildHands.arms.flat().forEach(a => { if (a) P.wildHands.outer.add(a.group); });
+    }
+    P.wildFace = P.face < 0 ? -1 : 1; P.wildBeat = 0; P.wildPoses = makeWildPoses(Math.ceil(pairs / 12));
+    const token = P.wildToken = {};
+    P.wildShotStart = G.t; P.wildShotEnd = G.t + duration; P.wildFlashAt = G.t;
+    for (let shot = 0; shot < pairs; shot++) FX.later(shot * shotInterval, () => {
+      if (G.P !== P || P.dead || G.phase !== 'play' || G.room !== room || P.wildToken !== token) return;
+      P.wildBeat = Math.floor(shot / 12); P.wildFlashAt = G.t;
       for (let side = 0; side < 2; side++) {
-        const angle = turn + side * Math.PI, ca = Math.cos(angle), sa = Math.sin(angle);
-        const x = P.x + ca * 0.55, y = P.y + 0.68 + sa * 0.24;
-        const bullet = spawnPBullet(P, rd, x, y, angle, 22);
-        if (bullet) { bullet.sup = 6.5; if (shot >= pairs - 6) bullet.popSet = preSup; }
-        FX.muzzleFlash(x, y, angle, 0xffe7aa, 0.85);
-        if (shot % 2 === 0) FX.beam(x, y, x + ca * 1.3, y + sa * 1.3, 0.045, 0xffd36a, 0.07);
-        if (shot % 3 === 0) FX.particle({ x, y, vx: -sa * 2, vy: 1.4, life: 0.18, size: 0.08, size1: 0, color: 0xffd070, tex: FX.tex.dot });
+        const p = wildGrip(P, side, P.wildBeat), x = p.mx, y = p.my;
+        const bullet = spawnPBullet(P, rd, x, y, p.angle, 22);
+        if (bullet) { bullet.sup = 6.5; bullet.noTrail = true; bullet.s.hidden = true; bullet.core.hidden = true; if (shot >= pairs - 24) bullet.popSet = preSup; }
+        FX.wildMuzzle(x,y,p.angle,shot,side,shot>=pairs-12);
+        if (shot % 12 === 0) FX.particle({ x, y, vx: side ? -1.2 : 1.2, vy: 1.1, grav: 5, life: 0.2, size: 0.045, size1: 0.025, aspect: 2, rot: p.angle, color: 0xdca94c, tex: FX.tex.beam });
       }
       P.recoil = 0.8;
-      if (shot % 3 === 0) SFX.play('gun', 0.55);
-      if (G.opt.shake && shot % 9 === 0) FX.shake(0.035);
+      if (shot % 12 === 0) SFX.play('gun', 0.55);
+      if (G.opt.shake && shot % 36 === 0) FX.shake(0.035);
       if (shot === pairs - 1) {
-        blankWave(P.x, P.y + 0.5, 2.5, false);
-        FX.ring(P.x, P.y + 0.25, 0.2, 1.3, 0xffdf9a, 0.15);
+        SFX.play('expS', 0.4);
       }
     });
-    FX.later(0.68, () => { if (P.wildHands === hands) clearWildShot(P); });
+    FX.later(duration + 0.02, () => { if (P.wildToken === token) clearWildShot(P); });
   }
   function wildShotClears(P, b, ox = b.x, oy = b.y) {
     if (P.dead || !(P.wildShotEnd > G.t)) return false;
@@ -4602,8 +4768,9 @@
       if (e.body) {
         e.body.root.position.set(e.x, e.y, 0);
         setFace(e.body, e.face);
-        if (e.spawnT <= 0) e.body.c.update(dt * (e.stun > 0 ? 0.2 : 1));
-        if (e.flash > 0 && e.def.pale) { const t = e.def.tint; e.body.c.setTint(t[0] * 1.08, t[1] * 1.02, t[2] * 1.02); }
+        if (e.spawnT <= 0 && !e.scudPending) e.body.c.update(dt * (e.stun > 0 ? 0.2 : 1));
+        if (e.scudPending) e.body.c.setTint(1.35, 0.85, 0.55);
+        else if (e.flash > 0 && e.def.pale) { const t = e.def.tint; e.body.c.setTint(t[0] * 1.08, t[1] * 1.02, t[2] * 1.02); }
         else if (e.flash > 0) e.body.c.setTint(e.boss ? 1.16 : 2.1, e.boss ? 1.1 : 1.9, e.boss ? 1.1 : 1.9); // bosses only glint, so pale ones never blow out under bloom
         else if (e.state === 'arm') { const on = Math.sin(G.t * 40) > 0; e.body.c.setTint(1.8, on ? 0.35 : 1, on ? 0.3 : 0.9); } // kamikaze about to burst: hard red blink
         else if (e.stun > 0 || e.slowT > 0) e.body.c.setTint(0.7, 0.85, 1.4);

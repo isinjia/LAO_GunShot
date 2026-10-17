@@ -71,6 +71,75 @@
     return canvasTex(cv);
   }
 
+  /* Directional, irregular flash frames: a white combustion core with torn amber tongues. */
+  function wildFlame(frame) {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+    const g = cv.getContext('2d');
+    let seed = 317 + frame * 7919;
+    const rand = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+    g.globalCompositeOperation = 'lighter';
+    for (let i=0;i<15;i++) {
+      const a=(rand()-.5)*2.2, len=28+rand()*72, width=2+rand()*9;
+      const dx=Math.cos(a),dy=Math.sin(a),px=-dy,py=dx;
+      const x=26+dx*len,y=64+dy*len;
+      const grad=g.createLinearGradient(26,64,x,y);
+      grad.addColorStop(0,'#fffce5');grad.addColorStop(.25,'#ffeaa3');
+      grad.addColorStop(.65,'rgba(255,146,32,0.8)');grad.addColorStop(1,'rgba(255,70,10,0)');
+      g.fillStyle=grad;g.shadowColor='#ff7308';g.shadowBlur=3;
+      g.beginPath();g.moveTo(20,64);
+      g.bezierCurveTo(26+dx*len*.18+px*width,64+dy*len*.18+py*width,26+dx*len*.65+px*width*.3,64+dy*len*.65+py*width*.3,x,y);
+      g.bezierCurveTo(26+dx*len*.45-px*width*.4,64+dy*len*.45-py*width*.4,26+dx*len*.15-px*width*.6,64+dy*len*.15-py*width*.6,20,64);
+      g.fill();
+    }
+    const core=g.createRadialGradient(29,64,1,35,64,23);
+    core.addColorStop(0,'#ffffff');core.addColorStop(.28,'#fffbed');
+    core.addColorStop(.6,'rgba(255,213,98,0.6)');core.addColorStop(1,'rgba(255,115,20,0)');
+    g.fillStyle=core;g.beginPath();g.ellipse(35,64,25,15,0,0,Math.PI*2);g.fill();
+    g.shadowBlur=0;
+    for(let i=0;i<5;i++) {
+      const a=(rand()-.5)*2.6,l=32+rand()*65;
+      g.strokeStyle=i%2?'#fff1b1':'#ffad36';g.lineWidth=.5+rand()*.7;
+      g.beginPath();g.moveTo(26,64);g.lineTo(26+Math.cos(a)*l,64+Math.sin(a)*l);g.stroke();
+    }
+    return canvasTex(cv);
+  }
+
+  /* Compact white shot impact with orange needles and swept blue-white afterglow. */
+  function scudFlashTexture(frame) {
+    const cv=document.createElement('canvas');cv.width=cv.height=128;
+    const g=cv.getContext('2d');let seed=1907+frame*3779;
+    const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+    g.globalCompositeOperation='lighter';
+    g.save();g.translate(55,64);g.scale(.62,1);
+    const halo=g.createRadialGradient(0,0,3,0,0,45);
+    halo.addColorStop(0,'#fffcec');halo.addColorStop(.35,'rgba(255,229,160,.9)');
+    halo.addColorStop(.65,'rgba(255,106,25,.45)');halo.addColorStop(1,'rgba(255,40,5,0)');
+    g.fillStyle=halo;g.fillRect(-48,-48,96,96);g.restore();
+    for(let i=0;i<15;i++) {
+      const a=(rand()-.5)*5.4,len=23+rand()*44,dx=Math.cos(a),dy=Math.sin(a);
+      const x=55+dx*len,y=64+dy*len;
+      const grad=g.createLinearGradient(55,64,x,y);
+      grad.addColorStop(0,'#fff');grad.addColorStop(.25,'#fff5c4');
+      grad.addColorStop(.7,'#ffb43f');grad.addColorStop(1,'rgba(255,70,5,0)');
+      g.fillStyle=grad;const w=.8+rand()*1.8;
+      g.beginPath();g.moveTo(55-dy*w,64+dx*w);g.lineTo(x,y);g.lineTo(55+dy*w,64-dx*w);g.fill();
+    }
+    g.strokeStyle='rgba(202,234,255,.65)';g.lineWidth=1.1;
+    for(let i=0;i<3;i++) {
+      g.beginPath();g.ellipse(53-i*2,64,10+i*3,32+i*4,-.2,Math.PI*.55,Math.PI*1.55);g.stroke();
+    }
+    const white=g.createRadialGradient(54,64,2,54,64,31);
+    white.addColorStop(0,'#fff');white.addColorStop(.65,'#fffdf1');white.addColorStop(1,'rgba(255,227,172,.65)');
+    g.fillStyle=white;g.shadowColor='#fff8dd';g.shadowBlur=5;
+    g.beginPath();
+    for(let i=0;i<28;i++) {
+      const a=i/28*Math.PI*2,r=.8+rand()*.25,x=54+Math.cos(a)*14*r,y=64+Math.sin(a)*29*r;
+      if(i)g.lineTo(x,y);else g.moveTo(x,y);
+    }
+    g.closePath();g.fill();
+    return canvasTex(cv);
+  }
+
   // all particle textures and sheet frames share one atlas so particles batch into a few draw calls
   const CELL = 128;
   let atlasTex = null;
@@ -185,6 +254,9 @@
     sheets.rsparks = sh('fx_rsparks', 2, 2); sheets.shockring = sh('fx_shockring', 3, 3); sheets.airboom = sh('fx_airboom', 3, 3);
     sheets.borifang = images.fx_borifang ? splitSheet(images.fx_borifang, 5, 2) : [];
     tex.beam = softTex('beam');
+    sheets.wildFlame = Array.from({ length: 6 }, (_, i) => wildFlame(i));
+    tex.wildFlash = sheets.wildFlame[0];
+    sheets.scudFlash = Array.from({length:6},(_,i)=>scudFlashTexture(i));
     tex.dot = softTex('dot');
     tex.slash = softTex('slash');
     tex.snow = softTex('snow');
@@ -192,8 +264,8 @@
     wc.getContext('2d').fillStyle = '#fff'; wc.getContext('2d').fillRect(0, 0, 8, 8);
     tex.white = canvasTex(wc); // solid quads (HP bars) in the particle batches
 
-    buildAtlas([...['glow', 'cross', 'ring', 'spark', 'elec', 'beam', 'dot', 'slash', 'snow', 'white'].map((k) => tex[k]),
-      ...sheets.smoke, ...sheets.fire, ...sheets.aura, ...sheets.bolt, ...sheets.kdust1, ...sheets.kdust2, ...sheets.kdust1m, ...sheets.kdust2m, ...sheets.borifang, ...sheets.borirun, ...sheets.borirunM, ...sheets.rlion, ...sheets.rlionM, ...sheets.rlionc, ...sheets.rfire, ...sheets.rring, ...sheets.rbolts, ...sheets.rsparks, ...sheets.shockring, ...sheets.airboom, ...[tex.dogaim, tex.lrlaxe].filter(Boolean), ...(tex.kpuff ? [tex.kpuff] : [])]);
+    buildAtlas([...['glow', 'cross', 'ring', 'spark', 'elec', 'beam', 'wildFlash', 'dot', 'slash', 'snow', 'white'].map((k) => tex[k]),
+      ...sheets.scudFlash, ...sheets.wildFlame, ...sheets.smoke, ...sheets.fire, ...sheets.aura, ...sheets.bolt, ...sheets.kdust1, ...sheets.kdust2, ...sheets.kdust1m, ...sheets.kdust2m, ...sheets.borifang, ...sheets.borirun, ...sheets.borirunM, ...sheets.rlion, ...sheets.rlionM, ...sheets.rlionc, ...sheets.rfire, ...sheets.rring, ...sheets.rbolts, ...sheets.rsparks, ...sheets.shockring, ...sheets.airboom, ...[tex.dogaim, tex.lrlaxe].filter(Boolean), ...(tex.kpuff ? [tex.kpuff] : [])]);
 
     flashMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(200, 200),
@@ -407,6 +479,41 @@
   }
 
   // gun flash at a muzzle, pointing along the shot: hot core, coloured bloom, a flash streak and a few sparks
+  /* Shared muzzle for Black Lilith's E and both ultimate firing stages. */
+  function wildMuzzle(x,y,angle,shot,side,finish=false) {
+    const flash=(sheets.wildFlame || [tex.wildFlash])[(shot+side*3)%6] || tex.wildFlash;
+    const fx=Math.cos(angle),fy=Math.sin(angle),flashScale=3.5;
+    particle({x:x+fx*.26*flashScale,y:y+fy*.26*flashScale,life:.038,size:(finish?1.15:.82)*flashScale,size1:(finish?1.35:.95)*flashScale,aspect:.75,rot:angle,color:0xffffff,tex:flash,alpha:side===Math.floor(shot/4)%2?.95:.35});
+    particle({x:x+fx*.08*flashScale,y:y+fy*.08*flashScale,life:.022,size:.26*flashScale,size1:.12*flashScale,aspect:.45,rot:angle,color:0xfff4d5,tex:flash,alpha:side===Math.floor(shot/4)%2?1:.45});
+  }
+  function scudMuzzle(x,y,angle,beat,scale=1) {
+    const frames=sheets.scudFlash,flash=frames[((beat%frames.length)+frames.length)%frames.length];
+    const ca=Math.cos(angle),sa=Math.sin(angle);
+    particle({x:x+ca*.12*scale,y:y+sa*.12*scale,life:.055,size:2.1*scale,size1:2.35*scale,
+      rot:angle,color:0xffffff,tex:flash,alpha:beat%2?.85:1});
+    particle({x:x+ca*.06*scale,y:y+sa*.06*scale,life:.028,size:.5*scale,size1:.35*scale,
+      aspect:1.8,rot:angle,color:0xfffdf4,tex:tex.glow,alpha:.95});
+    particle({x:x-ca*.22*scale,y:y-sa*.22*scale,life:.085,size:1.1*scale,size1:1.45*scale,
+      aspect:.65,rot:angle+Math.PI/2,color:0xb5d7e8,tex:tex.slash,alpha:.24});
+  }
+  function scudImpact(x,y,angle) {
+    particle({x,y,life:.06,size:.6,size1:.9,rot:angle,color:0xffffff,tex:sheets.scudFlash[2],alpha:1});
+    for(let i=0;i<4;i++) {
+      const a=angle+(i-1.5)*.45,v=7+i;
+      particle({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.12,size:.4,size1:.05,aspect:.07,rot:a,color:0xffa64e,tex:tex.beam,alpha:.85,drag:7});
+    }
+  }
+  function scudDetonate(x,y,height=1) {
+    const k=Math.max(.8,Math.min(1.6,height));
+    particle({x,y,life:.075,size:1.1*k,size1:1.8*k,color:0xffffff,tex:tex.glow,alpha:1});
+    particle({x,y,life:.3,size:1.05*k,size1:1.8*k,color:0xffae65,frames:sheets.fire,alpha:.95});
+    particle({x,y,life:.18,size:1.7*k,size1:2*k,rot:-.5,color:0xfff2c9,tex:sheets.scudFlash[4],alpha:.95});
+    for(let i=0;i<8;i++) {
+      const a=i*Math.PI/4+.17,v=5+(i%3)*2;
+      particle({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.24,size:.65*k,size1:.03,aspect:.035,rot:a,color:i%2?0xffe3a1:0xff773b,tex:tex.beam,alpha:.9,drag:5});
+    }
+    particle({x,y:y+.2,vy:.9,life:.4,size:.75*k,size1:1.25*k,color:0x635866,frames:sheets.smoke,alpha:.4,normal:true});
+  }
   function muzzleFlash(x, y, ang, color = 0xffd27a, k = 1) {
     const cx = Math.cos(ang), cy = Math.sin(ang);
     particle({ x, y, life: 0.07, size: 0.22 * k, size1: 0.42 * k, color: 0xffffff, tex: tex.glow, alpha: 1 });
@@ -626,7 +733,7 @@
 
   window.FX = {
     L, tex, sheets, init, update, clear, particle, sprite, kill, setTex, setBudget, draw: drawParticles, sparks, hit, explosion, ring, lightning, beam, slash, flame, wave, frost, holy,
-    trail, muzzle, muzzleFlash, summonBurst, mergeFx, deathFx, goldPop, meteor, raindrop, pillar, orbital, thunderBolt, freezeAll,
+    trail, muzzle, muzzleFlash, wildMuzzle, scudMuzzle, scudImpact, scudDetonate, summonBurst, mergeFx, deathFx, goldPop, meteor, raindrop, pillar, orbital, thunderBolt, freezeAll,
     shake, flash, follow, later: setTimeout0, state, rnd, tickers, ribbon, jagged,
   };
 })();

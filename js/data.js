@@ -53,8 +53,8 @@
   const HIDDEN = [
     {
       id: 'blacklilith', available: false, name: '블랙 리리스', title: '히든 · 쌍권총 전투 바이오로이드', img: 'c_HID_BlackLilith', gun: 'bl_dual', hp: 10, armor: 1, speed: 6.6, hidden: true,
-      skill: 'scud', skillName: '스커드 제노사이드', skillDesc: '[기폭] 조준 방향 돌진 → 도약·공중 쌍권총 회전 난사 → 착지 마무리 사격 — 시전 중 무적 · 공중 이동 가능 · 제압 대상 추가 경직 · 착지 시 주변 적탄 제거', color: '#c070ff', upF: 'u_escort', upE: 'u_dual',
-      sk2: { id: 'dualburst', name: '난사', icon: 'i_research', cd: 6, desc: '[부여] 0.66초간 사방으로 권총 72발 난사 — 이동 가능 · 시전 중 주변 적탄 지속 제거 · 6.5초 제압, 마지막 탄은 기존 제압 대상을 경직' },
+      skill: 'scud', skillName: '스커드 제노사이드', skillDesc: '[기폭] 전방 화염 범위에 2초간 사격 → 공중 좌우 사격으로 지상에서 명중한 모든 적을 추격 타격 → 착지 승리 포즈의 마지막 자세 유지 중 치명상 대상 일제 폭발 — 시전 중 무적 · 직접 이동 가능 · 마무리 시 주변 적탄 제거', color: '#c070ff', upF: 'u_escort', upE: 'u_dual',
+      sk2: { id: 'dualburst', name: '난사', icon: 'i_research', cd: 6, desc: '[부여] 2초간 사방으로 권총 874발 난사 — 이동 가능 · 시전 중 주변 적탄 지속 제거 · 6.5초 제압, 마지막 탄은 기존 제압 대상을 경직' },
       stats: { atk: 4, def: 3, mob: 5 }, desc: '쌍권총과 경호의 달인. 탄막 한가운데서 춤추듯 싸운다.',
     },
     {

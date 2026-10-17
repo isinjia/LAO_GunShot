@@ -1436,3 +1436,11 @@ body.playing #announce .ann em { line-height: 1.4; }
 body.playing.fighting #toasts { align-items: flex-start !important; }
 body.playing.fighting #toasts .notice-icon { display: inline-block; width: 18px; height: 18px; margin-right: 5px; vertical-align: middle; background: center / contain no-repeat; }
 body.playing.fighting #banner { display: none !important; }
+
+/* Real text entry also accepts Korean IME and touch keyboards. */
+#titleCodePanel { margin: 8px 0; max-width: 360px; color: #bdc9d4; font-size: 12px; }
+#titleCodePanel summary { cursor: pointer; width: fit-content; }
+#titleCodePanel form { display: flex; gap: 6px; margin-top: 6px; }
+#titleCodePanel input { min-width: 0; flex: 1; padding: 8px; border: 1px solid #64717e; background: #101822; color: #fff; font-size: 16px; }
+#titleCodePanel button { padding: 8px 12px; border: 1px solid #8c7b3d; background: #34301c; color: #ffe178; cursor: pointer; }
+#titleCodePanel small { display: block; margin-top: 4px; color: #ffe178; }
