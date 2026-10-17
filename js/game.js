@@ -395,8 +395,13 @@
     giveGun(P, hero.gun, true);
     return P;
   }
+  // picked-up guns are worth the slot: damage by rank (B x1 · A x1.15 · S x1.5 · SS x1.9) and twice the reserve for S / SS,
+  // so an S gun clearly beats every hero's own (bottomless) gun instead of running dry at the same strength
+  const RANK_DMG = [1, 1.15, 1.5, 1.9], RANK_AMMO = [1, 1, 2, 2];
   function gunState(id, infinite) {
-    const d = GUNS[id];
+    let d = GUNS[id];
+    const r = d.rank || 0;
+    if (!infinite && !d.noLoot && (RANK_DMG[r] !== 1 || RANK_AMMO[r] !== 1)) d = Object.assign({}, d, { dmg: d.dmg * RANK_DMG[r], ammo: Math.round(d.ammo * RANK_AMMO[r]) });
     return { id, d, mag: d.mag, ammo: infinite ? Infinity : d.ammo, infinite: !!infinite, hand: null };
   }
   const MAX_GUNS = 3; // weapon slots: the hero's own gun + two picked up
