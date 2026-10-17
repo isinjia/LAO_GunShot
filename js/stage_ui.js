@@ -118,7 +118,7 @@
     plate.hidden = false;
     const eq = curChar.equip || {}, slots = window.EQUIP ? EQUIP.SLOTS : [];
     plate.innerHTML = `<i class="pnpt" style="background-image:url(${portrait(h)});--c:${h.color}"></i><div class="pnh" style="--c:${h.color}"><small>${h.title}</small><h3>${esc(curChar.name)}</h3><span class="cls">${h.name}</span></div>
-      <div class="pnlv"><small>작전마다 <b>Lv.1</b>부터 성장 · 무기도 초기화 · 장비만 유지</small></div>
+      <div class="pnlv"><small class="pnrule">출격하면 레벨 1 · 기본 무기로 시작 — 장비만 유지됩니다</small></div>
       <div class="pnpw"><small>아이템 레벨 합</small><b class="num">${gearIl(curChar)}</b><small class="pnsub">전투력 ${power(curChar).toLocaleString()}</small></div>
       <div class="pneq">${slots.map((s) => { const it = eq[s.id]; return `<span class="${it ? 'on' : ''}" title="${it ? esc(EQUIP.itemName(it)) : s.name}" style="--rc:${it ? (it.rw ? '#c8a050' : RCOL[it.rar] || '#888') : 'rgba(255,255,255,0.15)'}">${it ? `<i style="background-image:url(${EQUIP.iconOf(it)})"></i>` : `<em aria-hidden="true"></em>`}</span>`; }).join('')}</div><small class="pneqc">장착 ${slots.filter((s) => eq[s.id]).length} / ${slots.length}</small>
       <div class="pnact"><button type="button" class="btn d" id="rpgInv">인벤토리 <kbd>I</kbd></button><button type="button" class="pndel" id="rpgDel">대원 삭제</button></div>`;
