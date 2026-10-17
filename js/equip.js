@@ -209,17 +209,30 @@
 
   // ── characters ──
   function load() { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && Array.isArray(v.list) ? v : { v: 1, list: [] }; } catch (e) { return { v: 1, list: [] }; } }
-  function loadVault() { try { const v = JSON.parse(localStorage.getItem(VAULT_KEY) || 'null'); return v && Array.isArray(v.list) ? v.list.filter(vaultOk) : []; } catch (e) { return []; } }
+  // the account store: the shared vault (gems / runes) and the shared 재료 balance
+  function loadAcct() { try { const v = JSON.parse(localStorage.getItem(VAULT_KEY) || 'null'); return { list: v && Array.isArray(v.list) ? v.list.filter(vaultOk) : [], mats: Math.max(0, Math.floor(Number(v && v.mats) || 0)) }; } catch (e) { return { list: [], mats: 0 }; } }
+  const loadVault = () => loadAcct().list;
   function saveAll(db) {
     try {
-      const ch = db.list.find((x) => Array.isArray(x.vault)); if (ch) localStorage.setItem(VAULT_KEY, JSON.stringify({ v: 1, list: ch.vault }));
-      localStorage.setItem(KEY, JSON.stringify(db, (k, v) => (k === 'vault' ? undefined : v))); // the vault lives in its own key
+      const ch = db.list.find((x) => Array.isArray(x.vault)); if (ch) localStorage.setItem(VAULT_KEY, JSON.stringify({ v: 1, list: ch.vault, mats: Math.max(0, Math.floor(Number(ch.mats) || 0)) }));
+      localStorage.setItem(KEY, JSON.stringify(db, (k, v) => (k === 'vault' || k === 'mats' ? undefined : v))); // vault and 재료 live in the account key
     } catch (e) { /* no storage */ }
   }
-  function getChar(id) { const db = load(); const c = db.list.find((x) => x.id === id) || null; if (c) c.vault = loadVault(); return { db, c }; }
+  function getChar(id) {
+    const db = load(), c = db.list.find((x) => x.id === id) || null;
+    if (c) {
+      const A = loadAcct();
+      c.vault = A.list;
+      // 재료 is account-wide; an older save kept it per operator: every operator's leftover is folded in once (it leaves the operator on the next save)
+      c.mats = A.mats + db.list.reduce((n, x) => n + Math.max(0, Math.floor(Number(x.mats) || 0)), 0);
+      db.list.forEach((x) => { if (x !== c) delete x.mats; });
+    }
+    return { db, c };
+  }
   function norm(c) { c.lv = c.lv || 1; c.xp = c.xp || 0; c.equip = c.equip || {}; c.bag = Array.isArray(c.bag) ? c.bag : []; c.stash = Array.isArray(c.stash) ? c.stash : []; c.mats = Math.max(0, Math.floor(Number(c.mats) || 0));
     if (c.equip.belt) { if (!c.equip.earring) c.equip.earring = c.equip.belt; delete c.equip.belt; }
     for (const k of ['bag', 'stash']) c[k].forEach((it) => { if (it.base && /^belt_/.test(it.base) && it.w !== 1) { it.w = 1; it.h = 1; } }); if (!Array.isArray(c.vault)) c.vault = loadVault(); return c; }
+  const acctMats = () => loadAcct().mats;
   // the character keeps only its gear: the level is the run's own (back to Lv.1 every sortie, like the weapons)
   const gearPower = (st) => Math.round(100 + (st.dmg || 0) * 4 + (st.hp || 0) * 30 + (st.armor || 0) * 40 + (st.crit || 0) * 5 + (st.rof || 0) * 3 + (st.speed || 0) * 2 + (st.skill || 0) * 2 + (st.pierce || 0) * 25 + (st.reload || 0) + (st.roll || 0));
   // grid placement: items carry x / y in their container
@@ -382,7 +395,7 @@
     const used = (list) => list.reduce((n, o) => n + o.w * o.h, 0);
     ov.querySelector('.ivwin').innerHTML = `<div class="ivh"><i class="ivpt" style="background-image:url(assets/ui/f_${c.hero}.webp);--c:${H.color || '#888'}"></i>
         <div class="ivn"><small>INVENTORY · ${H.name || ''}</small><h3>${esc(c.name)}</h3></div>
-        <div class="ivlv"><small>장비 전투력</small><b class="num">${gearPower(st).toLocaleString()}</b><span class="ivmat" title="장비 분해 · 작전 보상으로 획득 — 소켓 추가 · 소켓 비우기 · 보석 합성에 사용"><i></i>재료 <b class="num">${c.mats.toLocaleString()}</b></span></div>
+        <div class="ivlv"><small>장비 전투력</small><b class="num">${gearPower(st).toLocaleString()}</b><span class="ivmat" title="모든 대원 공용 · 장비 분해 · 작전 보상으로 획득 — 소켓 추가 · 소켓 비우기 · 보석 합성에 사용"><i></i>재료 (공용) <b class="num">${c.mats.toLocaleString()}</b></span></div>
         <button type="button" class="ivx" id="invClose" aria-label="닫기">닫기 <kbd>I</kbd></button></div>
       <div class="ivbody">
         <div class="ivleft"><div class="ivdoll">${doll}</div><div class="ivstats"><small>장비 능력치 합계 · 작전 시작 시 적용</small><ul>${statLines(st) || '<li class="zero"><span>장착한 장비 없음</span><b>—</b></li>'}</ul></div></div>
