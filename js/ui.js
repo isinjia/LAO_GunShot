@@ -295,6 +295,7 @@
     if (el.disarmAbort) el.disarmAbort();
   }
   function title() {
+    clearToasts(true);
     closeOverlays();
     el.hud.hidden = true; el.bossBar.hidden = true; el.result.hidden = true;
     el.title.hidden = false;
@@ -558,7 +559,7 @@
     el.result.hidden = true;
     closeOverlays();
     el.announce.hidden = false; el.announce.innerHTML = '';
-    clearToasts();
+    clearToasts(true);
     INPUT.toggleFire = GAME.G.opt.autoFire;
     document.body.classList.add('playing');
     const G = GAME.G, P = G.P, h = P.hero;
@@ -609,6 +610,7 @@
     xh.el.classList.toggle('rl', G.P.reloadT > 0);
   }
   function hud(G) {
+    noticeTick();
     const P = G.P;
     set('xp', P.lv + ':' + Math.round(P.xp), () => {
       document.getElementById('lvN').textContent = 'Lv.' + P.lv;
@@ -1047,26 +1049,81 @@
     ], { duration: 520, easing: 'ease-out', fill: 'forwards' });
     d.anim.onfinish = () => { d.busy = false; };
   }
-  const tq = [];
+  const tq = [], noticeDetails = [];
+  let toastTimer = 0, noticeNext = 0, noticeCombat = false, lastToast = '', lastToastT = 0;
+  function combatNotice() {
+    const g = GAME.G;
+    return g.phase === 'play' && !!(g.room && g.room.active);
+  }
+  function deferNotice(kind, args) {
+    const key = kind + ':' + args.slice(0, 2).join(':');
+    if (!noticeDetails.some(q => q.key === key)) noticeDetails.push({ kind, args, key });
+    if (noticeDetails.length > 24) noticeDetails.shift();
+  }
+  function noticeTick() {
+    const g = GAME.G, fighting = combatNotice(), now = performance.now();
+    if (fighting && !noticeCombat) {
+      el.announce.innerHTML = '';
+      while (el.toasts.children.length > 1) el.toasts.firstChild.remove();
+      el.skillCut.hidden = true;
+    }
+    noticeCombat = fighting;
+    if (g.phase !== 'play' || fighting || g.paused || g.choosing || g.lvPending || g.tut || !el.bossIntro.hidden || !el.skillCut.hidden || now < noticeNext || el.announce.children.length) return;
+    const q = noticeDetails.shift();
+    if (!q) return;
+    noticeNext = now + 3600;
+    if (q.kind === 'announce') announce(...q.args);
+    else toastNow(...q.args);
+  }
   function toast(msg, cls) {
-    // the top lane belongs to one thing at a time: a banner or cut-in in flight holds new toasts back briefly
+    const fighting = combatNotice();
+    if (fighting) {
+      if (String(msg).length > 64 && cls !== 'warn') {
+        deferNotice('toast', [msg, cls]);
+        msg = String(msg).split(' — ')[0];
+      }
+      toastNow(msg, cls); return;
+    }
     const busy = el.banner.classList.contains('on') && /phase|floor/.test(el.banner.className) || !el.skillCut.hidden;
-    if (busy && tq.length < 4) { tq.push([msg, cls]); setTimeout(() => { const q = tq.shift(); if (q) toastNow(q[0], q[1]); }, 1300 + (tq.length - 1) * 900); return; } // queued toasts come out one after another, not all at once
+    if (busy) {
+      if (tq.length >= 4) tq.shift();
+      tq.push([msg, cls]);
+      if (!toastTimer) toastTimer = setTimeout(flushToast, 1300);
+      return;
+    }
     toastNow(msg, cls);
   }
-  function clearToasts() { el.toasts.innerHTML = ''; tq.length = 0; }
-  let lastToast = '', lastToastT = 0;
-  function toastNow(msg, cls) {
-    const now = performance.now();
+  function flushToast() {
+    toastTimer = 0;
+    const q = tq.shift(); if (q) toast(...q);
+    if (tq.length && !toastTimer) toastTimer = setTimeout(flushToast, 1500);
+  }
+  function clearToasts(reset) {
+    el.toasts.innerHTML = ''; tq.length = 0; clearTimeout(toastTimer); toastTimer = 0;
+    lastToast = ''; lastToastT = 0;
+    if (reset) { noticeDetails.length = 0; noticeNext = 0; noticeCombat = false; }
+  }
+  function toastNow(msg, cls, icon) {
+    const now = performance.now(), fighting = combatNotice();
+    if (GAME.G.P && GAME.G.P.dead && GAME.G.phase === 'play') return;
+    const previous = el.toasts.lastElementChild;
+    const gain = String(msg).match(/^(.+?) \+(\d+)(.*)$/);
+    if (fighting && gain && previous && previous.dataset.gain === gain[1] + gain[3]) {
+      previous.dataset.total = Number(previous.dataset.total) + Number(gain[2]);
+      previous.textContent = gain[1] + ' +' + previous.dataset.total + gain[3];
+      clearTimeout(previous._expiry); previous._expiry = setTimeout(() => previous.remove(), 1600);
+      return;
+    }
     if (msg === lastToast && now - lastToastT < 1500) return;
     lastToast = msg; lastToastT = now;
-    if (GAME.G.P && GAME.G.P.dead && GAME.G.phase === 'play') return;
     const t = document.createElement('div');
     t.className = 'toast ' + (cls || '');
-    t.innerHTML = msg;
+    t.innerHTML = (icon ? `<i class="notice-icon" style="background-image:${icon}"></i>` : '') + msg;
+    if (gain) { t.dataset.gain = gain[1] + gain[3]; t.dataset.total = gain[2]; }
+    if (fighting) el.toasts.innerHTML = '';
     el.toasts.appendChild(t);
-    while (el.toasts.children.length > 3) el.toasts.firstChild.remove();
-    setTimeout(() => t.remove(), 2600);
+    while (el.toasts.children.length > (fighting ? 1 : 3)) el.toasts.firstChild.remove();
+    t._expiry = setTimeout(() => t.remove(), fighting ? 1600 : 2600);
   }
   let chEl = null, chLast = -1;
   function chTimer(t, r) {
@@ -1084,6 +1141,7 @@
     if (s <= 5 && s > 0) SFX.synth('beat', 0.5);
   }
   function banner(kind, title, sub) {
+    if (combatNotice()) { toastNow(title, kind === 'phase' || kind === 'boss' ? 'warn' : ''); return; }
     const b = el.banner;
     b.className = 'banner ' + kind;
     if (kind === 'floor' && sub && GAME.G.fi > 0) b.innerHTML = `<div><div class="band"><div class="ms2">SECTOR ${String(GAME.G.fi + 1).padStart(2, '0')} · DESCENT</div><div class="wv">${title}</div><div class="sub">${sub}</div></div></div>`;
@@ -1094,6 +1152,12 @@
     b.classList.add('on');
   }
   function announce(head, name, desc, rank, icon) {
+    if (combatNotice()) {
+      deferNotice('announce', [head, name, desc, rank, icon]);
+      toastNow(name, 'gem', icon ? `var(--s-${icon})` : rankImg(rank, true));
+      return;
+    }
+    noticeNext = Math.max(noticeNext, performance.now() + 3400);
     const a = document.createElement('div');
     a.className = 'ann';
     a.style.setProperty('--c', RANKS[Math.min(3, rank)].color);
@@ -1145,6 +1209,7 @@
   function hideBossIntro() { el.bossIntro.hidden = true;
   }
   function skillCut(h) {
+    if (combatNotice()) { toastNow(h.skillName, 'gem'); return; }
     const d = el.skillCut;
     if (!el.bossIntro.hidden) return; // the boss caution band owns the screen for its moment
     d.innerHTML = `<div class="sc-band" style="--c:${h.color}"><i style="background-image:${portrait(h)}"></i><div><small>SKILL</small><b>${h.skillName}</b></div></div>`;
@@ -1154,6 +1219,7 @@
   }
   // a shout stamped over the field (램파리온's chant lines): big = the finisher, small = the chant
   function shout(text, big, color) {
+    if (combatNotice()) { toastNow(text, 'gem'); return; }
     const host = el.skillCut && el.skillCut.parentNode; if (!host) return;
     const d = document.createElement('div');
     d.className = 'shout' + (big ? ' big' : '');

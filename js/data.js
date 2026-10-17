@@ -53,8 +53,8 @@
   const HIDDEN = [
     {
       id: 'blacklilith', available: false, name: '블랙 리리스', title: '히든 · 쌍권총 전투 바이오로이드', img: 'c_HID_BlackLilith', gun: 'bl_dual', hp: 10, armor: 1, speed: 6.6, hidden: true,
-      skill: 'escort', skillName: '요인 경호', skillDesc: '[기폭] 6초간 피해 무효 2회 · 공격력 +30% · 자동 조준 · 모든 무기 탄약 소모 없음, 경호 드론이 적탄을 먹는다 — 1.2초마다 쏘는 탄이 제압된 적을 경직', color: '#c070ff', upF: 'u_escort', upE: 'u_dual',
-      sk2: { id: 'dualburst', name: '듀얼 버스트', icon: 'i_research', cd: 6, desc: '[부여] 쌍권총 20연사 교차 — 맞은 적 6.5초 제압, 마지막 슬러그는 미리 제압돼 있던 적을 경직' },
+      skill: 'scud', skillName: '스커드 제노사이드', skillDesc: '[기폭] 조준 방향 돌진 → 도약·공중 쌍권총 회전 난사 → 착지 마무리 사격 — 시전 중 무적 · 공중 이동 가능 · 제압 대상 추가 경직 · 착지 시 주변 적탄 제거', color: '#c070ff', upF: 'u_escort', upE: 'u_dual',
+      sk2: { id: 'dualburst', name: '난사', icon: 'i_research', cd: 6, desc: '[부여] 0.66초간 사방으로 권총 72발 난사 — 이동 가능 · 시전 중 주변 적탄 지속 제거 · 6.5초 제압, 마지막 탄은 기존 제압 대상을 경직' },
       stats: { atk: 4, def: 3, mob: 5 }, desc: '쌍권총과 경호의 달인. 탄막 한가운데서 춤추듯 싸운다.',
     },
     {
@@ -321,8 +321,8 @@
     { id: 'u_rifle', hero: 'constantia', name: '열화우라늄 탄', icon: 'i_crit', max: 3, desc: '라이플 사격: 피해 +25%, 쿨타임 -0.6초' },
     { id: 'u_deploy', hero: 'kheshig', name: '배치 숙련', icon: 'i_battle', max: 3, desc: '전술 배치: 지속 +1.5초' },
     { id: 'u_cqb', hero: 'kheshig', name: '지근거리 사격', icon: 'i_power', max: 3, desc: '근거리 포격: 피해 +20%, 쿨타임 -0.6초' },
-    { id: 'u_escort', hero: 'blacklilith', name: '경호 연장', icon: 'i_battle', max: 3, desc: '요인 경호: 지속 +1.5초' },
-    { id: 'u_dual', hero: 'blacklilith', name: '아킴보 숙련', icon: 'i_power', max: 3, desc: '듀얼 버스트: 피해 +20%, 쿨타임 -0.6초' },
+    { id: 'u_escort', hero: 'blacklilith', name: '제노사이드 강화', icon: 'i_battle', max: 3, desc: '스커드 제노사이드: 피해 +20%' },
+    { id: 'u_dual', hero: 'blacklilith', name: '아킴보 숙련', icon: 'i_power', max: 3, desc: '난사: 피해 +20%, 쿨타임 -0.6초' },
     { id: 'u_beam', hero: 'lrl', name: '봉인 해제', icon: 'i_battle', max: 3, desc: '사이클롭스 이터널 빔: 폭 +30%, 효과 +1초' },
     { id: 'u_axe', hero: 'lrl', name: '용살자의 행운', icon: 'i_power', max: 3, desc: '액스 오브 다크니스: 피해 +20%, 약점 확률 +8%, 쿨타임 -0.6초' },
     // (램파리온 keeps the emplace / dash kit and its upgrades)
@@ -335,7 +335,7 @@
     { id: 'm_gnome', hero: 'gnome', name: '표식 연쇄', icon: 'i_atk', max: 3, desc: '모든 무기·스킬: 표식 대상 피해 +10%, 표식 적 처치 시 주변에 피해 8의 폭발(1초마다)' },
     { id: 'm_constantia', hero: 'constantia', name: '약점 포착', icon: 'i_atk', max: 3, desc: '모든 무기·스킬: 표식·속박 대상 피해 +16%' },
     { id: 'm_kheshig', hero: 'kheshig', name: '근접 대응', icon: 'i_atk', max: 3, desc: '모든 무기·스킬: 거리 4 이내 대상 피해 +12%' },
-    { id: 'm_blacklilith', hero: 'blacklilith', name: '경호 전술', icon: 'i_atk', max: 3, desc: '모든 무기·스킬: 제압 대상 또는 경호 중 피해 +12%' },
+    { id: 'm_blacklilith', hero: 'blacklilith', name: '섬멸 전술', icon: 'i_atk', max: 3, desc: '모든 무기·스킬: 제압 대상 또는 궁극기 시전 중 피해 +12%' },
     { id: 'm_lrl', hero: 'lrl', name: '암흑 추적', icon: 'i_atk', max: 3, desc: '모든 무기·스킬: 실명 대상 피해 +16%' },
     { id: 'm_ramparion', hero: 'ramparion', name: '돌파 교리', icon: 'i_atk', max: 3, desc: '모든 무기·스킬: 거리 3 이내 또는 속박·기절 대상 피해 +12%' },
   ];
