@@ -213,11 +213,16 @@
     bulwark: { name: '외곽 방어선', en: 'OUTER BULWARK', ...LOOK(FLOORS[4]) },
     command: { name: '철혈 사령부', en: 'IRON COMMAND', ...LOOK(FLOORS[5]) },
     // new looks
-    frost: { name: '동결 저장고', en: 'CRYO VAULT', floor: 'floor_plate', alt: 'floor_dot', face: 'wall_face_c', cap: 'wall_cap_b', tint: [0.78, 0.94, 1.28], light: 0x9fe8ff, music: ['tension1', 'battle'] },
-    foundry: { name: '용광로 구역', en: 'FOUNDRY', floor: 'floor_grate', alt: 'floor_brick', face: 'wall_face_b', cap: 'wall_cap_b', tint: [1.3, 0.82, 0.6], light: 0xff5020, music: ['battle2', 'march'] },
-    toxic: { name: '오염 처리장', en: 'TOXIC WORKS', floor: 'floor_pipe', alt: 'floor_grate', face: 'wall_face_d', cap: 'wall_cap_b', tint: [0.82, 1.18, 0.7], light: 0x9dff40, music: ['horror2', 'tension2'] },
-    flood: { name: '수몰 구역', en: 'FLOODED SECTOR', floor: 'floor_deck', alt: 'floor_plate', face: 'wall_face_a', tint: [0.66, 0.92, 1.16], light: 0x2a90ff, music: ['battle4', 'stage10'] },
-    power: { name: '발전 구역', en: 'POWER PLANT', floor: 'floor_x', alt: 'floor_plate', face: 'wall_face_c', cap: 'wall_cap_b', tint: [1.1, 1.04, 0.72], light: 0xffe040, music: ['northern', 'outctrl'] },
+    frost: { name: '동결 저장고', en: 'CRYO VAULT', floor: 'floor_tread', alt: 'floor_frame', face: 'wall_face_e', cap: 'wall_cap_b', tint: [0.7, 0.9, 1.38], light: 0x9fe8ff, music: ['tension1', 'battle'],
+      decal: 'deco_ice', hazard: 'ice', props: ['prop_cargo', 'prop_console'] },
+    foundry: { name: '용광로 구역', en: 'FOUNDRY', floor: 'floor_bigplate', alt: 'floor_brick', face: 'wall_face_g', cap: 'wall_cap_b', tint: [1.38, 0.76, 0.52], light: 0xff5020, music: ['battle2', 'march'],
+      decal: 'deco_lava', decalAdd: true, decalAlpha: 0.95, hazard: 'lava', props: ['prop_cargo', 'prop_machine'] },
+    toxic: { name: '오염 처리장', en: 'TOXIC WORKS', floor: 'floor_ventgrid', alt: 'floor_pipe', face: 'wall_face_f', cap: 'wall_cap_b', tint: [0.76, 1.24, 0.64], light: 0x9dff40, music: ['horror2', 'tension2'],
+      decal: 'deco_toxic', decalAdd: true, decalAlpha: 0.75, hazard: 'toxic', props: ['prop_tank', 'prop_machine'] },
+    flood: { name: '수몰 구역', en: 'FLOODED SECTOR', floor: 'floor_hatch', alt: 'floor_deck', face: 'wall_face_h', tint: [0.6, 0.88, 1.22], light: 0x2a90ff, music: ['battle4', 'stage10'],
+      decal: 'deco_water', decalAdd: true, decalAlpha: 0.8, hazard: 'water', props: ['prop_cargo', 'prop_tank'] },
+    power: { name: '발전 구역', en: 'POWER PLANT', floor: 'floor_panel2', alt: 'floor_plate', face: 'wall_face_c', cap: 'wall_cap_b', tint: [1.12, 1.06, 0.68], light: 0xffe040, music: ['northern', 'outctrl'],
+      decal: 'deco_pit', decalAspect: 0.62, hazard: 'shock', props: ['prop_core', 'prop_console'] },
   };
   // floors: [theme, tier, rooms]; mid = floor 3's boss, boss = the last floor's
   const STAGES = [

@@ -356,6 +356,36 @@
   // the hero colour as a hex int, parsed once (was a new THREE.Color per particle)
   // whose voice: 램파리온 broken down to 램파트 speaks with Rampart's own lines
   function vid(P) { return P.form === 'rampart' ? 'rampart' : P.hero.id; }
+  // stage-theme hazard pools (level.js fills G.lv.hz from the theme's decals): only the room the hero is in matters
+  const HZ = { ice: { slow: 0.62, name: '빙결 바닥', col: 0xbfe8ff }, water: { slow: 0.7, name: '침수 구역', col: 0x5aa8ff }, lava: { dmg: 1, every: 1.1, name: '용암 균열', col: 0xff6a20 }, toxic: { dmg: 1, every: 1.4, name: '오염 웅덩이', col: 0x9dff40 }, shock: { dmg: 2, period: 3.2, warn: 0.9, name: '방전 패드', col: 0x7fe3ff } };
+  function updateThemeHazards(dt) {
+    const P = G.P; if (!P) return; P.hzSlow = 1;
+    const list = G.lv && G.lv.hz; if (!list || !list.length || P.dead) return;
+    const rid = G.room ? G.room.id : -1;
+    for (const h of list) {
+      const H = HZ[h.kind]; if (!H) continue;
+      const inside = h.room === rid && ((P.x - h.x) / h.rx) ** 2 + ((P.y - h.y) / h.ry) ** 2 < 1;
+      if (H.slow && inside) { P.hzSlow = Math.min(P.hzSlow, H.slow); if (Math.random() < dt * 6) FX.particle({ x: P.x + rnd(-0.3, 0.3), y: P.y + 0.1, vy: rnd(0.3, 0.8), life: 0.5, size: 0.18, size1: 0, color: H.col, tex: FX.tex.dot, alpha: 0.8 }); }
+      if (H.every) {
+        h.cd = (h.cd || 0) - dt;
+        if (inside) {
+          if (Math.random() < dt * 10) FX.particle({ x: P.x + rnd(-0.3, 0.3), y: P.y + 0.15, vy: rnd(0.6, 1.4), life: 0.45, size: 0.22, size1: 0, color: H.col, tex: FX.tex.glow, alpha: 0.85 });
+          if (h.cd <= 0 && P.iframe <= 0 && !P.roll) { h.cd = H.every; hurtPlayer(H.name, H.dmg); }
+        }
+      }
+      if (H.period && h.room === rid) { // power pads: charge (sparks), then discharge — the iron bugs standing on them get it too
+        h.t = (h.t || 0) + dt;
+        const ph = h.t % H.period;
+        if (ph > H.period - H.warn && Math.random() < dt * 14) FX.particle({ x: h.x + rnd(-h.rx, h.rx) * 0.8, y: h.y + rnd(-h.ry, h.ry) * 0.8, life: 0.25, size: 0.35, size1: 0.6, frames: FX.sheets.bolt, color: H.col, alpha: 0.85 });
+        if (h.lastPh != null && ph < h.lastPh) {
+          FX.ring(h.x, h.y + 0.1, 0.2, Math.max(h.rx, h.ry) * 1.3, H.col, 0.3); SFX.play('elec', 0.35);
+          if (inside && P.iframe <= 0 && !P.roll) hurtPlayer(H.name, H.dmg);
+          for (const e of G.enemies) if (e.alive && !e.boss && ((e.x - h.x) / h.rx) ** 2 + ((e.y - h.y) / h.ry) ** 2 < 1) { hurtEnemy(e, 40, false, 0, 0, 'hitE'); e.stun = Math.max(e.stun || 0, 0.6); }
+        }
+        h.lastPh = ph;
+      }
+    }
+  }
   // an ultimate is still running (its own clock, a lasting wall / spray / zone / bind / overdrive): no new charge meanwhile
   function ultActive(P) { return P.ultT > 0 || P.ultHold > 0 || P.wallT > 0 || P.sprayT > 0 || (P.zone && P.zone.t > 0) || (P.overdrive > 0 && !(P.focusT > 0)); }
   function heroHex(P) { if (P.hex == null) P.hex = new THREE.Color(P.hero.color).getHex(); return P.hex; }
@@ -691,7 +721,7 @@
       SFX.play('roll', 0.9);
       if (Math.abs(d[0]) > 0.1) P.face = Math.sign(d[0]);
     } else {
-      const sp = P.hero.speed * P.mods.speed * (P.reloadT > 0 ? 0.92 : 1) * (P.emplaceT > 0 ? 0.5 : 1) * (P.sprayT > 0 ? 0.6 : 1) * (P.hh || P.formAnim > 0 || P.lrlBeam > 0 ? 0 : P.lionHolding ? 0.5 : 1); // 거치 사격: half speed · 난사 slows her · 램파리온 plants for his chant
+      const sp = P.hero.speed * P.mods.speed * (P.reloadT > 0 ? 0.92 : 1) * (P.emplaceT > 0 ? 0.5 : 1) * (P.sprayT > 0 ? 0.6 : 1) * (P.hh || P.formAnim > 0 || P.lrlBeam > 0 ? 0 : P.lionHolding ? 0.5 : 1) * (P.hzSlow || 1); // 거치 사격: half speed · 난사 slows her · 램파리온 plants for his chant
       LEVEL.move(P, mv[0] * sp * dt, mv[1] * sp * dt);
     }
     if (P.hh || P.lrlCast || P.formAnim > 0) { /* 램파리온's assembly / break-down clip plays out */ } else if (moving !== P.moving || (moving && P.body.c.clipName !== 'move')) {
@@ -4262,6 +4292,7 @@
     G.t += dt;
     if (!G.tut) G.stats.time += dt; /* the training lap is not part of the run clock */
     const P = G.P;
+    updateThemeHazards(dt); // stage themes: ice / water slow, lava / toxic burn, power pads shock
     updatePlayer(dt);
     // room transitions
     const r = LEVEL.roomAt(P.x, P.y);
@@ -4685,6 +4716,7 @@
     curGun, magSize, maxAmmo, sk2Cool, applyItem, giveGun, spawnPedestal, hurtPlayer, refreshHints: () => refreshHints(), canvasRect: () => rectOf(), redraw: () => { frozenDrawn = false; }, recolorBullets: () => recolorBullets(), skipTutorial: () => tutorialEnd(true), rebuildGuide: () => rebuildGuide(),
     choosePerk, xpNeed, teleportTo,
     dropGear: (x, y, it) => addPickup(x, y, 'gear', it), applyGear: () => window.EQUIP && EQUIP.reapply(G),
-    debug: { sim, xp: (n) => gainXp(n), spawnEnemy, killAll: () => G.enemies.forEach((e) => { if (e.alive) { e.hp = 0; killEnemy(e); } }), give: (id) => giveGun(G.P, id), item: (id) => applyItem(G.P, id), next: nextFloor, tp: (type) => { const r = G.lv.rooms.find((x) => x.type === type); if (r) { G.P.x = r.cx; G.P.y = r.y0 + 1.2; } } },
+    debug: { frame: () => frameBody(performance.now()), // one frame on demand (captures from a hidden tab, where rAF is paused)
+      sim, xp: (n) => gainXp(n), spawnEnemy, killAll: () => G.enemies.forEach((e) => { if (e.alive) { e.hp = 0; killEnemy(e); } }), give: (id) => giveGun(G.P, id), item: (id) => applyItem(G.P, id), next: nextFloor, tp: (type) => { const r = G.lv.rooms.find((x) => x.type === type); if (r) { G.P.x = r.cx; G.P.y = r.y0 + 1.2; } } },
   };
 })();

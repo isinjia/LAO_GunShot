@@ -348,6 +348,39 @@
     group.add(plate.mesh(basic(loadTex('prop_plate'), tint.clone().multiplyScalar(0.55), { opacity: 0.85 }), 0.25));
     group.add(lane.mesh(basic(loadTex('deco_lane'), tint.clone().multiplyScalar(0.45), { opacity: 0.6 }), 0.25));
 
+    // stage themes: ground decals (some of them live hazard pools, see game.js updateThemeHazards) and facility props
+    lv.hz = [];
+    if (F.decal) {
+      const dz = builder(), rubble = builder();
+      lv.rooms.forEach((r) => {
+        if (r.type === 'start' || r.type === 'shop') return;
+        const n = r.type === 'boss' ? 4 : r.type === 'combat' ? 2 + Math.floor(rnd() * 2) : 1;
+        for (let i = 0; i < n; i++) {
+          const w = 2.6 + rnd() * 2.2, h = w * (F.decalAspect || 0.8);
+          const x = r.x0 + 1.5 + rnd() * Math.max(0.1, r.w - 3 - w), y = r.y0 + 1.5 + rnd() * Math.max(0.1, r.h - 3 - h);
+          if (Math.hypot(x + w / 2 - r.cx, y + h / 2 - r.cy) < 2.2 && r.type !== 'combat') continue; // keep chests / exits / boss spawns clear
+          dz.q(x, y, x + w, y + h, 0, 0, 1, 1);
+          if (F.hazard && r.type !== 'treasure') lv.hz.push({ x: x + w / 2, y: y + h / 2, rx: w * 0.36, ry: h * 0.36, room: r.id, kind: F.hazard, t: rnd() * 3 });
+        }
+        if (rnd() < 0.4) { const x = r.x0 + 1 + rnd() * (r.w - 4), y = r.y0 + 1 + rnd() * (r.h - 3); rubble.q(x, y, x + 2.4, y + 1.2, 0, 0, 1, 1); }
+      });
+      group.add(dz.mesh(basic(loadTex(F.decal), new THREE.Color(1, 1, 1), { opacity: F.decalAlpha || 0.85, blending: F.decalAdd ? THREE.AdditiveBlending : THREE.NormalBlending }), 0.22));
+      group.add(rubble.mesh(basic(loadTex('deco_rubble'), tint.clone().multiplyScalar(0.8), { opacity: 0.8 }), 0.21));
+    }
+    if (F.props && F.props.length) {
+      const pb = {};
+      lv.rooms.forEach((r) => {
+        if (r.type === 'start') return;
+        const n = r.type === 'boss' ? 3 : 1 + Math.floor(rnd() * 2);
+        for (let i = 0; i < n; i++) {
+          const key = F.props[Math.floor(rnd() * F.props.length)], h = key === 'prop_tank' ? 2.4 : key === 'prop_cargo' ? 1.8 : 1.5, w = h * (key === 'prop_tank' ? 0.56 : key === 'prop_console' ? 0.6 : key === 'prop_machine' ? 1.45 : 0.85);
+          const x = r.x0 + 1 + rnd() * Math.max(0.1, r.w - 2 - w), y1 = r.y1 - 0.15;
+          (pb[key] = pb[key] || builder()).q(x, y1 - h, x + w, y1, 0, 0, 1, 1);
+        }
+      });
+      Object.keys(pb).forEach((k) => group.add(pb[k].mesh(basic(loadTex(k), tint.clone().lerp(new THREE.Color(1, 1, 1), 0.55), { opacity: 1 }), 0.3)));
+    }
+
     // floor shading: dark band under north faces, softer along side / south walls
     const ao = builder(), aoS = builder();
     for (let y = 0; y < lv.H; y++) for (let x = 0; x < W; x++) {
