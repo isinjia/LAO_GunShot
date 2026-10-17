@@ -473,7 +473,7 @@
       cards.forEach((b) => { const k = +b.dataset.i; b.classList.toggle('on', k === -1); if (k < 0) return; b.classList.toggle('locked', !unlocked(HEROES[k])); });
       el.heroInfo.innerHTML = infoHtml(forcedHidden);
       lockInfoHeight(); heroMini(h); plate(h);
-      if (!quiet) SFX.play('uiPick', 0.6);
+      if (!quiet) { SFX.play('uiPick', 0.6); SFX.voice(h.id, 'SortiePick', 1, true); }
       if (GAME.showcase) GAME.showcase(forcedHidden);
       try { localStorage.setItem('lao_rogue_hero', 'random'); } catch (e) { /* ignore */ }
       return;
