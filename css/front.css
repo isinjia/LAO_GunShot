@@ -376,3 +376,6 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin: 0 1px; fo
 #rpgOv #stageGo.blocked { filter: grayscale(1) brightness(0.7); cursor: not-allowed; } #rpgOv #stageGo.blocked small { opacity: 1; color: #ffd0c8; }
 #rpgOv #stageGo.shake { animation: frShake 0.3s; }
 #rpgPlate .pnpw .pnsub { margin-left: auto; margin-right: 10px; font-size: 11px; color: rgba(255, 255, 255, 0.5); }
+/* nameplate: label / value spacing; scaled from its bottom-right corner so it never runs off screen */
+#rpgPlate .pnpw { gap: 12px; align-items: center; } #rpgPlate .pnpw > small:first-child { white-space: nowrap; } #rpgPlate .pnpw b { margin-right: auto; }
+@media (min-width: 901px) and (min-aspect-ratio: 1/1) { #rpgPlate { zoom: 1; transform: scale(var(--fs, 1)); transform-origin: right bottom; } }
