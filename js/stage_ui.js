@@ -202,7 +202,7 @@
         <button type="button" class="mcard" data-m="farm" style="--art:url(${UIP}mode_horde.webp)"><span class="art"></span><span class="tag">CLASSIC</span>
           <span class="mt"><small>DATA CHIP OPERATION</small><b>오르카 던전 돌파</b></span>
           <ul><li>대원을 골라 B1 ~ B6 연속 돌파</li><li>장비 없이 그 판의 성장만으로 승부</li><li>데이터 칩을 모아 연구소 영구 강화</li></ul><span class="cta">시작 <kbd>1</kbd></span></button>
-        <button type="button" class="mcard rpg" data-m="rpg" style="--art:url(${UIP}mode_hero.webp)"><span class="art"></span><span class="tag new">NEW · RPG</span>
+        <button type="button" class="mcard rpg" data-m="rpg" style="--art:url(${UIP}mode_hero.webp)"><span class="art"></span><span class="tag new">RPG</span>
           <span class="mt"><small>OPERATION RECORD</small><b>오르카 작전 기록</b></span>
           <ul><li>매 작전 Lv.1부터 · 장비는 영구 보존</li><li>스테이지 5개 · 쉬움 / 보통 / 어려움</li><li>장비 · 소켓 · 보석 · 룬워드 파밍</li></ul><span class="meta" id="mcRpgMeta"></span><span class="cta">시작 <kbd>2</kbd></span></button>
       </div>
