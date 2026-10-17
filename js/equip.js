@@ -37,8 +37,10 @@
   };
   // slots and their bases (원본 장비 이름): w x h cells, reqLv, sockets max, base stat (scaled by ilvl), icons
   const SLOTS = [
-    { id: 'weapon', name: '무기 코어' }, { id: 'armor', name: '방어구' }, { id: 'helm', name: '헬멧' }, { id: 'gloves', name: '글러브' }, { id: 'boots', name: '신발' },
-    { id: 'belt', name: '벨트' }, { id: 'ring1', name: '반지', kind: 'ring' }, { id: 'ring2', name: '반지', kind: 'ring' }, { id: 'amulet', name: '목걸이' },
+    // paper doll: 목걸이 · 헬멧 · 귀걸이 / 무기 코어 · 방어구 · 글러브 / 반지 · 신발 · 반지
+    { id: 'amulet', name: '목걸이' }, { id: 'helm', name: '헬멧' }, { id: 'earring', name: '귀걸이' },
+    { id: 'weapon', name: '무기 코어' }, { id: 'armor', name: '방어구' }, { id: 'gloves', name: '글러브' },
+    { id: 'ring1', name: '반지', kind: 'ring' }, { id: 'boots', name: '신발' }, { id: 'ring2', name: '반지', kind: 'ring' },
   ];
   const BASES = [
     { id: 'core_atk', slot: 'weapon', name: '공격 회로', w: 1, h: 3, req: 1, sock: 4, base: { dmg: 4 }, icon: 'Chip_Atk' },
@@ -57,9 +59,9 @@
     { id: 'boots_booster', slot: 'boots', name: '보조 부스터', w: 2, h: 2, req: 1, sock: 2, base: { speed: 3 }, icon: 'Sub_SubBooster' },
     { id: 'boots_speed', slot: 'boots', name: '고속 OS', w: 2, h: 2, req: 15, sock: 2, base: { speed: 4, roll: 4 }, icon: 'System_Highspd' },
     { id: 'boots_maneuver', slot: 'boots', name: '기동 OS', w: 2, h: 2, req: 30, sock: 3, base: { speed: 5, roll: 6 }, icon: 'System_Maneuver' },
-    { id: 'belt_energy', slot: 'belt', name: '에너지 팩', w: 2, h: 1, req: 1, sock: 1, base: { ammo: 8 }, icon: 'Sub_EnergyPack' },
-    { id: 'belt_kit', slot: 'belt', name: '검사 키트', w: 2, h: 1, req: 14, sock: 2, base: { ammo: 10, hp: 1 }, icon: 'Sub_ExamKit' },
-    { id: 'belt_stim', slot: 'belt', name: '전투 자극제', w: 2, h: 1, req: 28, sock: 2, base: { reload: 8, skill: 4 }, icon: 'Sub_Stimulant' },
+    { id: 'belt_energy', slot: 'earring', name: '에너지 이어링', w: 1, h: 1, req: 1, sock: 1, base: { ammo: 8 }, icon: 'Sub_EnergyPack' },
+    { id: 'belt_kit', slot: 'earring', name: '분석 이어피스', w: 1, h: 1, req: 14, sock: 2, base: { ammo: 10, hp: 1 }, icon: 'Sub_ExamKit' },
+    { id: 'belt_stim', slot: 'earring', name: '각성 이어링', w: 1, h: 1, req: 28, sock: 2, base: { reload: 8, skill: 4 }, icon: 'Sub_Stimulant' },
     { id: 'ring_cri', slot: 'ring', name: '치명 칩', w: 1, h: 1, req: 1, sock: 1, base: { crit: 2 }, icon: 'Chip_Cri' },
     { id: 'ring_acc', slot: 'ring', name: '명중 칩', w: 1, h: 1, req: 8, sock: 1, base: { rof: 2 }, icon: 'Chip_Acc' },
     { id: 'ring_spd', slot: 'ring', name: '기동 칩', w: 1, h: 1, req: 20, sock: 1, base: { speed: 2, roll: 3 }, icon: 'Chip_Spd' },
@@ -92,7 +94,7 @@
     { id: 's_orca3', base: 'glove_bullet', set: 'orca', name: '오르카 친위대 탄띠', req: 6, stats: { rof: 6 } },
     { id: 's_orca4', base: 'boots_booster', set: 'orca', name: '오르카 친위대 부스터', req: 6, stats: { speed: 6 } },
   ];
-  // gems: [weapon effect, armour (armor/helm/gloves/boots/belt) effect, jewel (ring/amulet) effect] per grade
+  // gems: [weapon effect, armour (armor/helm/gloves/boots) effect, jewel (ring/amulet/earring) effect] per grade
   const GEM_GRADE = ['조각난', '', '완벽한'];
   const GEMS = {
     ruby: { name: '루비', color: '#ff4a4a', icon: 'Chip_Atk', fx: [{ dmg: 3 }, { hp: 1 }, { dmg: 2 }], k: [1, 2, 3.5] },
@@ -125,7 +127,7 @@
     { name: '심판', slots: ['weapon'], runes: ['lambda', 'kappa', 'omega', 'iota'], stats: { dmg: 45, crit: 10, pierce: 2 } },
     { name: '불굴', slots: ['armor'], runes: ['omega', 'iota', 'epsilon', 'zeta'], stats: { hp: 6, armor: 3, skill: 20 } },
   ];
-  const classOf = (slot) => (slot === 'weapon' ? 0 : slot === 'ring' || slot === 'amulet' ? 2 : 1);
+  const classOf = (slot) => (slot === 'weapon' ? 0 : slot === 'ring' || slot === 'amulet' || slot === 'earring' ? 2 : 1);
   const baseOf = (id) => BASES.find((b) => b.id === id);
   const rnd = (a, b) => a + Math.random() * (b - a);
   const ri = (a, b) => Math.floor(rnd(a, b + 1));
@@ -215,7 +217,9 @@
     } catch (e) { /* no storage */ }
   }
   function getChar(id) { const db = load(); const c = db.list.find((x) => x.id === id) || null; if (c) c.vault = loadVault(); return { db, c }; }
-  function norm(c) { c.lv = c.lv || 1; c.xp = c.xp || 0; c.equip = c.equip || {}; c.bag = Array.isArray(c.bag) ? c.bag : []; c.stash = Array.isArray(c.stash) ? c.stash : []; c.mats = Math.max(0, Math.floor(Number(c.mats) || 0)); if (!Array.isArray(c.vault)) c.vault = loadVault(); return c; }
+  function norm(c) { c.lv = c.lv || 1; c.xp = c.xp || 0; c.equip = c.equip || {}; c.bag = Array.isArray(c.bag) ? c.bag : []; c.stash = Array.isArray(c.stash) ? c.stash : []; c.mats = Math.max(0, Math.floor(Number(c.mats) || 0));
+    if (c.equip.belt) { if (!c.equip.earring) c.equip.earring = c.equip.belt; delete c.equip.belt; }
+    for (const k of ['bag', 'stash']) c[k].forEach((it) => { if (it.base && /^belt_/.test(it.base) && it.w !== 1) { it.w = 1; it.h = 1; } }); if (!Array.isArray(c.vault)) c.vault = loadVault(); return c; }
   // the character keeps only its gear: the level is the run's own (back to Lv.1 every sortie, like the weapons)
   const gearPower = (st) => Math.round(100 + (st.dmg || 0) * 4 + (st.hp || 0) * 30 + (st.armor || 0) * 40 + (st.crit || 0) * 5 + (st.rof || 0) * 3 + (st.speed || 0) * 2 + (st.skill || 0) * 2 + (st.pierce || 0) * 25 + (st.reload || 0) + (st.roll || 0));
   // grid placement: items carry x / y in their container
@@ -326,7 +330,7 @@
   function statLines(st, cmp) {
     const keys = Object.keys(STAT).filter((k) => (st[k] || (cmp && cmp[k])) && STAT[k]);
     return keys.map((k) => {
-      const v = st[k] || 0, d = cmp ? Math.round((v - (cmp[k] || 0)) * 10) / 10 : 0;
+      const v = Math.round((st[k] || 0) * 10) / 10, d = cmp ? Math.round((v - (cmp[k] || 0)) * 10) / 10 : 0; // one decimal: sums of rolled values carry float noise
       return `<li${v ? '' : ' class="zero"'}><span>${STAT[k].n}</span><b>${v ? STAT[k].f(v) : '—'}</b>${cmp && d ? `<em class="${(k === 'roll' || k === 'sk2' ? -d : d) > 0 ? 'up' : 'dn'}">${d > 0 ? '▲' : '▼'}${Math.abs(d)}</em>` : ''}</li>`;
     }).join('');
   }

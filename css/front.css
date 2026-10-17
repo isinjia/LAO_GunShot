@@ -367,3 +367,7 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin: 0 1px; fo
 #invOv .ivgrid[data-c="vault"] { border-color: rgba(181, 140, 255, 0.45); background-color: rgba(40, 20, 70, 0.25); }
 #invOv .ivvt { margin: 8px 0 0; font-size: 12px; color: rgba(255, 255, 255, 0.5); } #invOv .ivvt b { color: #c8a8ff; }
 #invOv .ivacts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* paper doll: 목걸이 · 헬멧 · 귀걸이 / 무기 코어 · 방어구 · 글러브 / 반지 · 신발 · 반지 */
+#invOv .ivdoll { grid-template-areas: "amulet helm earring" "weapon armor gloves" "ring1 boots ring2"; }
+#invOv .s_earring { grid-area: earring; }
