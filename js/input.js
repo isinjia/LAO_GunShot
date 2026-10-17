@@ -250,5 +250,5 @@
       return null; },
     moveVec, held, take, clear, bindTouch, isTouch, get enabled() { return enabled; }, set enabled(v) { enabled = v; },
     get toggleFire() { return toggleFire; }, set toggleFire(v) { toggleFire = !!v; latch = false; },
-    get firing() { return latch; }, stopFire() { latch = false; mouse.down = false; } };
+    get firing() { return latch; }, stopFire() { mouse.down = false; } };
 })();

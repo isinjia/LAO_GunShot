@@ -387,3 +387,13 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin: 0 1px; fo
 #modeOv .mnotes { position: absolute; right: max(18px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); z-index: 3; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; font: 600 13px var(--kr); color: #e8edf2; background: rgba(8, 10, 14, 0.72); border: 1px solid rgba(255, 216, 74, 0.45); cursor: pointer; }
 #modeOv .mnotes b { font: 700 12px var(--en); color: var(--y); letter-spacing: 1px; }
 #modeOv .mnotes:hover, #modeOv .mnotes:focus-visible { background: rgba(255, 204, 0, 0.16); border-color: var(--y); outline: none; }
+
+/* portrait touch: the bag sits under the pause button (both used to share right / top 150) */
+@media (max-aspect-ratio: 1/1) { body.touchui #btnInv { top: calc(max(10px, env(safe-area-inset-top)) + 206px); height: 40px; } }
+/* portrait / narrow: one column (doll, bag, details) - the 3-column override above pushed the bag off-screen */
+@media (max-width: 900px), (max-aspect-ratio: 1/1) { #invOv .ivbody { grid-template-columns: minmax(0, 1fr); } #invOv .ivmid { order: -1; } }
+@media (max-width: 900px), (max-aspect-ratio: 1/1) { #invOv .ivmid { overflow: visible; min-height: max-content; } }
+/* phone landscape: three flexible columns, the bag column shrinks and its cells shrink with it (equip.js render fit) */
+@media (max-height: 560px) and (min-aspect-ratio: 1/1) { #invOv .ivwin { zoom: 1 !important; width: 100vw; height: 100dvh; max-height: none; } #invOv .ivbody { grid-template-columns: minmax(170px, 0.75fr) minmax(0, 1.5fr) minmax(200px, 1fr); overflow: hidden; } #invOv .ivmid { min-width: 0; overflow: hidden; } #invOv .ivleft, #invOv .ivtip { overflow-y: auto; min-height: 0; } #invOv .ivslot { min-height: 0; } }
+@media (max-height: 560px) and (min-aspect-ratio: 1/1) { #invOv .ivdoll { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, 58px); gap: 6px; padding: 6px; } #invOv .ivh { padding: 6px 12px; } #invOv .ivbody { padding: 8px 10px; gap: 10px; } }
+@media (max-width: 900px) and (max-aspect-ratio: 1/1), (max-aspect-ratio: 1/1) { #invOv .ivbody { display: flex; flex-direction: column; } #invOv .ivbody > * { flex: none; } }

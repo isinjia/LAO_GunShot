@@ -379,11 +379,18 @@
   function bagHtml(list, W, H, which) {
     return `<div class="ivgrid" data-c="${which}" style="--w:${W};--h:${H};--cell:${CELL}px">${list.map((it) => `<button type="button" class="ivit r_${it.gem ? 'gem' : it.rune ? 'rune' : it.rw ? 'rw' : it.rar}${selItem && selItem.id === it.id ? ' on' : ''}" data-id="${it.id}" data-c="${which}" style="left:${it.x * CELL}px;top:${it.y * CELL}px;width:${it.w * CELL - 2}px;height:${it.h * CELL - 2}px;--rc:${itemColor(it)}" aria-label="${esc(itemName(it))}"><i style="background-image:url(${itemIcon(it)})"></i>${it.sockets ? `<em>${'●'.repeat(it.socketed.length)}${'○'.repeat(it.sockets - it.socketed.length)}</em>` : ''}</button>`).join('')}</div>`;
   }
+  // the bag grid always fits its column: render, measure the column, re-render with a cell that fits (phones, landscape or portrait)
+  let cellFit = 0;
   function render() {
+    cellFit = 0; render0();
+    const ov = el('#invOv'), mid = ov && ov.querySelector('.ivmid');
+    if (mid && mid.clientWidth && mid.clientWidth < 10 * CELL + 4) { cellFit = Math.max(22, Math.floor((mid.clientWidth - 4) / 10)); render0(); cellFit = 0; }
+  }
+  function render0() {
     const ov = el('#invOv'); if (!ov || ov.hidden) return;
     const { c } = getChar(invChar); if (!c) { ov.hidden = true; return; }
     norm(c);
-    CELL = window.innerWidth <= 900 || window.innerWidth < window.innerHeight ? 40 : 52; // fixed: the window scales as a whole (--fsi), cells never change size
+    CELL = cellFit || (window.innerWidth <= 900 || window.innerWidth < window.innerHeight ? Math.max(26, Math.min(40, Math.floor((Math.min(window.innerWidth, 900) - 44) / 10))) : 52); // fixed: the window scales as a whole (--fsi), cells never change size
     const H = window.DATA.HEROES.find((h) => h.id === c.hero) || {};
     const st = charStats(c);
     const doll = SLOTS.map((s) => { const it = c.equip[s.id]; return `<button type="button" class="ivslot s_${s.id}${it ? ' full' : ''}${selItem && isGear(selItem) && !Object.values(c.equip).some((o) => o && o.id === selItem.id) && slotOk(selItem, s.id) ? ' can' : ''}${selItem && it && selItem.id === it.id ? ' on' : ''}" data-slot="${s.id}" style="--rc:${it ? itemColor(it) : 'rgba(255,255,255,0.18)'}" aria-label="${s.name}${it ? ' — ' + esc(itemName(it)) : ''}">${it ? `<i style="background-image:url(${itemIcon(it)})"></i>` : ''}<span>${s.name}</span></button>`; }).join('');

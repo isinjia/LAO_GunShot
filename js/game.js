@@ -800,7 +800,7 @@
       want = Math.atan2(wy - (P.y + 0.7), wx - P.x);
       P.target = null;
       snap = 1e4; // mouse aim is exact: shots go where the crosshair is, no smoothing lag on flicks
-    } else if (src && src.kind === 'stick' && !(P.visorT > 0)) {
+    } else if (src && src.kind === 'stick' && !(P.visorT > 0) && !(assist && INPUT.isTouch)) {
       want = Math.atan2(src.y, src.x);
       P.target = null;
     } else if (assist) {
@@ -853,7 +853,8 @@
     } else if (P.shieldFx) { P.shieldFx.forEach((s) => { s.hidden = true; }); }
     if (P.chargeT > 0) { P.chargeT -= dt; if (Math.random() < dt * 10) FX.particle({ x: P.x + rnd(-0.4, 0.4), y: P.y + rnd(0.2, 1.3), vy: 1.4, life: 0.4, size: 0.14, size1: 0, color: 0x9dff7a, tex: FX.tex.dot }); }
     if (INPUT.take('skill2') && !P.hh && !P.lrlCast) useSkill2();
-    if (INPUT.held('fire') && !(P.wildShotEnd > G.t) && !P.hh && !P.lrlCast && !P.roll && P.reloadT <= 0 && P.fireCd <= 0) {
+    const autoIdle = INPUT.toggleFire && !G.enemies.some((e) => e.alive); // 자동 사격: holds fire while the room is empty
+    if (INPUT.held('fire') && !autoIdle && !(P.wildShotEnd > G.t) && !P.hh && !P.lrlCast && !P.roll && P.reloadT <= 0 && P.fireCd <= 0) {
       if (g.d.noReload || freeAmmo(P) || g.mag > 0) fire(P, g);
       else if (g.ammo > 0) startReload(P, g);
       else { P.fireCd = 0.3; SFX.synth('empty'); if (!P.emptyWarned) { P.emptyWarned = true; UI.toast('탄약이 없습니다 — 무기를 교체하세요', 'warn'); UI.gunEmpty(); tip('ammo', '탄약 소진', INPUT.isTouch ? '교체 버튼으로 다른 무기로 바꾸세요. 기본 무기는 탄약이 무한합니다. 탄약 상자(초록)로 보충' : `1~3 / ${UI.K('swap')} / 휠로 다른 무기로 바꾸세요. 기본 무기는 탄약이 무한합니다. 빈 무기는 ${UI.K('interact')}로 버릴 수 있습니다(무기는 최대 3개)`); } }
