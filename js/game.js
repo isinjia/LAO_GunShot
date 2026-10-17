@@ -4094,7 +4094,7 @@
     SFX.music(null);
     if (win) { SFX.play('win'); const run = G.stats; setTimeout(() => { if (G.phase === 'win' && G.stats === run) SFX.music('ending'); }, 2500); } // a quick retry keeps its own music
     else { const run = G.stats; setTimeout(() => { if (G.phase === 'dead' && G.stats === run) SFX.music('aftermath'); }, 2200); } // a quiet loop under the fail report
-    UI.result(win, G.stats, G.P, G.ti);
+    UI.result(win, G.stats, G.P, G.fi);
   }
   function toTitle() {
     G.phase = 'title'; G.choosing = null; G.paused = false;
@@ -4563,7 +4563,7 @@
     composer.render();
     RAMP_BOMB.draw(G.P, worldToScreen, stageEl, G.phase === 'play');
     LRL_BOMB.draw(G.P, worldToScreen, stageEl, G.phase === 'play');
-    return { phase: G.phase, fi: G.ti, t: Math.round(G.stats ? G.stats.time : 0) };
+    return { phase: G.phase, fi: G.fi, t: Math.round(G.stats ? G.stats.time : 0) };
   }
 
   let last = 0, frozenDrawn = false;
