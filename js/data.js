@@ -200,6 +200,50 @@
     },
   ];
 
+  // ── stage mode (궁수의 전설 style chapters) ─────────────────
+  // the B1-B6 run above stays as the data-chip farm. Stage mode: 5 stages x 5+ floors, a mid boss on floor 3 and the
+  // final boss on the last floor; easy / normal / hard. A stage floor = a THEME (look) + a TIER (which farm floor's
+  // enemy roster and difficulty curve it borrows: 0 = B1 ... 5 = B6)
+  const LOOK = (f) => ({ floor: f.floor, alt: f.alt, face: f.face, cap: f.cap, tint: f.tint, light: f.light, music: f.music });
+  const THEMES = {
+    hangar: { name: '오르카 격납고', en: 'HANGAR SECTOR', ...LOOK(FLOORS[0]) },
+    nest: { name: '철충 소굴', en: 'IRON NEST', ...LOOK(FLOORS[1]) },
+    dock: { name: '지하 정비창', en: 'UNDER DOCK', ...LOOK(FLOORS[2]) },
+    lab: { name: '폐쇄 연구동', en: 'SEALED LAB', ...LOOK(FLOORS[3]) },
+    bulwark: { name: '외곽 방어선', en: 'OUTER BULWARK', ...LOOK(FLOORS[4]) },
+    command: { name: '철혈 사령부', en: 'IRON COMMAND', ...LOOK(FLOORS[5]) },
+    // new looks
+    frost: { name: '동결 저장고', en: 'CRYO VAULT', floor: 'floor_plate', alt: 'floor_dot', face: 'wall_face_c', cap: 'wall_cap_b', tint: [0.78, 0.94, 1.28], light: 0x9fe8ff, music: ['tension1', 'battle'] },
+    foundry: { name: '용광로 구역', en: 'FOUNDRY', floor: 'floor_grate', alt: 'floor_brick', face: 'wall_face_b', cap: 'wall_cap_b', tint: [1.3, 0.82, 0.6], light: 0xff5020, music: ['battle2', 'march'] },
+    toxic: { name: '오염 처리장', en: 'TOXIC WORKS', floor: 'floor_pipe', alt: 'floor_grate', face: 'wall_face_d', cap: 'wall_cap_b', tint: [0.82, 1.18, 0.7], light: 0x9dff40, music: ['horror2', 'tension2'] },
+    flood: { name: '수몰 구역', en: 'FLOODED SECTOR', floor: 'floor_deck', alt: 'floor_plate', face: 'wall_face_a', tint: [0.66, 0.92, 1.16], light: 0x2a90ff, music: ['battle4', 'stage10'] },
+    power: { name: '발전 구역', en: 'POWER PLANT', floor: 'floor_x', alt: 'floor_plate', face: 'wall_face_c', cap: 'wall_cap_b', tint: [1.1, 1.04, 0.72], light: 0xffe040, music: ['northern', 'outctrl'] },
+  };
+  // floors: [theme, tier, rooms]; mid = floor 3's boss, boss = the last floor's
+  const STAGES = [
+    { id: 's1', name: '오르카 외곽', en: 'ORCA OUTSKIRTS', floors: [['hangar', 0, 4], ['hangar', 0, 4], ['nest', 0, 4], ['nest', 1, 5], ['frost', 1, 5]], mid: 'emperor', boss: 'executioner' },
+    { id: 's2', name: '동결 저장고', en: 'CRYO VAULT', floors: [['frost', 1, 4], ['frost', 1, 5], ['dock', 1, 5], ['frost', 2, 5], ['flood', 2, 5]], mid: 'executioner', boss: 'goltarion' },
+    { id: 's3', name: '수몰 정비창', en: 'SUNKEN DOCK', floors: [['flood', 2, 5], ['dock', 2, 5], ['flood', 2, 5], ['toxic', 3, 5], ['toxic', 3, 6]], mid: 'goltarion', boss: 'nightqueen' },
+    { id: 's4', name: '용광로 전선', en: 'FOUNDRY FRONT', floors: [['foundry', 3, 5], ['lab', 3, 5], ['foundry', 3, 6], ['bulwark', 4, 6], ['foundry', 4, 6]], mid: 'nidhogg', boss: 'doomprime' },
+    { id: 's5', name: '철혈 사령부', en: 'IRON COMMAND', floors: [['power', 4, 6], ['bulwark', 4, 6], ['power', 4, 6], ['command', 5, 6], ['command', 5, 7]], mid: 'nightqueen', boss: 'ironprince' },
+  ];
+  // difficulty: enemy HP, enemy fire interval, enemy bullet speed; chips = the data-chip share (stage mode is a poor chip farm)
+  const DIFFS = [
+    { id: 'easy', name: '쉬움', hp: 1, rate: 1, bspd: 1, chips: 0.15, color: '#63d34a' },
+    { id: 'normal', name: '보통', hp: 1.8, rate: 0.88, bspd: 1.06, chips: 0.2, color: '#38b6ff' },
+    { id: 'hard', name: '어려움', hp: 3.2, rate: 0.76, bspd: 1.12, chips: 0.25, color: '#ff5a4a' },
+  ];
+  // one stage as a floor list in the FLOORS shape (enemy roster / elites / hpMul from the tier's farm floor)
+  const FARM = FLOORS.slice();
+  function stageFloors(si) {
+    const S = STAGES[si];
+    return S.floors.map(([th, tier, rooms], fi) => {
+      const T = THEMES[th], B = FARM[tier], last = fi === S.floors.length - 1;
+      return { ...T, key: `${si + 1}-${fi + 1}`, rooms, enemies: B.enemies, elites: B.elites, hpMul: B.hpMul, tier,
+        boss: fi === 2 ? [S.mid] : last ? [S.boss] : [], bossKey: fi === 2 ? S.mid : last ? S.boss : null, mid: fi === 2 };
+    });
+  }
+
   // item pairs that unlock an extra effect when both are owned
   const SYNERGY = [
     { a: 'bounce', b: 'homing', name: '추적 도탄', desc: '튕긴 탄환이 적을 향해 꺾이고, 두 번 튕김' },
@@ -300,5 +344,5 @@
     explo: { name: '폭발탄', short: '폭발', color: '#9dff5a', hex: 0x9dff5a, guns: ['gl', 'mortar', 'cannon'] },
     energy: { name: '에너지 셀', short: '에너지', color: '#5ae8ff', hex: 0x5ae8ff, guns: ['pistol', 'shock', 'rail'] },
   };
-  window.DATA = { RANKS, AMMO, HEROES, HIDDEN, GUNS, ITEMS, ENEMIES, ELITES, BOSSES, FLOORS, BAL, SYNERGY, UNLOCK, META, PERKS };
+  window.DATA = { RANKS, AMMO, HEROES, HIDDEN, GUNS, ITEMS, ENEMIES, ELITES, BOSSES, FLOORS, FARM, THEMES, STAGES, DIFFS, stageFloors, BAL, SYNERGY, UNLOCK, META, PERKS };
 })();

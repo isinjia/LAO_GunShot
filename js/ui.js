@@ -104,7 +104,7 @@
     $('#btnLab').onclick = () => openLab(true);
     if ($('#btnNotes')) $('#btnNotes').onclick = () => openNotes(true);
     $('#labClose').onclick = () => openLab(false);
-    $('#btnRetry').onclick = () => { el.result.hidden = true; GAME.startRun(pickHero()); };
+    $('#btnRetry').onclick = () => { el.result.hidden = true; GAME.startRun(pickHero(), GAME.G.runOpts); }; // a retry keeps the mode (farm / the same stage and difficulty)
     $('#btnHome').onclick = () => { el.result.hidden = true; GAME.toTitle(); };
     $('#btnResume').onclick = () => togglePause(false);
     // abort asks twice: the first press arms the button for 3 s
@@ -1285,6 +1285,6 @@
   window.UI = {
     refreshLanguage: () => { mapDirty=true; lastHud={}; if (window.GAME) GAME.redraw(); },
     init, gunEmpty, sk2Used, reloadGauge, loading, loaded, title, titleTick, startRun, hud, gunChanged, toggleMap, dmg, toast, clearToasts, banner, chTimer, ammoWarn, levelUp, shock, chTimer, announce, prompt, boss, hideBoss, bossIntro, skillCut, shout, hurt, fade,
-    togglePause, result, coach, heat, K, hideBossIntro, keyLabels: () => keyLabels(), mapDirty() { mapDirty = true; }, get sel() { return selHero; }, mapOpen: () => !!el.bigMap && !el.bigMap.hidden, goalHtml,
+    togglePause, result, coach, heat, K, hideBossIntro, keyLabels: () => keyLabels(), mapDirty() { mapDirty = true; }, get sel() { return selHero; }, pickHero, heroLocked: () => selHero >= 0 && !unlocked(HEROES[selHero]), mapOpen: () => !!el.bigMap && !el.bigMap.hidden, goalHtml,
   };
 })();

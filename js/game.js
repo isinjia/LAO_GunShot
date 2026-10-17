@@ -1235,7 +1235,7 @@
   function spawnEnemy(defKey, x, y, opts = {}) {
     const def = ENEMIES[defKey] || ELITES[defKey] || BOSSES[defKey];
     const F = FLOORS[G.fi];
-    const hpMul = (opts.boss ? FLOOR_BOSS_HP[G.fi] * clamp(def.hp / 1300, 0.8, G.fi <= 2 ? 1.0 : 1.25) / def.hp : F.hpMul * (1 + G.stats.roomsCleared * 0.005)) * (1 + (G.heat || 0) * 0.15);
+    const hpMul = (G.diff ? G.diff.hp * (opts.boss && FLOORS[G.fi].mid ? 0.8 : 1) : 1) * (opts.boss ? FLOOR_BOSS_HP[G.ti] * clamp(def.hp / 1300, 0.8, G.ti <= 2 ? 1.0 : 1.25) / def.hp : F.hpMul * (1 + G.stats.roomsCleared * 0.005)) * (1 + (G.heat || 0) * 0.15);
     const e = {
       key: defKey, def, x, y, r: def.r, h: def.h, hp: def.hp * hpMul, maxHp: def.hp * hpMul, alive: true, spawnT: opts.boss ? 0 : 0.9,
       fireT: rnd(0.8, 1.6) * (def.rate || 2), t: 0, vx: 0, vy: 0, kx: 0, ky: 0, flash: 0, face: -1, seq: [], state: 'idle', stun: 0,
@@ -1362,7 +1362,7 @@
     if (e.dmgAcc && G.opt.dmg) { UI.dmg(e.x, e.y + e.h * 0.8, e.dmgAcc, false); e.dmgAcc = 0; }
     if (silent) { e.noReward = true; } else {
       G.stats.kills++;
-      if (!e.boss) gainXp(e.elite ? 10 : 3 + G.fi);
+      if (!e.boss) gainXp(e.elite ? 10 : 3 + G.ti);
       if (e.room && e.room.chMode === 'hunt' && e.room.active) e.room.chKills = (e.room.chKills || 0) + 1;
     }
     const cy = e.y + e.h * 0.4;
@@ -1379,7 +1379,7 @@
     if (!silent) {
     const gold = e.noReward ? 0 : Math.round(e.def.gold * 0.5 * (P.mods.lucky ? 1.5 : 1) * rnd(0.6, 1.2));
     if (gold) dropPickup(e.x, e.y, 'gold', gold);
-    if (Math.random() < BAL.heartDrop * (e.elite ? 4 : 1) * Math.max(0.2, 1 - G.fi * 0.17)) dropPickup(e.x, e.y, 'half'); // healing thins out with depth
+    if (Math.random() < BAL.heartDrop * (e.elite ? 4 : 1) * Math.max(0.2, 1 - G.ti * 0.17)) dropPickup(e.x, e.y, 'half'); // healing thins out with depth
     if (Math.random() < BAL.ammoDrop * 0.5) dropPickup(e.x, e.y, ammoKind());
     if (e.elite && Math.random() < 0.6) dropPickup(e.x, e.y, 'key');
     if (P.mods.overclock) P.ocT = 3;
@@ -1441,7 +1441,7 @@
     if (G.ebul.length > 640) return null; // a high ceiling: patterns are density-scaled, so this only guards runaway cases
     const cb = G.opt.cbBullets, col = (cb ? EB_CB : EB_COL)[o.c || 'n'], size = o.size || 0.3;
     const b = {
-      x, y, vx: Math.cos(ang) * speed * BSPD[G.fi] * (1 + (G.heat || 0) * 0.04), vy: Math.sin(ang) * speed * BSPD[G.fi] * (1 + (G.heat || 0) * 0.04), r: size * 0.55, life: o.life || 6, t: 0,
+      x, y, vx: Math.cos(ang) * speed * BSPD[G.ti] * (G.diff ? G.diff.bspd : 1) * (1 + (G.heat || 0) * 0.04), vy: Math.sin(ang) * speed * BSPD[G.ti] * (G.diff ? G.diff.bspd : 1) * (1 + (G.heat || 0) * 0.04), r: size * 0.55, life: o.life || 6, t: 0,
       src: G.shooter, acc: o.acc || 0, homing: o.homing || 0, curve: o.curve || 0, delay: o.delay || 0,
       ol: FX.sprite({ x, y, size: size * (cb ? 2.4 : 2.15), color: cb ? 0x000000 : 0x0c0208, alpha: cb ? 1 : 0.92, tex: FX.tex.dot, normal: true, order: L.PROJ + 0.9 }),
       s: FX.sprite({ x, y, size: size * 2.3, color: col, alpha: 0.95, tex: FX.tex.glow, order: L.PROJ + 1 }),
@@ -1588,9 +1588,9 @@
     wave: (e) => { const a = aimAt(e); for (let i = 0; i < 9; i++) later(e, i * 0.05, () => ebullet(e.x, e.y + e.h * 0.45, a - 0.8 + i * 0.2, 5.2, { c: 'b' })); },
     cross: (e) => { const a0 = Math.random() * TAU; for (let w = 0; w < 3; w++) later(e, w * 0.3, () => emitRing(e, 4, 5, { ang: a0 + w * 0.25, size: 0.36 })); },
     homing: (e) => { for (let i = 0; i < 2; i++) later(e, i * 0.3, () => emitFan(e, 1, 0, 3.6, { ang: aimAt(e) + (i ? 0.8 : -0.8), homing: 2.2, life: 4.5, c: 'o', size: 0.4 })); },
-    eliteA: (e) => { const k = clamp(0.7 + G.fi * 0.07, 0.7, 1); emitFan(e, Math.round(7 * k), 1.1, 5.5, { c: 'o' }); later(e, 0.45, () => emitRing(e, Math.round(14 * k), 4.2)); later(e, 0.9, () => emitFan(e, Math.round(7 * k), 1.1, 5.5, { c: 'o' })); }, // grows with depth
+    eliteA: (e) => { const k = clamp(0.7 + G.ti * 0.07, 0.7, 1); emitFan(e, Math.round(7 * k), 1.1, 5.5, { c: 'o' }); later(e, 0.45, () => emitRing(e, Math.round(14 * k), 4.2)); later(e, 0.9, () => emitFan(e, Math.round(7 * k), 1.1, 5.5, { c: 'o' })); }, // grows with depth
     // (elite spirals grow with depth: the Fortress no longer arrives at B2-B3 with its B6 density)
-    eliteB: (e) => { const a0 = Math.random() * TAU, n = Math.round(24 * clamp(0.62 + G.fi * 0.08, 0.6, 1)); for (let i = 0; i < n; i++) later(e, i * 0.08, () => { emitRing(e, 2, 4.4, { ang: a0 + i * 0.27, c: 'p' }); emitRing(e, 2, 4.4, { ang: -a0 - i * 0.27, c: 'b' }); }); },
+    eliteB: (e) => { const a0 = Math.random() * TAU, n = Math.round(24 * clamp(0.62 + G.ti * 0.08, 0.6, 1)); for (let i = 0; i < n; i++) later(e, i * 0.08, () => { emitRing(e, 2, 4.4, { ang: a0 + i * 0.27, c: 'p' }); emitRing(e, 2, 4.4, { ang: -a0 - i * 0.27, c: 'b' }); }); },
     eliteC: (e) => { for (let k = 0; k < 3; k++) later(e, k * 0.4, () => emitFan(e, 5, 0.8, 5.6 + k * 0.6, { c: 'n', size: 0.3 })); },
   };
 
@@ -1670,7 +1670,7 @@
           if (e.state === 'arm') {
             e.armT -= dt;
             if (e.body) e.body.c.setTint(1.6, Math.sin(G.t * 40) > 0 ? 0.5 : 1, 0.5);
-            if (e.armT <= 0) { G.shooter = def.name; emitRing(e, 10 + G.fi * 2, 4.4, { c: 'o', size: 0.3 }); FX.explosion(e.x, e.y + 0.4, 1.1, 0xff7a2a, true); SFX.play('expM', 0.7, panOf(e.x)); if (!P.dead && dist < 1.5) hurtPlayer(def.name); e.hp = 0; e.noReward = true; killEnemy(e, true); continue; }
+            if (e.armT <= 0) { G.shooter = def.name; emitRing(e, 10 + G.ti * 2, 4.4, { c: 'o', size: 0.3 }); FX.explosion(e.x, e.y + 0.4, 1.1, 0xff7a2a, true); SFX.play('expM', 0.7, panOf(e.x)); if (!P.dead && dist < 1.5) hurtPlayer(def.name); e.hp = 0; e.noReward = true; killEnemy(e, true); continue; }
           } else {
             mvx = dx / dist; mvy = dy / dist;
             if (dist < 2.1 && seeP) { e.state = 'arm'; e.armT = 0.7; SFX.play('warning', 0.45, panOf(e.x)); FX.ring(e.x, e.y + 0.4, 0.3, 1.5, 0xff3020, 0.7, 0.9); FX.particle({ x: e.x, y: e.y + 0.4, life: 0.7, size: 3.0, size1: 3.0, color: 0xff2010, tex: FX.tex.ring, alpha: 0.5 }); } // blast radius shown while it arms
@@ -1723,7 +1723,7 @@
       // firing
       e.fireT -= dt;
       if (e.fireT <= 0 && seeP && dist < 13 && e.state !== 'charge' && e.state !== 'wind' && def.ai !== 'kamikaze') {
-        e.fireT = def.rate * rnd(0.85, 1.2) * [0.9, 0.84, 0.84, 0.72, 0.63, 0.57][G.fi] * (1 - (G.heat || 0) * 0.05); // later floors fire faster again (the curve keeps rising to B6)
+        e.fireT = def.rate * rnd(0.85, 1.2) * [0.9, 0.84, 0.84, 0.72, 0.63, 0.57][G.ti] * (G.diff ? G.diff.rate : 1) * (1 - (G.heat || 0) * 0.05); // later floors fire faster again (the curve keeps rising to B6)
         if (def.ai !== 'charger' || Math.random() < 0.5) {
           G.shooter = def.name; PATTERNS[def.fire](e);
           if (e.body && e.body.c.has('atk')) e.body.c.play('atk');
@@ -1785,7 +1785,7 @@
       if (blocked || e.dash.t <= 0) {
         e.dash = null;
         FX.shake(0.4); FX.explosion(e.x, e.y + 0.5, 1.4, 0xffaa55, true); SFX.play('quake');
-        emitRing(e, Math.round((18 + phase * 4) * Math.max(0.6, DENS[G.fi])), 4.6, { c: 'o', size: 0.34 });
+        emitRing(e, Math.round((18 + phase * 4) * Math.max(0.6, DENS[G.ti])), 4.6, { c: 'o', size: 0.34 });
       }
     } else {
       e.wander += dt * 0.5;
@@ -1793,24 +1793,24 @@
       const mx = tx - e.x, my = ty - e.y, ml = Math.hypot(mx, my);
       if (ml > 0.3) LEVEL.move(e, mx / ml * def.speed * dt, my / ml * def.speed * dt);
     }
-    if (!P.dead && P.iframe <= 0 && Math.hypot(P.x - e.x, P.y - e.y) < e.r + P.r) hurtPlayer(def.name, G.fi >= 2 ? 2 : 1);
+    if (!P.dead && P.iframe <= 0 && Math.hypot(P.x - e.x, P.y - e.y) < e.r + P.r) hurtPlayer(def.name, G.ti >= 2 ? 2 : 1);
     // patterns
     e.patT = (e.patT || 1.5) - dt;
     if (e.patT <= 0 && !e.dash && !e.seq.length) {
-      const base = G.fi <= 2 && phase < 2 ? def.patterns.slice(0, 3) : def.patterns; /* a late-pool boss drawn early opens with its first three patterns only */
+      const base = G.ti <= 2 && phase < 2 ? def.patterns.slice(0, 3) : def.patterns; /* a late-pool boss drawn early opens with its first three patterns only */
       const pats = phase >= 2 ? [...base, ...['bLaser', 'bFlower', 'bHoming'].filter((x) => !base.includes(x)).slice(0, 2)] : base;
       let p = pats[Math.floor(Math.random() * Math.min(pats.length, 2 + phase * 2))];
       if (p === e.lastPat && Math.random() < 0.7) p = pats[(pats.indexOf(p) + 1) % Math.min(pats.length, 2 + phase * 2)];
       e.lastPat = p;
       BOSS_PAT[p](e, phase);
-      e.patT = [1.7, 1.72, 1.58, 1.4, 1.26, 1.18][G.fi] - phase * 0.16; /* B2/B3 bosses breathe more: any of them can be drawn this early */
+      e.patT = [1.7, 1.72, 1.58, 1.4, 1.26, 1.18][G.ti] - phase * 0.16; /* B2/B3 bosses breathe more: any of them can be drawn this early */
       if (e.body && e.body.c.has('atk')) e.body.c.play('atk'); // (some original skill clips hide the body for a cut-in)
     }
     if (e.body && (e.body.c.clipName === 'idle' || e.body.c.clipName === 'move')) { if (e.body.c.clipName !== 'move' && e.body.c.has('move')) e.body.c.play('move', null, true); }
   }
   const BOSS_PAT = {
-    bRing: (e, ph) => { for (let w = 0; w < 3 + ph; w++) later(e, w * 0.45, () => emitRing(e, Math.round((20 + ph * 4) * DENS[G.fi]), 4.4, { ang: w * 0.13, size: 0.34 })); SFX.play('cannon', 0.6); },
-    bSpiral: (e, ph) => { const a0 = Math.random() * TAU, n = Math.round((40 + ph * 10) * Math.max(0.7, DENS[G.fi])); for (let i = 0; i < n; i++) later(e, i * 0.06 / DENS[G.fi], () => emitRing(e, 3 + ph, 4.8, { ang: a0 + i * 0.21, c: 'p' })); SFX.play('laser', 0.5); },
+    bRing: (e, ph) => { for (let w = 0; w < 3 + ph; w++) later(e, w * 0.45, () => emitRing(e, Math.round((20 + ph * 4) * DENS[G.ti]), 4.4, { ang: w * 0.13, size: 0.34 })); SFX.play('cannon', 0.6); },
+    bSpiral: (e, ph) => { const a0 = Math.random() * TAU, n = Math.round((40 + ph * 10) * Math.max(0.7, DENS[G.ti])); for (let i = 0; i < n; i++) later(e, i * 0.06 / DENS[G.ti], () => emitRing(e, 3 + ph, 4.8, { ang: a0 + i * 0.21, c: 'p' })); SFX.play('laser', 0.5); },
     bSummon: (e, ph) => {
       const pool = FLOORS[G.fi].enemies;
       const adds = G.enemies.filter((o) => o.alive && !o.boss).length;
@@ -1819,10 +1819,10 @@
       SFX.play('warning', 0.6);
       later(e, 0.6, () => emitFan(e, 9, 1.4, 5, { c: 'o' }));
     },
-    bAimFan: (e, ph) => { for (let w = 0; w < 3 + ph; w++) later(e, w * 0.36, () => emitFan(e, Math.round((7 + ph * 2) * DENS[G.fi]), 1.0, 6.5 + w * 0.4, { size: 0.3 })); SFX.play('gun', 0.6); },
+    bAimFan: (e, ph) => { for (let w = 0; w < 3 + ph; w++) later(e, w * 0.36, () => emitFan(e, Math.round((7 + ph * 2) * DENS[G.ti]), 1.0, 6.5 + w * 0.4, { size: 0.3 })); SFX.play('gun', 0.6); },
     bWall: (e, ph) => {
       // a wall of bullets with a gap, sweeping toward the player
-      const a = aimAt(e), n = Math.round(22 * Math.max(0.7, DENS[G.fi])), gap = Math.floor(rnd(5, n - 6)), gw = G.fi < 2 ? 2 : 1; // density-scaled like every other pattern
+      const a = aimAt(e), n = Math.round(22 * Math.max(0.7, DENS[G.ti])), gap = Math.floor(rnd(5, n - 6)), gw = G.ti < 2 ? 2 : 1; // density-scaled like every other pattern
       for (let w = 0; w < 2 + ph; w++) later(e, w * 0.75, () => {
         const g2 = clamp(gap + Math.floor(rnd(-3, 4)), 3, n - 4);
         for (let i = 0; i < n; i++) { if (Math.abs(i - g2) <= gw) continue; ebullet(e.x, e.y + e.h * 0.45, a + (i / (n - 1) - 0.5) * 2.4, 4.2, { c: 'b', size: 0.32 }); }
@@ -1835,10 +1835,10 @@
       SFX.play(e.key === 'goltarion' ? 'eGolt' : 'charge', 0.8);
       later(e, 0.8 - ph * 0.12, () => { e.dash = { dx: dx / d, dy: dy / d, t: 1.2 }; e.tele = null; SFX.play('swing'); });
     },
-    bShotgun: (e, ph) => { for (let w = 0; w < 3; w++) later(e, w * 0.45, () => { emitFan(e, Math.round((12 + ph * 3) * DENS[G.fi]), 1.3, 7, { c: 'o', size: 0.28 }); for (let k = 0; k < Math.round(6 * DENS[G.fi]); k++) ebullet(e.x, e.y + e.h * 0.45, aimAt(e) + rnd(-0.5, 0.5), rnd(3, 6.5), { size: 0.22 }); }); SFX.play('cannon'); },
+    bShotgun: (e, ph) => { for (let w = 0; w < 3; w++) later(e, w * 0.45, () => { emitFan(e, Math.round((12 + ph * 3) * DENS[G.ti]), 1.3, 7, { c: 'o', size: 0.28 }); for (let k = 0; k < Math.round(6 * DENS[G.ti]); k++) ebullet(e.x, e.y + e.h * 0.45, aimAt(e) + rnd(-0.5, 0.5), rnd(3, 6.5), { size: 0.22 }); }); SFX.play('cannon'); },
     bRain: (e, ph) => {
       const room = G.room;
-      for (let i = 0; i < Math.round((26 + ph * 10) * DENS[G.fi]); i++) later(e, i * 0.08, () => {
+      for (let i = 0; i < Math.round((26 + ph * 10) * DENS[G.ti]); i++) later(e, i * 0.08, () => {
         // never drop a shell right on top of a player hugging the top wall: skip the lane above her
         let x = rnd(room.x0 + 1, room.x1 - 1);
         const y = room.y1 - 0.5, P = G.P;
@@ -1849,7 +1849,7 @@
       SFX.play('missile', 0.6);
     },
     bSpiral2: (e, ph) => { const a0 = Math.random() * TAU; for (let i = 0; i < 40 + ph * 8; i++) later(e, i * 0.07, () => { emitRing(e, 2, 5, { ang: a0 + i * 0.17, c: 'p' }); emitRing(e, 2, 4, { ang: -a0 - i * 0.23, c: 'b', curve: 0.3 }); }); SFX.play('laser', 0.5); },
-    bHoming: (e, ph) => { for (let i = 0; i < Math.round((6 + ph * 2) * DENS[G.fi]); i++) later(e, i * 0.18, () => ebullet(e.x, e.y + e.h * 0.6, rnd(0, TAU), 4.2, { homing: 1.8, life: 5, c: 'o', size: 0.42 })); SFX.play('missile'); },
+    bHoming: (e, ph) => { for (let i = 0; i < Math.round((6 + ph * 2) * DENS[G.ti]); i++) later(e, i * 0.18, () => ebullet(e.x, e.y + e.h * 0.6, rnd(0, TAU), 4.2, { homing: 1.8, life: 5, c: 'o', size: 0.42 })); SFX.play('missile'); },
     bLaser: (e, ph) => {
       // telegraphed sweeping bullet beams
       const a0 = aimAt(e) - 0.9;
@@ -1880,7 +1880,7 @@
     },
     // 골타리온 / 니드호그: an imploding ring — bullets spawn on a wide circle and converge on the boss; stand in a gap
     bVortex: (e, ph) => {
-      const R = 7.5, n = Math.round((22 + ph * 6) * DENS[G.fi]), gap = Math.random() * TAU, cy = e.y + e.h * 0.45;
+      const R = 7.5, n = Math.round((22 + ph * 6) * DENS[G.ti]), gap = Math.random() * TAU, cy = e.y + e.h * 0.45;
       SFX.play('energy', 0.6);
       for (let w = 0; w < 2; w++) later(e, w * 0.7, () => {
         for (let i = 0; i < n; i++) {
@@ -1930,12 +1930,12 @@
       if (G.phase !== 'play' || G.stats !== run || !G.P || G.P.dead) return; // the hero fell meanwhile: no banner / exit over the fail screen
       roomCleared(G.room);
       const r = G.room;
-      spawnChest(r.cx - 3, r.cy + 1.5, Math.min(3, 2 + (G.fi >= 2 ? 1 : 0)), true);
-      dropPickup(r.cx + 3, r.cy + 1.5, G.fi >= 2 ? 'half' : 'heart'); // deeper floors heal less: wounds carry into the next floor
+      spawnChest(r.cx - 3, r.cy + 1.5, Math.min(3, 2 + (G.ti >= 2 ? 1 : 0)), true);
+      dropPickup(r.cx + 3, r.cy + 1.5, G.ti >= 2 ? 'half' : 'heart'); // deeper floors heal less: wounds carry into the next floor
       spawnExit(r.cx, r.cy + 1.5);
       SFX.music(G.fi < FLOORS.length - 1 ? 'aftermath' : 'ending');
       SFX.play('win');
-      UI.banner('clear', `${e.def.name} 격파`, G.fi < FLOORS.length - 1 ? '승강기를 타고 다음 구역으로 이동하세요' : '철혈 사령부 제압 — 승강기로 귀환하세요');
+      UI.banner('clear', `${e.def.name} 격파`, G.fi < FLOORS.length - 1 ? '승강기를 타고 다음 구역으로 이동하세요' : (G.stageI != null ? `${DATA.STAGES[G.stageI].name} 제압 — 승강기로 귀환하세요` : '철혈 사령부 제압 — 승강기로 귀환하세요'));
     });
   }
 
@@ -3383,13 +3383,13 @@
     ];
     const priceOf = (it) => (it.kind === 'gun' ? F.gun[GUNS[it.id].rank] : F.item[Math.min(2, ITEMS.find((i) => i.id === it.id).rank)]);
     for (let k = 0; k < 6 && stock.length < 5; k++) {
-      const it = rollLoot(Math.random() < 0.3 + G.fi * 0.15 ? 2 : 1);
+      const it = rollLoot(Math.random() < 0.3 + G.ti * 0.15 ? 2 : 1);
       if (it.kind === 'gold' || stock.some((x) => x.loot.id === it.id)) continue;
       stock.push({ loot: it, price: priceOf(it) });
     }
     const n = stock.length;
     const disc = 1 - (G.P.metaLuck || 0) * 0.07; // research: 보급망 확충
-    stock.forEach((s, i) => spawnPedestal(room.cx + (i - (n - 1) / 2) * 2.5, room.cy - 1, s.loot, Math.round((s.price + G.fi * 5) * disc)));
+    stock.forEach((s, i) => spawnPedestal(room.cx + (i - (n - 1) / 2) * 2.5, room.cy - 1, s.loot, Math.round((s.price + G.ti * 5) * disc)));
   }
 
   function nearestInteract() {
@@ -3572,24 +3572,25 @@
     r.doors.forEach((d) => { FX.sparks(d.cx, d.cy, 0xff4040, 14, 4, 0.12, 0.5); FX.particle({ x: d.cx, y: d.cy, life: 0.4, size: 1, size1: 3, color: 0xff3030, tex: FX.tex.glow, alpha: 0.8 }); });
     if (G.opt.shake) FX.shake(0.12);
     const F = FLOORS[G.fi];
-    if (r.type === 'boss') return startBoss(r);
+    if (r.type === 'boss' && G.bossKeys[G.fi]) return startBoss(r);
+    if (r.type === 'boss') { r.guard = true; UI.banner('room', '경비 구역 — 승강기 확보', ''); }
     if (r.challenge) return startChallenge(r);
     const area = r.w * r.h;
-    const waves = area > 240 ? 3 : area > 150 ? 2 : (Math.random() < 0.65 ? 1 : 2);
+    const waves = r.guard ? 3 : area > 240 ? 3 : area > 150 ? 2 : (Math.random() < 0.65 ? 1 : 2);
     r.waves = [];
     for (let w = 0; w < waves; w++) {
-      const n = Math.round(clamp(2.6 + G.fi * 0.3 + area / 95 + rnd(0, 1) + w * 0.3, 2, [6, 6, 6, 6, 7, 7][G.fi]));
+      const n = Math.round(clamp(2.6 + G.ti * 0.3 + area / 95 + rnd(0, 1) + w * 0.3, 2, [6, 6, 6, 6, 7, 7][G.ti]));
       const pool = F.enemies;
       const list = [];
       for (let i = 0; i < n; i++) list.push(pool[Math.floor(Math.random() * pool.length)]);
-      if (F.elites.length && w === waves - 1 && Math.random() < 0.4 + G.fi * 0.1) { list.splice(0, 2, F.elites[Math.floor(Math.random() * F.elites.length)]); }
+      if (F.elites.length && w === waves - 1 && (r.guard || Math.random() < 0.4 + G.ti * 0.1)) { list.splice(0, 2, F.elites[Math.floor(Math.random() * F.elites.length)]); }
       // the last two floors can field an elite pair
-      if (F.elites.length && G.fi >= 2 && w === 0 && waves > 1 && Math.random() < (G.fi >= 4 ? 0.4 : 0.25)) /* mid floors meet a second elite now and then */ { list.splice(0, 2, F.elites[Math.floor(Math.random() * F.elites.length)]); }
+      if (F.elites.length && G.ti >= 2 && w === 0 && waves > 1 && Math.random() < (G.ti >= 4 ? 0.4 : 0.25)) /* mid floors meet a second elite now and then */ { list.splice(0, 2, F.elites[Math.floor(Math.random() * F.elites.length)]); }
       r.waves.push(list);
     }
     r.waveI = 0;
     spawnWave(r);
-    if (G.fi >= 1 && !r.challenge && Math.random() < 0.45) {
+    if (G.ti >= 1 && !r.challenge && Math.random() < 0.45) {
       // arena hazard: steam vents that charge (red ring) and burst every few seconds
       const n = 2 + Math.floor(Math.random() * 2);
       for (let i = 0; i < n; i++) {
@@ -3626,7 +3627,7 @@
   function startChallenge(r) {
     r.chMode = Math.random() < 0.5 ? 'survive' : 'hunt';
     r.chT = r.chMode === 'hunt' ? 40 : CH_TIME; r.chNext = 0; r.chElite = false; r.waves = []; r.waveI = 0;
-    r.chGoal = 10 + G.fi * 2; r.chKills = 0;
+    r.chGoal = 10 + G.ti * 2; r.chKills = 0;
     FX.later(2.3, () => { if (r.active) UI.toast(r.chMode === 'hunt' ? `40초 안에 ${r.chGoal}기 섬멸 — 성공하면 고급 보급 상자` : '끝까지 버티면 고급 보급 상자 획득', 'gem'); });
     FX.later(0.5, () => G.P && SFX.voice(vid(G.P), 'SearchStart'));
     SFX.play('warning', 0.6);
@@ -3643,7 +3644,7 @@
       return roomCleared(r);
     }
     let alive = 0; for (const e of G.enemies) if (e.alive) alive++; // counted in place (this runs every frame)
-    const cap = 4 + G.fi;
+    const cap = 4 + G.ti;
     if (r.chNext <= 0 && alive < cap && r.chT > 3) {
       const F = FLOORS[G.fi], pool = F.enemies, list = [];
       const n = Math.min(cap - alive, 2 + Math.floor(Math.random() * 2) + (r.chT < 12 ? 1 : 0));
@@ -3696,8 +3697,8 @@
     if (r.challenge) return challengeTick(r, dt);
     const alive = G.enemies.some((e) => e.alive);
     if (alive) return;
-    if (r.type !== 'boss' && r.waveI < r.waves.length) { spawnWave(r); return; }
-    if (r.type !== 'boss') roomCleared(r);
+    if ((r.type !== 'boss' || r.guard) && r.waveI < r.waves.length) { spawnWave(r); return; } // a stage floor's guard room plays its waves like any room
+    if (r.type !== 'boss' || r.guard) roomCleared(r);
   }
   function roomCleared(r) {
     r.active = false; r.cleared = true;
@@ -3712,7 +3713,14 @@
       if (Q && Q.mods.reserve) Q.guns.forEach((g) => { if (!g.infinite) g.ammo = Math.min(maxAmmo(g), g.ammo + Math.ceil(maxAmmo(g) * 0.2)); });
       if (Q && Q.mods.medkit && Q.hp < Q.maxHp && (Q.syn.has('응급 수복') || Q.hp * 2 <= Q.maxHp)) { Q.hp = Math.min(Q.maxHp, Q.hp + (Q.syn.has('응급 수복') ? 2 : 1)); FX.ring(Q.x, Q.y + 0.6, 0.3, 1.4, 0xff4060, 0.45); SFX.play('reinforce', 0.6); UI.toast('응급 처치 키트 — 체력 회복', 'gem'); }
     }
-    if (r.type === 'boss') return;
+    if (r.type === 'boss') {
+      if (r.guard) { // a guard room down: the lift to the next floor
+        spawnChest(r.cx - 2.5, r.cy + 1.5, Math.min(3, 1 + (G.ti >= 2 ? 1 : 0)), true);
+        spawnExit(r.cx, r.cy + 1.5); SFX.play('win', 0.7);
+        UI.banner('clear', '경비 구역 제압', '승강기를 타고 다음 층으로 이동하세요');
+      }
+      return;
+    }
     const P = G.P;
     if (r.challenge && r.chFail) { UI.banner('room', '도전 실패 — 시간 초과', ''); SFX.play('fail', 0.6); return; }
     if (r.challenge) {
@@ -3721,8 +3729,8 @@
       SFX.play('rankUp', 0.8);
       FX.ring(r.cx, r.cy + 0.5, 0.4, 3.2, 0xffc81e, 0.6);
       const away = Math.hypot(P.x - r.cx, P.y - r.cy) < 2.6 ? [r.cx + (P.x < r.cx ? 3 : -3), r.cy] : [r.cx, r.cy];
-      spawnChest(away[0], away[1], Math.min(3, 1 + (G.fi >= 2 ? 1 : 0) + (Math.random() < 0.25 ? 1 : 0)), true);
-      dropPickup(away[0], away[1] - 1, 'gold', 10 + G.fi * 4);
+      spawnChest(away[0], away[1], Math.min(3, 1 + (G.ti >= 2 ? 1 : 0) + (Math.random() < 0.25 ? 1 : 0)), true);
+      dropPickup(away[0], away[1] - 1, 'gold', 10 + G.ti * 4);
       if (!(P.ultT > 0 || P.overdrive > 0)) P.skill = Math.min(100, P.skill + 20 * P.mods.skill);
       return;
     }
@@ -3732,11 +3740,11 @@
     const roll = Math.random();
     if (roll < 0.14) dropPickup(r.cx, r.cy, 'key');
     // healing gets scarcer with depth (10 % on B1 → 4 % from B6), never zero; low HP still gets a mercy roll
-    else if (roll < 0.14 + Math.max(0.03, 0.09 - G.fi * 0.014) || (P.hp <= 2 && roll < 0.4)) dropPickup(r.cx, r.cy, P.hp < P.maxHp ? 'heart' : 'armor');
+    else if (roll < 0.14 + Math.max(0.03, 0.09 - G.ti * 0.014) || (P.hp <= 2 && roll < 0.4)) dropPickup(r.cx, r.cy, P.hp < P.maxHp ? 'heart' : 'armor');
     else if (roll < 0.42) dropPickup(r.cx, r.cy, ammoKind());
-    else if (roll < 0.47 - G.fi * 0.015) dropPickup(r.cx, r.cy, 'armor');
+    else if (roll < 0.47 - G.ti * 0.015) dropPickup(r.cx, r.cy, 'armor');
     else if (roll < 0.58) spawnChest(r.cx, r.cy, 0, true);
-    dropPickup(r.cx, r.cy, 'gold', Math.round((4 + G.fi * 2) * (G.P.mods.lucky ? 1.5 : 1))); /* 행운의 참치 counts here too */
+    dropPickup(r.cx, r.cy, 'gold', Math.round((4 + G.ti * 2) * (G.P.mods.lucky ? 1.5 : 1))); /* 행운의 참치 counts here too */
     if (!(P.ultT > 0 || P.overdrive > 0)) P.skill = Math.min(100, P.skill + 8 * P.mods.skill);
   }
   function startBoss(r) {
@@ -3776,6 +3784,7 @@
     (G.vents || []).forEach((v) => FX.kill(v.ring));
     Object.assign(G, { enemies: [], corpses: [], pbul: [], ebul: [], pickups: [], props: [], objs: [], hazards: [], vents: [], bossE: null, room: null });
     G.fi = fi;
+    G.ti = G.stageI != null ? FLOORS[fi].tier : fi; // stage floors borrow a farm floor's difficulty tier
     if (SD.evict && SD.loaded) { /* any rig outside this floor and the next is released, including a finished run's last floor */
       const keep = new Set([...HEROES.map((h) => h.id), ...(G.P ? [rigOf(G.P.hero)] : []), ...(G.P && G.P.hero.id === 'ramparion' ? ['e_Rampart_N', 'AGS_Rampart_NS1'] : []), ...Object.values(GUNS).filter((x) => !x.noLoot || (G.P && G.P.hero.gun === x.id)).map((x) => x.donor), 'labiata', ...floorRigs(fi), ...(fi + 1 < DATA.FLOORS.length ? floorRigs(fi + 1) : [])]);
       SD.loaded().forEach((id) => { if (!keep.has(id)) SD.evict(id); });
@@ -3783,7 +3792,7 @@
     // progress: the deepest floor ever reached unlocks heroes
     try {
       const pr = readObj('lao_rogue_prog'); pr.maxFi = Math.max(-1, Math.floor(Number(pr.maxFi)) || 0);
-      if (!TEST && !(pr.maxFi >= fi)) {
+      if (!TEST && G.stageI == null && !(pr.maxFi >= fi)) {
         pr.maxFi = fi; localStorage.setItem('lao_rogue_prog', JSON.stringify(pr));
         const h = HEROES.find((x) => UNLOCK[x.id] && UNLOCK[x.id].floor === fi);
         if (h) FX.later(3.2, () => { UI.announce('대원 해금', h.name, `${h.title} — 다음 출격부터 선택 가능`, 3); SFX.play('pickSS'); }, 3200);
@@ -3897,7 +3906,7 @@
   const COMMON_FX = ['skill_hit_simple', 'simple_explosion', 'Constantia_hit', 'Phoenix_skill1_hit', 'valkyrie_Hit_skill2', 'Thetis_skill2_Hit', 'RPG_skill2_hit', 'Harpy_skill2_missile_last_Hit'];
   function floorRigs(fi) {
     const F = FLOORS[fi];
-    return F ? [...F.enemies.map((k) => ENEMIES[k].rig), ...F.elites.map((k) => ELITES[k].rig), BOSSES[G.bossKeys[fi]].rig] : [];
+    return F ? [...F.enemies.map((k) => ENEMIES[k].rig), ...F.elites.map((k) => ELITES[k].rig), ...(G.bossKeys[fi] ? [BOSSES[G.bossKeys[fi]].rig] : [])] : [];
   }
   async function preloadFloor(fi) { bgLoad(floorRigs(fi)); }
   // background streaming: one rig at a time with a breather between, so play never hitches on a burst of parsing
@@ -3932,20 +3941,26 @@
     };
     next();
   }
-  async function startRun(heroIdx) {
+  async function startRun(heroIdx, opts) {
     /* a failure while setting up a run never leaves the game stuck in 'loading' */
-    try { await startRunInner(heroIdx); } catch (e) {
+    try { await startRunInner(heroIdx, opts); } catch (e) {
       console.error('[LAO] run start failed', e); G.errors = (G.errors || 0) + 1; bgAfter = 0; // background asset streaming resumes at once
       try { toTitle(); UI.toast('출격 준비 중 오류가 발생했습니다 — 다시 시도해 주세요', 'warn'); } catch (e2) { G.phase = 'title'; }
     }
   }
-  async function startRunInner(heroIdx) {
+  async function startRunInner(heroIdx, opts) {
     if (!scene || G.phase === 'loading' || G.phase === 'boot') return; // not booted yet / already starting
+    // mode: the data-chip farm (B1-B6, default) or a stage (opts.stage 0-4, opts.diff 0-2)
+    opts = opts || {};
+    const si = Number.isInteger(opts.stage) && DATA.STAGES[opts.stage] ? opts.stage : null;
+    G.runOpts = si != null ? { stage: si, diff: clamp(Math.floor(Number(opts.diff) || 0), 0, 2), charId: opts.charId ? String(opts.charId) : null } : {};
+    G.stageI = si; G.diff = si != null ? DATA.DIFFS[G.runOpts.diff] : null;
+    FLOORS.splice(0, FLOORS.length, ...(si != null ? DATA.stageFloors(si) : DATA.FARM));
     heroIdx = Math.floor(Number(heroIdx));
     if (!(heroIdx >= 0 && heroIdx < ALLH.length)) heroIdx = Math.floor(Math.random() * HEROES.length); /* out of range (or the random slot): a random hero */
     if (ALLH[heroIdx].available === false) heroIdx = 0;
     G.heroIdx = heroIdx;
-    G.heat = UI.heat ? UI.heat() : 0;
+    G.heat = G.stageI == null && UI.heat ? UI.heat() : 0; // stage difficulty replaces the risk level
     G.phase = 'loading';
     bgAfter = Math.max(bgAfter, performance.now() + 60000); // title-time streaming stands down at once
     { const t = document.getElementById('title'); if (t) t.hidden = true; }
@@ -3954,7 +3969,8 @@
     const need = [rigOf(hero), GUNS[hero.gun].donor, 'labiata', ...(hero.id === 'ramparion' ? ['e_Rampart_N'] : [])]; // 램파리온 breaks down into the Rampart rig
     const F = FLOORS[0];
     G.bossKeys = [];
-    {
+    if (G.stageI != null) G.bossKeys = FLOORS.map((f) => f.bossKey);
+    else {
       const b1 = FLOORS[0].boss[Math.floor(Math.random() * FLOORS[0].boss.length)];
       // each floor draws from its own pool (data.js FLOORS[].boss), never repeating a boss within the run;
       // the B1 bosses stay on B1 and the last floor is always the Iron Prince
@@ -3967,7 +3983,7 @@
       }
       G.bossKeys = [...keys, 'ironprince'];
     }
-    const enemyIds = [...F.enemies.map((k) => ENEMIES[k].rig), BOSSES[G.bossKeys[0]].rig];
+    const enemyIds = [...F.enemies.map((k) => ENEMIES[k].rig), ...(G.bossKeys[0] ? [BOSSES[G.bossKeys[0]].rig] : [])];
     const all = [...new Set([...need, ...enemyIds])];
     bgAfter = Math.max(bgAfter, performance.now() + 60000); // hold the title-time queue while the run loads
     let done = 0;
@@ -4019,7 +4035,9 @@
     // data chips for the research lab: depth, bosses, kills
     const quit = !win && G.stats.cause === '작전 포기' && G.stats.time < 60; // an instant abort pays nothing
     const chips = quit ? 0 : Math.round((G.fi * 12 + G.stats.bosses * 15 + G.stats.roomsCleared * 2 + Math.floor(G.stats.kills / 6) + (win ? 30 : 0)) * (1 + (G.heat || 0) * 0.25));
-    G.stats.chips = chips;
+    G.stats.chips = G.diff ? Math.round(chips * G.diff.chips) : chips; // stage mode drops chips, but poorly
+    G.stats.stage = G.stageI; G.stats.diff = G.diff ? G.diff.id : null;
+    if (win && G.stageI != null && !TEST) try { const sp = readObj('lao_rogue_stage'), cid = G.runOpts.charId || '_'; const cp = sp[cid] && typeof sp[cid] === 'object' ? sp[cid] : (sp[cid] = {}); const k = 's' + G.stageI; cp[k] = Math.max(Number(cp[k]) || 0, G.runOpts.diff + 1); localStorage.setItem('lao_rogue_stage', JSON.stringify(sp)); /* per RPG character */ } catch (e) { /* no storage */ }
     G.stats.heat = G.heat || 0;
     // clearing at the highest risk level opens the next one
     if (win && !TEST) try { const h = readObj('lao_rogue_heat'); h.max = clamp(Math.floor(Number(h.max) || 0), 0, 5); if ((G.heat || 0) >= (h.max || 0) && (h.max || 0) < 5) { h.max = (h.max || 0) + 1; G.stats.heatUp = h.max; } localStorage.setItem('lao_rogue_heat', JSON.stringify(h)); } catch (e) { /* no storage */ }
@@ -4027,7 +4045,7 @@
       // a damaged save (null, a string, a negative number) is repaired instead of losing this run's chips
       let m = null; try { m = JSON.parse(localStorage.getItem('lao_rogue_meta') || '{}'); } catch (e) { m = null; }
       if (!m || typeof m !== 'object') m = {};
-      m.chips = Math.max(0, Math.floor(Number(m.chips) || 0)) + chips;
+      m.chips = Math.max(0, Math.floor(Number(m.chips) || 0)) + G.stats.chips;
       if (!m.lv || typeof m.lv !== 'object') m.lv = {};
       m.v = 2;
       localStorage.setItem('lao_rogue_meta', JSON.stringify(m));
@@ -4036,7 +4054,7 @@
     SFX.music(null);
     if (win) { SFX.play('win'); const run = G.stats; setTimeout(() => { if (G.phase === 'win' && G.stats === run) SFX.music('ending'); }, 2500); } // a quick retry keeps its own music
     else { const run = G.stats; setTimeout(() => { if (G.phase === 'dead' && G.stats === run) SFX.music('aftermath'); }, 2200); } // a quiet loop under the fail report
-    UI.result(win, G.stats, G.P, G.fi);
+    UI.result(win, G.stats, G.P, G.ti);
   }
   function toTitle() {
     G.phase = 'title'; G.choosing = null; G.paused = false;
@@ -4354,7 +4372,7 @@
         else if (e.state === 'arm') { const on = Math.sin(G.t * 40) > 0; e.body.c.setTint(1.8, on ? 0.35 : 1, on ? 0.3 : 0.9); } // kamikaze about to burst: hard red blink
         else if (e.stun > 0 || e.slowT > 0) e.body.c.setTint(0.7, 0.85, 1.4);
         else if (e.elite) e.body.c.setTint(1.15, 0.85, 0.85);
-        else if (!e.boss) { const t = e.def.tint; const lift = G.fi === 1 ? 1.18 : 1.08; /* a touch brighter than the floor (B2's dark brick most of all) so dark rigs never sink into it */ if (t) e.body.c.setTint(t[0] * lift, t[1] * lift, t[2] * lift); else e.body.c.setTint(lift, lift, lift); } // keeps a variant's own tint (red kamikaze drones)
+        else if (!e.boss) { const t = e.def.tint; const lift = G.ti === 1 ? 1.18 : 1.08; /* a touch brighter than the floor (B2's dark brick most of all) so dark rigs never sink into it */ if (t) e.body.c.setTint(t[0] * lift, t[1] * lift, t[2] * lift); else e.body.c.setTint(lift, lift, lift); } // keeps a variant's own tint (red kamikaze drones)
         else { const t = e.def.tint || [1, 1, 1], ph = e.phase || 0, lb = e.def.pale ? 1 : 1.1; /* dark bosses lift off dark arena floors */ e.body.c.setTint(t[0] * lb, t[1] * lb * (1 - ph * 0.15), t[2] * lb * (1 - ph * 0.2)); }
         e.body.c.setOrder(ORD(e.y));
       }
@@ -4503,7 +4521,7 @@
     composer.render();
     RAMP_BOMB.draw(G.P, worldToScreen, stageEl, G.phase === 'play');
     LRL_BOMB.draw(G.P, worldToScreen, stageEl, G.phase === 'play');
-    return { phase: G.phase, fi: G.fi, t: Math.round(G.stats ? G.stats.time : 0) };
+    return { phase: G.phase, fi: G.ti, t: Math.round(G.stats ? G.stats.time : 0) };
   }
 
   let last = 0, frozenDrawn = false;
