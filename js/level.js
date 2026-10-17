@@ -360,7 +360,7 @@
           const x = r.x0 + 1.5 + rnd() * Math.max(0.1, r.w - 3 - w), y = r.y0 + 1.5 + rnd() * Math.max(0.1, r.h - 3 - h);
           if (Math.hypot(x + w / 2 - r.cx, y + h / 2 - r.cy) < 2.2 && r.type !== 'combat') continue; // keep chests / exits / boss spawns clear
           dz.q(x, y, x + w, y + h, 0, 0, 1, 1);
-          if (F.hazard && r.type !== 'treasure') lv.hz.push({ x: x + w / 2, y: y + h / 2, rx: w * 0.36, ry: h * 0.36, room: r.id, kind: F.hazard, t: rnd() * 3 });
+          if (F.hazard && r.type !== 'treasure') lv.hz.push({ x: x + w / 2, y: y + h / 2, rx: w * (F.hazard === 'lava' ? 0.29 : 0.36), ry: h * (F.hazard === 'lava' ? 0.29 : 0.36), room: r.id, kind: F.hazard, t: rnd() * 3 });
         }
         if (rnd() < 0.4) { const x = r.x0 + 1 + rnd() * (r.w - 4), y = r.y0 + 1 + rnd() * (r.h - 3); rubble.q(x, y, x + 2.4, y + 1.2, 0, 0, 1, 1); }
       });

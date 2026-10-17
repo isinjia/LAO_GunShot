@@ -370,10 +370,11 @@
   // a room can never lock the hero in: no live enemy for 4 s moves the waves on (or clears it); after 90 s, stragglers
   // stuck outside the room / out of reach are brought back in
   function roomWatchdog(dt) {
-    const r = G.room; if (!r || !r.active || r.type === 'boss' && !r.guard || r.challenge) return;
+    const r = G.room; if (!r || !r.active || r.challenge) return;
+    const bossRoom = r.type === 'boss' && !r.guard; // boss rooms: only the un-stick sweep (the boss's death ends the room)
     r.actT = (r.actT || 0) + dt;
     const live = G.enemies.filter((e) => e.alive);
-    if (!live.length) { r.idleT = (r.idleT || 0) + dt; if (r.idleT > 4) { r.idleT = 0; if (r.waves && r.waveI < r.waves.length) spawnWave(r); else roomCleared(r); } return; }
+    if (!live.length) { if (bossRoom) return; r.idleT = (r.idleT || 0) + dt; if (r.idleT > 4) { r.idleT = 0; if (r.waves && r.waveI < r.waves.length) spawnWave(r); else roomCleared(r); } return; }
     r.idleT = 0;
     if (r.actT > 90) for (const e of live) {
       if (e.golden || e.spawnT > 0) continue;
@@ -398,7 +399,7 @@
         h.cd = (h.cd || 0) - dt; h.inT = inside ? (h.inT || 0) + dt : 0; // a step in is free: the burn starts after 0.6 s on it
         if (inside && h.inT > 0.6) {
           if (Math.random() < dt * 10) FX.particle({ x: P.x + rnd(-0.3, 0.3), y: P.y + 0.15, vy: rnd(0.6, 1.4), life: 0.45, size: 0.22, size1: 0, color: H.col, tex: FX.tex.glow, alpha: 0.85 });
-          if (h.cd <= 0 && P.iframe <= 0 && !P.roll) { h.cd = H.every; hurtPlayer(H.name, H.dmg); } // hazards wear you down but never land the killing blow
+          if (h.cd <= 0 && P.iframe <= 0 && !P.roll) { h.cd = H.every * (G.diff && G.diff.id === 'hard' ? 0.85 : 1); hurtPlayer(H.name, H.dmg); } // hazards wear you down but never land the killing blow
         }
       }
       if (H.period && h.room === rid) { // power pads: charge (sparks), then discharge — the iron bugs standing on them get it too
@@ -415,7 +416,7 @@
     }
   }
   // the difficulty's HP bonus eases off in later stages: their own tiers and the gear gate already raise the bar there
-  function diffHp() { const k = G.diff.hp - 1; return 1 + k * (1 - 0.05 * (G.stageI || 0)); }
+  function diffHp() { const k = G.diff.hp - 1; return (1 + k) * (1 + (G.stageI >= 3 ? 0.16 : 0.12) * (G.stageI || 0)); }
   // 보물 철충 (the stage mode's golden goblin): a gilded runner that never fights back, flees the hero and slips away after
   // 14 s; brought down in time it bursts into a jackpot (equip.js onKill: rare+ gear, gems, runes, 재료)
   function spawnGolden(r) {
@@ -423,7 +424,7 @@
     const p = freeSpot(r.cx + rnd(-3, 3), r.cy + rnd(-2, 2), r); if (!p) return;
     const e = spawnEnemy(pool.includes('pupp') ? 'pupp' : pool[0], p[0], p[1]);
     if (!e) return;
-    e.golden = true; e.goldT = 11; e.maxHp = e.hp = Math.max(e.maxHp * 6, 260 * (1 + G.ti * 0.6)) * (G.diff ? diffHp() : 1); e.r *= 1.15;
+    e.golden = true; e.goldT = 15; e.maxHp = e.hp = Math.max(e.maxHp * 6, 260 * (1 + G.ti * 0.6)) * (G.diff ? diffHp() : 1); e.r *= 1.15;
     e.room = r; G.stats.golden = (G.stats.golden || 0) + 1;
     UI.banner('room', '보물 철충 출현!', '14초 안에 처치하면 대량의 장비'); SFX.play('rankUpSS', 0.8);
     FX.ring(e.x, e.y + 0.5, 0.3, 3.5, 0xffd040, 0.5);
@@ -1329,7 +1330,7 @@
   function spawnEnemy(defKey, x, y, opts = {}) {
     const def = ENEMIES[defKey] || ELITES[defKey] || BOSSES[defKey];
     const F = FLOORS[G.fi];
-    const hpMul = (G.diff ? diffHp() * (opts.boss && FLOORS[G.fi].mid ? 0.8 : 1) : 1) * (opts.boss ? FLOOR_BOSS_HP[G.ti] * clamp(def.hp / 1300, 0.8, G.ti <= 2 ? 1.0 : 1.25) / def.hp : F.hpMul * (1 + G.stats.roomsCleared * 0.005)) * (1 + (G.heat || 0) * 0.15);
+    const hpMul = (G.diff ? diffHp() * (opts.boss && FLOORS[G.fi].mid ? 0.8 : opts.boss ? 1.1 : 1) : 1) * (opts.boss ? FLOOR_BOSS_HP[G.ti] * clamp(def.hp / 1300, 0.8, G.ti <= 2 ? 1.0 : 1.25) / def.hp : F.hpMul * (1 + G.stats.roomsCleared * 0.005)) * (1 + (G.heat || 0) * 0.15);
     const e = {
       key: defKey, def, x, y, r: def.r, h: def.h, hp: def.hp * hpMul, maxHp: def.hp * hpMul, alive: true, spawnT: opts.boss ? 0 : 0.9,
       fireT: rnd(0.8, 1.6) * (def.rate || 2), t: 0, vx: 0, vy: 0, kx: 0, ky: 0, flash: 0, face: -1, seq: [], state: 'idle', stun: 0,
@@ -1516,6 +1517,8 @@
   // enemy bullets ─────────────────────────────────────────
   const BSPD = [0.95, 0.98, 1.0, 1.03, 1.07, 1.1]; // enemy bullet speed per floor
   const DENS = [0.44, 0.6, 0.7, 0.96, 1.2, 1.4]; // boss bullet density per floor
+  // stage mode threat: easy final bosses breathe, hard packs +30 % bullets, +4 %/stage
+  function threat() { if (!G.diff) return 1; return [0.85, 1.0, 1.3][['easy', 'normal', 'hard'].indexOf(G.diff.id)] * (1 + 0.04 * (G.stageI || 0)) * (FLOORS[G.fi] && FLOORS[G.fi].mid ? 0.85 : G.fi === FLOORS.length - 1 ? 1.15 : 1); }
   // enemy bullets keep to warm / violet hues so they never read as the player's yellow-cyan tracers
   const EB_COL = { n: 0xff2d6a, o: 0xff3fb8, b: 0xb06bff, y: 0xff5fe0, p: 0xc35bff }; /* every enemy shot sits in the pink-violet family: warm amber belongs to the player */
   // high-contrast option: one saturated magenta family, larger dark rim (red-green / blue-yellow safe)
@@ -1882,7 +1885,7 @@
       if (blocked || e.dash.t <= 0) {
         e.dash = null;
         FX.shake(0.4); FX.explosion(e.x, e.y + 0.5, 1.4, 0xffaa55, true); SFX.play('quake');
-        emitRing(e, Math.round((18 + phase * 4) * Math.max(0.6, DENS[G.ti])), 4.6, { c: 'o', size: 0.34 });
+        emitRing(e, Math.round((18 + phase * 4) * Math.max(0.6, (DENS[G.ti] * threat()))), 4.6, { c: 'o', size: 0.34 });
       }
     } else {
       e.wander += dt * 0.5;
@@ -1893,7 +1896,7 @@
     if (!P.dead && P.iframe <= 0 && Math.hypot(P.x - e.x, P.y - e.y) < e.r + P.r) hurtPlayer(def.name, G.ti >= 2 ? 2 : 1);
     // enrage after 180 s: faster patterns, but its plating burns away (0.6 %/s) so an under-geared run can't soft-lock
     e.bt = (e.bt || 0) + dt;
-    if (e.bt > 180) { if (!e.enraged) { e.enraged = true; UI.toast('보스 폭주 — 장갑이 붕괴합니다', 'warn'); } e.hp -= e.maxHp * 0.006 * dt; if (e.hp <= 0) { killEnemy(e); return; } }
+    if (e.bt > 150) { if (!e.enraged) { e.enraged = true; UI.toast('보스 폭주 — 장갑이 붕괴합니다', 'warn'); } e.hp -= e.maxHp * 0.006 * dt; if (e.hp <= 0) { killEnemy(e); return; } }
     // patterns
     e.patT = (e.patT || 1.5) - dt;
     if (e.patT <= 0 && !e.dash && !e.seq.length) {
@@ -1903,14 +1906,14 @@
       if (p === e.lastPat && Math.random() < 0.7) p = pats[(pats.indexOf(p) + 1) % Math.min(pats.length, 2 + phase * 2)];
       e.lastPat = p;
       BOSS_PAT[p](e, phase);
-      e.patT = ([1.7, 1.72, 1.58, 1.4, 1.26, 1.18][G.ti] - phase * 0.16) * (e.bt > 180 ? 0.72 : 1); /* B2/B3 bosses breathe more: any of them can be drawn this early */
+      e.patT = ([1.7, 1.72, 1.58, 1.4, 1.26, 1.18][G.ti] - phase * 0.16) * (e.bt > 150 ? 0.72 : 1); /* B2/B3 bosses breathe more: any of them can be drawn this early */
       if (e.body && e.body.c.has('atk')) e.body.c.play('atk'); // (some original skill clips hide the body for a cut-in)
     }
     if (e.body && (e.body.c.clipName === 'idle' || e.body.c.clipName === 'move')) { if (e.body.c.clipName !== 'move' && e.body.c.has('move')) e.body.c.play('move', null, true); }
   }
   const BOSS_PAT = {
-    bRing: (e, ph) => { for (let w = 0; w < 3 + ph; w++) later(e, w * 0.45, () => emitRing(e, Math.round((20 + ph * 4) * DENS[G.ti]), 4.4, { ang: w * 0.13, size: 0.34 })); SFX.play('cannon', 0.6); },
-    bSpiral: (e, ph) => { const a0 = Math.random() * TAU, n = Math.round((40 + ph * 10) * Math.max(0.7, DENS[G.ti])); for (let i = 0; i < n; i++) later(e, i * 0.06 / DENS[G.ti], () => emitRing(e, 3 + ph, 4.8, { ang: a0 + i * 0.21, c: 'p' })); SFX.play('laser', 0.5); },
+    bRing: (e, ph) => { for (let w = 0; w < 3 + ph; w++) later(e, w * 0.45, () => emitRing(e, Math.round((20 + ph * 4) * (DENS[G.ti] * threat())), 4.4, { ang: w * 0.13, size: 0.34 })); SFX.play('cannon', 0.6); },
+    bSpiral: (e, ph) => { const a0 = Math.random() * TAU, n = Math.round((40 + ph * 10) * Math.max(0.7, (DENS[G.ti] * threat()))); for (let i = 0; i < n; i++) later(e, i * 0.06 / (DENS[G.ti] * threat()), () => emitRing(e, 3 + ph, 4.8, { ang: a0 + i * 0.21, c: 'p' })); SFX.play('laser', 0.5); },
     bSummon: (e, ph) => {
       const pool = FLOORS[G.fi].enemies;
       const adds = G.enemies.filter((o) => o.alive && !o.boss).length;
@@ -1919,10 +1922,10 @@
       SFX.play('warning', 0.6);
       later(e, 0.6, () => emitFan(e, 9, 1.4, 5, { c: 'o' }));
     },
-    bAimFan: (e, ph) => { for (let w = 0; w < 3 + ph; w++) later(e, w * 0.36, () => emitFan(e, Math.round((7 + ph * 2) * DENS[G.ti]), 1.0, 6.5 + w * 0.4, { size: 0.3 })); SFX.play('gun', 0.6); },
+    bAimFan: (e, ph) => { for (let w = 0; w < 3 + ph; w++) later(e, w * 0.36, () => emitFan(e, Math.round((7 + ph * 2) * (DENS[G.ti] * threat())), 1.0, 6.5 + w * 0.4, { size: 0.3 })); SFX.play('gun', 0.6); },
     bWall: (e, ph) => {
       // a wall of bullets with a gap, sweeping toward the player
-      const a = aimAt(e), n = Math.round(22 * Math.max(0.7, DENS[G.ti])), gap = Math.floor(rnd(5, n - 6)), gw = G.ti < 2 ? 2 : 1; // density-scaled like every other pattern
+      const a = aimAt(e), n = Math.round(22 * Math.max(0.7, (DENS[G.ti] * threat()))), gap = Math.floor(rnd(5, n - 6)), gw = G.ti < 2 ? 2 : 1; // density-scaled like every other pattern
       for (let w = 0; w < 2 + ph; w++) later(e, w * 0.75, () => {
         const g2 = clamp(gap + Math.floor(rnd(-3, 4)), 3, n - 4);
         for (let i = 0; i < n; i++) { if (Math.abs(i - g2) <= gw) continue; ebullet(e.x, e.y + e.h * 0.45, a + (i / (n - 1) - 0.5) * 2.4, 4.2, { c: 'b', size: 0.32 }); }
@@ -1935,10 +1938,10 @@
       SFX.play(e.key === 'goltarion' ? 'eGolt' : 'charge', 0.8);
       later(e, 0.8 - ph * 0.12, () => { e.dash = { dx: dx / d, dy: dy / d, t: 1.2 }; e.tele = null; SFX.play('swing'); });
     },
-    bShotgun: (e, ph) => { for (let w = 0; w < 3; w++) later(e, w * 0.45, () => { emitFan(e, Math.round((12 + ph * 3) * DENS[G.ti]), 1.3, 7, { c: 'o', size: 0.28 }); for (let k = 0; k < Math.round(6 * DENS[G.ti]); k++) ebullet(e.x, e.y + e.h * 0.45, aimAt(e) + rnd(-0.5, 0.5), rnd(3, 6.5), { size: 0.22 }); }); SFX.play('cannon'); },
+    bShotgun: (e, ph) => { for (let w = 0; w < 3; w++) later(e, w * 0.45, () => { emitFan(e, Math.round((12 + ph * 3) * (DENS[G.ti] * threat())), 1.3, 7, { c: 'o', size: 0.28 }); for (let k = 0; k < Math.round(6 * (DENS[G.ti] * threat())); k++) ebullet(e.x, e.y + e.h * 0.45, aimAt(e) + rnd(-0.5, 0.5), rnd(3, 6.5), { size: 0.22 }); }); SFX.play('cannon'); },
     bRain: (e, ph) => {
       const room = G.room;
-      for (let i = 0; i < Math.round((26 + ph * 10) * DENS[G.ti]); i++) later(e, i * 0.08, () => {
+      for (let i = 0; i < Math.round((26 + ph * 10) * (DENS[G.ti] * threat())); i++) later(e, i * 0.08, () => {
         // never drop a shell right on top of a player hugging the top wall: skip the lane above her
         let x = rnd(room.x0 + 1, room.x1 - 1);
         const y = room.y1 - 0.5, P = G.P;
@@ -1949,7 +1952,7 @@
       SFX.play('missile', 0.6);
     },
     bSpiral2: (e, ph) => { const a0 = Math.random() * TAU; for (let i = 0; i < 40 + ph * 8; i++) later(e, i * 0.07, () => { emitRing(e, 2, 5, { ang: a0 + i * 0.17, c: 'p' }); emitRing(e, 2, 4, { ang: -a0 - i * 0.23, c: 'b', curve: 0.3 }); }); SFX.play('laser', 0.5); },
-    bHoming: (e, ph) => { for (let i = 0; i < Math.round((6 + ph * 2) * DENS[G.ti]); i++) later(e, i * 0.18, () => ebullet(e.x, e.y + e.h * 0.6, rnd(0, TAU), 4.2, { homing: 1.8, life: 5, c: 'o', size: 0.42 })); SFX.play('missile'); },
+    bHoming: (e, ph) => { for (let i = 0; i < Math.round((6 + ph * 2) * (DENS[G.ti] * threat())); i++) later(e, i * 0.18, () => ebullet(e.x, e.y + e.h * 0.6, rnd(0, TAU), 4.2, { homing: 1.8, life: 5, c: 'o', size: 0.42 })); SFX.play('missile'); },
     bLaser: (e, ph) => {
       // telegraphed sweeping bullet beams
       const a0 = aimAt(e) - 0.9;
@@ -1980,7 +1983,7 @@
     },
     // 골타리온 / 니드호그: an imploding ring — bullets spawn on a wide circle and converge on the boss; stand in a gap
     bVortex: (e, ph) => {
-      const R = 7.5, n = Math.round((22 + ph * 6) * DENS[G.ti]), gap = Math.random() * TAU, cy = e.y + e.h * 0.45;
+      const R = 7.5, n = Math.round((22 + ph * 6) * (DENS[G.ti] * threat())), gap = Math.random() * TAU, cy = e.y + e.h * 0.45;
       SFX.play('energy', 0.6);
       for (let w = 0; w < 2; w++) later(e, w * 0.7, () => {
         for (let i = 0; i < n; i++) {
@@ -2044,6 +2047,7 @@
   // dmg in half-hearts: trash bullets 1, heavy hits (boss body slams, explosions) 2 — armor still soaks one whole hit
   function hurtPlayer(src, dmg = 1) {
     dmg = Math.max(1, Math.min(4, Math.round(Number(dmg)) || 1)); src = String(src || '알 수 없는 공격');
+    if (G.diff && G.fi >= 2 && dmg === 1 && !/바닥|구역|균열|웅덩이|패드/.test(src) && Math.random() < ({ normal: 0.1, hard: 0.6 }[G.diff.id] || 0) + (G.diff.id === 'easy' ? 0 : 0.05 * (G.stageI || 0))) dmg = 2; // 보통 / 어려움: some hits bite for two, more each stage (hazards never)
     if (G.P) G.P.beats = 0; // a new hit re-arms the low-health heartbeat
     const P = G.P;
     if (!P || P.dead || P.iframe > 0 || G.phase !== 'play') return;
@@ -3808,7 +3812,7 @@
       const pool = F.enemies;
       const list = [];
       for (let i = 0; i < n; i++) list.push(pool[Math.floor(Math.random() * pool.length)]);
-      if (F.elites.length && w === waves - 1 && (r.guard || Math.random() < 0.4 + G.ti * 0.1)) { list.splice(0, 2, F.elites[Math.floor(Math.random() * F.elites.length)]); }
+      if (F.elites.length && w === waves - 1 && (r.guard && !(G.diff && G.fi === 0) || Math.random() < (0.4 + G.ti * 0.1) * (G.diff && G.diff.id === 'hard' ? 1.8 : 1) * (G.diff && G.fi === 0 ? 0.5 : 1))) { list.splice(0, 2, F.elites[Math.floor(Math.random() * F.elites.length)]); }
       // the last two floors can field an elite pair
       if (F.elites.length && G.ti >= 2 && w === 0 && waves > 1 && Math.random() < (G.ti >= 4 ? 0.4 : 0.25)) /* mid floors meet a second elite now and then */ { list.splice(0, 2, F.elites[Math.floor(Math.random() * F.elites.length)]); }
       r.waves.push(list);

@@ -229,14 +229,14 @@
     { id: 's1', name: '오르카 외곽', en: 'ORCA OUTSKIRTS', floors: [['hangar', 0, 3], ['hangar', 0, 3], ['nest', 0, 4], ['nest', 0, 3], ['frost', 1, 4]], mid: 'emperor', boss: 'executioner' },
     { id: 's2', name: '동결 저장고', en: 'CRYO VAULT', floors: [['frost', 1, 3], ['frost', 1, 3], ['dock', 1, 4], ['frost', 1, 3], ['flood', 2, 4]], mid: 'executioner', boss: 'goltarion' },
     { id: 's3', name: '수몰 정비창', en: 'SUNKEN DOCK', floors: [['flood', 2, 3], ['dock', 2, 3], ['flood', 2, 4], ['toxic', 2, 3], ['toxic', 3, 4]], mid: 'goltarion', boss: 'nightqueen' },
-    { id: 's4', name: '용광로 전선', en: 'FOUNDRY FRONT', floors: [['foundry', 2, 3], ['lab', 3, 3], ['foundry', 3, 4], ['bulwark', 3, 3], ['foundry', 4, 4]], mid: 'nidhogg', boss: 'doomprime' },
+    { id: 's4', name: '용광로 전선', en: 'FOUNDRY FRONT', floors: [['foundry', 3, 3], ['lab', 3, 3], ['foundry', 3, 4], ['bulwark', 3, 3], ['foundry', 4, 3]], mid: 'nidhogg', boss: 'doomprime' },
     { id: 's5', name: '철혈 사령부', en: 'IRON COMMAND', floors: [['power', 4, 3], ['bulwark', 4, 3], ['power', 4, 4], ['command', 4, 3], ['command', 5, 4]], mid: 'nightqueen', boss: 'ironprince' },
   ];
   // difficulty: enemy HP, enemy fire interval, enemy bullet speed; chips = the data-chip share (stage mode is a poor chip farm)
   const DIFFS = [
     { id: 'easy', name: '쉬움', hp: 1, rate: 1, bspd: 1, chips: 0.15, color: '#63d34a' },
     { id: 'normal', name: '보통', hp: 2.3, rate: 0.78, bspd: 1.1, chips: 0.2, color: '#38b6ff' },
-    { id: 'hard', name: '어려움', hp: 4.2, rate: 0.62, bspd: 1.18, chips: 0.25, color: '#ff5a4a' },
+    { id: 'hard', name: '어려움', hp: 3.5, rate: 0.56, bspd: 1.24, chips: 0.25, color: '#ff5a4a' },
   ];
   // one stage as a floor list in the FLOORS shape (enemy roster / elites / hpMul from the tier's farm floor)
   const FARM = FLOORS.slice();
@@ -244,7 +244,7 @@
     const S = STAGES[si];
     return S.floors.map(([th, tier, rooms], fi) => {
       const T = THEMES[th], B = FARM[tier], last = fi === S.floors.length - 1;
-      return { ...T, key: `${si + 1}-${fi + 1}`, rooms, enemies: B.enemies, elites: B.elites, hpMul: B.hpMul, tier,
+      return { ...T, key: `${si + 1}-${fi + 1}`, rooms, enemies: fi < 2 ? B.enemies.filter((k) => k !== 'gigantes' && (fi || k !== 'intruder')) : B.enemies, elites: B.elites, hpMul: B.hpMul, tier,
         boss: fi === 2 ? [S.mid] : last ? [S.boss] : [], bossKey: fi === 2 ? S.mid : last ? S.boss : null, mid: fi === 2 };
     });
   }

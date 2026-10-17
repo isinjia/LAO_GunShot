@@ -146,13 +146,13 @@
     const b = pick(pool);
     // unique / set: 1.2 % from trash, more from elites / chests / bosses (minRar 0-3); otherwise the tier roll
     const roll = Math.random() + (minRar || 0) * 0.15;
-    if (forceU || Math.random() < 0.006 + (minRar || 0) * 0.015) {
+    if (forceU || Math.random() < 0.0045 + (minRar || 0) * 0.015) {
       const u = UNIQUES.concat(SET_ITEMS).filter((x) => x.req <= ilvl + 4);
       if (u.length) { const q = pick(u), B = baseOf(q.base); return { id: uid(), base: B.id, name: q.name, rar: q.set ? 'set' : 'unique', set: q.set || null, ilvl, req: q.req, stats: { ...q.stats }, base_: scaleBase(B, ilvl), sockets: Math.min(B.sock, ri(0, 1)), socketed: [], w: B.w, h: B.h }; }
     }
     const rar = roll > 0.92 ? 'rare' : roll > 0.58 ? 'magic' : 'normal';
     const it = { id: uid(), base: b.id, name: b.name, rar, ilvl, req: Math.max(b.req, Math.floor(ilvl * 0.8)), stats: {}, base_: scaleBase(b, ilvl), sockets: 0, socketed: [], w: b.w, h: b.h };
-    const k = 1 + ilvl / 12;
+    const k = 1 + ilvl / 15;
     const roll1 = (a) => { const v = rnd(a.r[0], a.r[1]) * (a.s === 'hp' || a.s === 'armor' || a.s === 'pierce' ? 1 : k); it.stats[a.s] = Math.round(((it.stats[a.s] || 0) + v) * 10) / 10; if (a.s === 'hp' || a.s === 'armor' || a.s === 'pierce') it.stats[a.s] = Math.round(it.stats[a.s]); };
     const okA = (a) => !a.lv || a.lv <= ilvl;
     if (rar === 'magic') {
@@ -298,10 +298,10 @@
     if (P && P.gearVamp && P.hp < P.maxHp && Math.random() < P.gearVamp) { P.hp++; SFX.play('reinforce', 0.4); } // 흡혈: a kill can mend half a heart
     const lv = ilvlNow(), r = Math.random();
     if (e.golden) { // 보물 철충 jackpot
-      for (let i = 0; i < 4; i++) drop(e.x + Math.cos(i * 1.6) * 1.2, e.y + Math.sin(i * 1.6) * 1.2, genItem(lv + 2, i ? 2 : 3, i === 0));
+      for (let i = 0; i < 4; i++) drop(e.x + Math.cos(i * 1.6) * 1.2, e.y + Math.sin(i * 1.6) * 1.2, genItem(lv + 2, i ? 2 : 3, i === 0 && Math.random() < 0.25));
       drop(e.x, e.y + 1.4, genGem(lv + 4)); drop(e.x + 1, e.y - 1, genGem(lv + 4)); drop(e.x - 1, e.y - 1, genRune(lv + 6));
       const db = load(), c = db.list.find((x) => x.id === runChar); if (c) { const A = loadAcct(); localStorage.setItem(VAULT_KEY, JSON.stringify({ v: 1, list: A.list, mats: A.mats + 40 })); }
-      UI.banner('clear', '보물 철충 처치!', '유니크 1 · 장비 3 · 보석 2 · 룬 1 · 재료 +40'); SFX.play('pickSS', 1);
+      UI.banner('clear', '보물 철충 처치!', '장비 4 · 보석 2 · 룬 1 · 재료 +40'); SFX.play('pickSS', 1);
       return;
     }
     if (r < (e.elite ? 0.12 : 0.008)) drop(e.x, e.y, genItem(lv, e.elite ? 1 : 0));
@@ -312,7 +312,7 @@
   function onBoss(x, y, mid) {
     if (!runChar) return;
     const lv = ilvlNow() + (mid ? 0 : 3);
-    for (let i = 0; i < (mid ? 1 : 2); i++) drop(x + (i - 1) * 1.6, y - 1.2, genItem(lv, mid ? 1 : 2, Math.random() < 0.08));
+    for (let i = 0; i < (mid ? 1 : 2); i++) drop(x + (i - 1) * 1.6, y - 1.2, genItem(lv, mid ? 1 : 2, Math.random() < 0.03));
     drop(x, y - 2.4, genRune(lv + 4)); if (Math.random() < 0.6) drop(x + 1.6, y - 2.4, genGem(lv));
   }
   // picked up: straight into the character's save (never lost, win or lose)
@@ -333,7 +333,7 @@
     const { db, c } = getChar(runChar); if (!c) return;
     norm(c);
     G.stats.charGear = G.runGear ? G.runGear.items : 0; // items picked up this run (already saved)
-    { const s = G.stats, dm = G.diff ? [1, 1.25, 1.5][['easy', 'normal', 'hard'].indexOf(G.diff.id)] : 1; const m = Math.round((s.kills * 0.15 + s.roomsCleared * 1 + s.bosses * 8 + (win ? 15 : 0)) * dm * (1 + (G.stageI || 0) * 0.12)); c.mats = Math.max(0, Math.floor(Number(c.mats) || 0)) + m; s.charMats = m; setTimeout(() => UI.toast(`재료 +${m} 획득`, 'gem'), 1500); }
+    { const s = G.stats, dm = G.diff ? [1, 1.25, 1.5][['easy', 'normal', 'hard'].indexOf(G.diff.id)] : 1; const m = Math.round((s.kills * 0.15 + s.roomsCleared * 1 + s.bosses * 8 + (win ? 15 : 0)) * dm * (1 + (G.stageI || 0) * 0.06)); c.mats = Math.max(0, Math.floor(Number(c.mats) || 0)) + m; s.charMats = m; setTimeout(() => UI.toast(`재료 +${m} 획득`, 'gem'), 1500); }
     if (G.stats.charGear) setTimeout(() => UI.toast(`${esc(c.name)} — 이번 작전 장비 ${G.stats.charGear}개 회수 (보관 완료)`, 'gem'), 900);
     saveAll(db);
     runChar = null; applied = null;
