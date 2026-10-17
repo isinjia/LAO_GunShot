@@ -10,7 +10,7 @@ M = {"brownie": "FullbodyIMG_BR_Brownie_N", "leprechaun": "FullbodyIMG_BR_Leprec
      "kheshig": "FullbodyIMG_BR_Kheshig_N", "gnome": "FullbodyIMG_BR_Gnome_N",
      "blacklilith": "FullbodyIMG_3P_BlackLilith_N"}
 # hand-picked crops where the auto head finder is fooled (weapons / parts above the head): head centre x, top y, height (fractions of the figure box)
-CROP = {"nymph": (0.62, 0.0, 0.36), "kheshig": (0.2, 0.0, 0.36)}
+CROP = {"nymph": (0.62, 0.0, 0.36), "kheshig": (0.2, 0.0, 0.36), "blacklilith": (0.5, 0.06, 0.34)}
 
 
 def head_x(a, y0, y1):
