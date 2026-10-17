@@ -4144,7 +4144,7 @@
     FLOORS.splice(0, FLOORS.length, ...(si != null ? DATA.stageFloors(si) : DATA.FARM));
     heroIdx = Math.floor(Number(heroIdx));
     if (!(heroIdx >= 0 && heroIdx < ALLH.length)) heroIdx = Math.floor(Math.random() * HEROES.length); /* out of range (or the random slot): a random hero */
-    if (ALLH[heroIdx].available === false) heroIdx = 0;
+    if (!UI.hiddenAllowed(ALLH[heroIdx])) heroIdx = 0;
     G.heroIdx = heroIdx;
     G.heat = G.stageI == null && UI.heat ? UI.heat() : 0; // stage difficulty replaces the risk level
     G.phase = 'loading';
@@ -4304,7 +4304,7 @@
     if (!scene) return;
     if (i < 0) { clearShow(); showDeco(); G.showDeco.q.visible = !G.quietStage; G.showDeco.glow.hidden = !!G.quietStage; if (!G.quietStage) FX.ring(SHOW.x, SHOW.y + 0.2, 0.4, 3.2, 0xd8dee8, 0.5, 0.9); return; } // quietStage: the RPG hub with no operator yet // the random card: an empty stage
     const hid = i >= HEROES.length, h = hid ? (DATA.HIDDEN || [])[i - HEROES.length] : HEROES[i];
-    if (!h || h.available === false) return;
+    if (!UI.hiddenAllowed(h)) return;
     const rid = h.rig || h.id;
     if (!SD.ready(rid) || !SD.ready(GUNS[h.gun].donor)) { SD.prepare(rid).then(() => SD.prepare(GUNS[h.gun].donor)).then(() => { if (G.phase === 'title' && G.showWant === i) showcase(i); }); return; }
     clearShow(); if (G.showDeco) G.showDeco.glow.hidden = false;

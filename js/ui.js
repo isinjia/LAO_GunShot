@@ -329,12 +329,15 @@
   const K_ = (str) => str.split(' ').map((c) => (c.length === 1 ? 'Key' + c : c));
   const CHEAT_ON = K_('C L X M G H K F T J D G H K');
   const RAMP_CODES = [K_('F O A V K F L D H S'), K_('R A M P A R I O N'), K_('R A M P A L I O N')];
+  const LILITH_CODES = [K_('Q M F F O R F L F L T M'), K_('B L A C K L I L I T H')];
+  let blackLilithUnlocked = false;
+  function hiddenAllowed(h) { return !!h && (h.available !== false || h.id === 'blacklilith' && cheatsOn && blackLilithUnlocked); }
   const LRL_CODE = ['ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight'];
   let cheatBuf = [], cheatAt = 0;
   const ends = (buf, seq) => buf.length >= seq.length && seq.every((c, i) => buf[buf.length - seq.length + i] === c);
   let swipeClickUntil = 0;
   function forceHidden(id, selectNow) {
-    const HID = DATA.HIDDEN || [], k = HID.findIndex((h) => h.id === id && h.available !== false);
+    const HID = DATA.HIDDEN || [], k = HID.findIndex((h) => h.id === id && hiddenAllowed(h));
     if (k < 0) return;
     forcedHidden = HEROES.length + k;
     const h = HID[k];
@@ -356,10 +359,11 @@
       try { sessionStorage.setItem('lao_rogue_cheats', '1'); } catch (er) { /* ignore */ }
       SFX.play('rankUp', 0.8); toast('치트 활성화', 'gem'); return true;
     }
+    if (cheatsOn && LILITH_CODES.some(q => ends(cheatBuf, q))) { blackLilithUnlocked = true; cheatBuf = []; forceHidden('blacklilith', true); return true; }
     if (cheatsOn && RAMP_CODES.some((q) => ends(cheatBuf, q))) { cheatBuf = []; forceHidden('ramparion'); return true; }
     // mid-code letters (2+ keys into a code) don't fire the title shortcuts (H 위험 등급 · O 설정 · U 연구소 · A / D)
     if (!/^Key/.test(e.code)) return false;
-    const codes = [CHEAT_ON, ...RAMP_CODES]; // either code, cheats on or not (치트활성화 typed again must not start a sortie)
+    const codes = [CHEAT_ON, ...RAMP_CODES, ...LILITH_CODES]; // either code, cheats on or not (치트활성화 typed again must not start a sortie)
     for (let n = Math.min(cheatBuf.length, 20); n >= 2; n--) { const tail = cheatBuf.slice(-n); if (codes.some((q) => n <= q.length && tail.every((c, i) => c === q[i]))) return true; }
     return false;
   }
@@ -390,13 +394,13 @@
   function dressRandomCard() {
     if (forcedHidden == null) return;
     const h = DATA.HIDDEN[forcedHidden - HEROES.length], rc = el.heroSel && el.heroSel.querySelector('.hcard.rand');
-    if (!h || h.available === false || !rc) return;
+    if (!hiddenAllowed(h) || !rc) return;
     rc.style.setProperty('--c', h.color); rc.classList.add('hid');
     rc.innerHTML = `<i style="background-image:${portrait(h)}"></i><b>${h.name}</b><small>히든 대원</small>`;
   }
   // the random card: any unlocked hero, decided when the run starts
   function pickHero() {
-    if (forcedHidden != null && !(DATA.HIDDEN[forcedHidden - HEROES.length] && DATA.HIDDEN[forcedHidden - HEROES.length].available !== false)) forcedHidden = null;
+    if (forcedHidden != null && !hiddenAllowed(DATA.HIDDEN[forcedHidden - HEROES.length])) forcedHidden = null;
     if (selHero === -1 && forcedHidden != null) return forcedHidden; // the random card, dressed as the cheat's hidden hero
     if (selHero >= 0) return selHero;
     // hidden heroes: 2% each on the random card (indices after the card heroes)
@@ -1354,6 +1358,6 @@
   window.UI = {
     refreshLanguage: () => { mapDirty=true; lastHud={}; if (window.GAME) GAME.redraw(); },
     init, gunEmpty, sk2Used, reloadGauge, loading, loaded, title, titleTick, startRun, hud, gunChanged, toggleMap, dmg, toast, clearToasts, banner, chTimer, ammoWarn, levelUp, shock, chTimer, announce, prompt, boss, hideBoss, bossIntro, skillCut, shout, hurt, fade,
-    togglePause, result, coach, heat, K, hideBossIntro, keyLabels: () => keyLabels(), mapDirty() { mapDirty = true; }, get sel() { return selHero; }, pickHero, heroLocked: () => selHero >= 0 && !unlocked(HEROES[selHero]), mapOpen: () => !!el.bigMap && !el.bigMap.hidden, goalHtml,
+    togglePause, result, coach, heat, K, hideBossIntro, keyLabels: () => keyLabels(), mapDirty() { mapDirty = true; }, get sel() { return selHero; }, pickHero, hiddenAllowed, heroLocked: () => selHero >= 0 && !unlocked(HEROES[selHero]), mapOpen: () => !!el.bigMap && !el.bigMap.hidden, goalHtml,
   };
 })();
