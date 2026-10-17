@@ -111,7 +111,7 @@
         const po = near(pick.filter((p) => !(BOT.skip && BOT.skip.has(p)) && !((p.kind === 'heart' || p.kind === 'half') && P.hp >= P.maxHp)));
         const oo = near(objs);
         if (po && Math.hypot(po.x - P.x, po.y - P.y) < 9) goal = { x: po.x, y: po.y, pk: po };
-        else if (oo) goal = { x: oo.x, y: oo.y - 0.8, obj: oo };
+        else if (oo && !(exit && Math.hypot(oo.x - P.x, oo.y - P.y) > 6)) goal = { x: oo.x, y: oo.y - 0.8, obj: oo }; // once the lift is up, only what is close by
         else if (exit) goal = { x: exit.x, y: exit.y, obj: exit };
         else {
           const rooms = lv.rooms.filter((x) => !x.visited && x.type !== 'boss');

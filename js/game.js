@@ -356,10 +356,27 @@
   // the hero colour as a hex int, parsed once (was a new THREE.Color per particle)
   // whose voice: 램파리온 broken down to 램파트 speaks with Rampart's own lines
   function vid(P) { return P.form === 'rampart' ? 'rampart' : P.hero.id; }
+  // a room can never lock the hero in: no live enemy for 4 s moves the waves on (or clears it); after 90 s, stragglers
+  // stuck outside the room / out of reach are brought back in
+  function roomWatchdog(dt) {
+    const r = G.room; if (!r || !r.active || r.type === 'boss' && !r.guard || r.challenge) return;
+    r.actT = (r.actT || 0) + dt;
+    const live = G.enemies.filter((e) => e.alive);
+    if (!live.length) { r.idleT = (r.idleT || 0) + dt; if (r.idleT > 4) { r.idleT = 0; if (r.waves && r.waveI < r.waves.length) spawnWave(r); else roomCleared(r); } return; }
+    r.idleT = 0;
+    if (r.actT > 90) for (const e of live) {
+      if (e.golden || e.spawnT > 0) continue;
+      const out = LEVEL.roomAt(e.x, e.y) !== r || LEVEL.hitCircle(e.x, e.y, e.r * 0.5);
+      if (!out && r.actT < 150) continue;
+      const p = freeSpot(r.cx + rnd(-2, 2), r.cy + rnd(-2, 2), r); if (p) { e.x = p[0]; e.y = p[1]; e.spawnT = 0.4; }
+    }
+    if (r.actT > 150) r.actT = 90; // one more sweep a minute later if still stuck
+  }
   // stage-theme hazard pools (level.js fills G.lv.hz from the theme's decals): only the room the hero is in matters
   const HZ = { ice: { slow: 0.62, name: '빙결 바닥', col: 0xbfe8ff }, water: { slow: 0.7, name: '침수 구역', col: 0x5aa8ff }, lava: { dmg: 1, every: 2.0, name: '용암 균열', col: 0xff6a20 }, toxic: { dmg: 1, every: 2.4, name: '오염 웅덩이', col: 0x9dff40 }, shock: { dmg: 1, period: 4.0, warn: 1.2, name: '방전 패드', col: 0x7fe3ff } };
   function updateThemeHazards(dt) {
     const P = G.P; if (!P) return; P.hzSlow = 1;
+    roomWatchdog(dt);
     const list = G.lv && G.lv.hz; if (!list || !list.length || P.dead) return;
     const rid = G.room ? G.room.id : -1;
     for (const h of list) {
@@ -500,7 +517,7 @@
       case 'gnome': if (e.markT > 0) bonus = 0.10; break;
       case 'constantia': if (e.markT > 0 || e.rootT > 0) bonus = 0.16; break;
       case 'kheshig': if (Math.hypot(e.x-P.x,e.y-P.y) <= 4) bonus = 0.12; break;
-      case 'blacklilith': if (e.supT > 0 || P.guardT > 0) bonus = 0.12; break;
+      case 'blacklilith': if (e.supT > 0 || P.scud) bonus = 0.12; break;
       case 'lrl': if (e.blindT > 0) bonus = 0.16; break;
       case 'ramparion': if (e.rootT > 0 || e.stun > 0 || Math.hypot(e.x-P.x,e.y-P.y) <= 3) bonus = 0.12; break;
     }
@@ -554,6 +571,7 @@
     P.fireCd = Math.max(0, P.fireCd - dt);
     P.recoil = Math.max(0, P.recoil - dt * 6);
     P.hurtFlash = Math.max(0, P.hurtFlash - dt);
+    if (P.scud) { updateScud(P, dt); return; }
     if (P.ocT > 0) P.ocT -= dt;
     if (P.adrT > 0) { P.adrT -= dt; if (Math.random() < dt * 14) FX.particle({ x: P.x + rnd(-0.4, 0.4), y: P.y + rnd(0.2, 1.3), vy: 1.6, life: 0.35, size: 0.12, size1: 0, color: 0xff5a3a, tex: FX.tex.dot }); }
     updateOrbs(P, dt);
@@ -822,7 +840,7 @@
     } else if (P.shieldFx) { P.shieldFx.forEach((s) => { s.hidden = true; }); }
     if (P.chargeT > 0) { P.chargeT -= dt; if (Math.random() < dt * 10) FX.particle({ x: P.x + rnd(-0.4, 0.4), y: P.y + rnd(0.2, 1.3), vy: 1.4, life: 0.4, size: 0.14, size1: 0, color: 0x9dff7a, tex: FX.tex.dot }); }
     if (INPUT.take('skill2') && !P.hh && !P.lrlCast) useSkill2();
-    if (INPUT.held('fire') && !P.hh && !P.lrlCast && !P.roll && P.reloadT <= 0 && P.fireCd <= 0) {
+    if (INPUT.held('fire') && !(P.wildShotEnd > G.t) && !P.hh && !P.lrlCast && !P.roll && P.reloadT <= 0 && P.fireCd <= 0) {
       if (g.d.noReload || freeAmmo(P) || g.mag > 0) fire(P, g);
       else if (g.ammo > 0) startReload(P, g);
       else { P.fireCd = 0.3; SFX.synth('empty'); if (!P.emptyWarned) { P.emptyWarned = true; UI.toast('탄약이 없습니다 — 무기를 교체하세요', 'warn'); UI.gunEmpty(); tip('ammo', '탄약 소진', INPUT.isTouch ? '교체 버튼으로 다른 무기로 바꾸세요. 기본 무기는 탄약이 무한합니다. 탄약 상자(초록)로 보충' : `1~3 / ${UI.K('swap')} / 휠로 다른 무기로 바꾸세요. 기본 무기는 탄약이 무한합니다. 빈 무기는 ${UI.K('interact')}로 버릴 수 있습니다(무기는 최대 3개)`); } }
@@ -867,7 +885,7 @@
   function poseHand(P) {
     const g = curGun();
     if (!g || !g.hand) return;
-    const a = P.aim, ca = Math.cos(a), sa = Math.sin(a);
+    const a = P.wildShotEnd > G.t ? P.aim + (G.t - P.wildShotStart) * TAU * 2 : P.aim, ca = Math.cos(a), sa = Math.sin(a);
     const rk = P.recoil * 0.22;
     const bob = P.moving ? Math.sin(G.t * 14) * 0.03 : Math.sin(G.t * 3) * 0.015;
     // the wrist sits so the back of the gun reaches the body's centre line, at chest height
@@ -890,7 +908,7 @@
     o.visible = !P.dead;
     g.hand.c.setOrder(ORD(P.ordY != null ? P.ordY : P.y) + 0.0004); // the gun always draws over the body and head
     if (P.roll) o.visible = false;
-    if (P.hh || P.lrlCast) o.visible = false;
+    if (P.hh || P.lrlCast || P.scud) o.visible = false;
     if (P.swingT > 0) { // 액스 오브 다크니스: the axe hand sweeps the same arc as the slash, high to low across the aim
       const k = 1 - P.swingT / P.swingMax, e = k * k * (3 - 2 * k), off = (1.25 - 2.5 * e) * fl, sa2 = a + off;
       o.position.set(P.x + Math.cos(sa2) * 0.95, P.y + 0.85 + Math.sin(sa2) * 0.75, 0);
@@ -1056,6 +1074,7 @@
     const P = G.P;
     for (let i = G.pbul.length - 1; i >= 0; i--) {
       const b = G.pbul[i];
+      if (wildShotClears(P, b)) { popEB(b); ebRemove(i); continue; }
       b.t += dt; b.life -= dt;
       // homing chip: steer gently toward the nearest enemy
       const homeK = (P.mods.homing || 0) + (b.visor ? 3 : 0); // 전술 조준 모드: strongly guided rounds
@@ -1549,6 +1568,7 @@
       if (b.acc) { const sp = Math.hypot(b.vx, b.vy), k = Math.max(0.2, (sp + b.acc * dt) / (sp || 1)); b.vx *= k; b.vy *= k; }
       const ox = b.x, oy = b.y;
       b.x += b.vx * dt; b.y += b.vy * dt;
+      if (wildShotClears(P, b, ox, oy)) { popEB(b); ebRemove(i); continue; }
       const t = LEVEL.tile(b.x, b.y - 0.3);
       const door = LEVEL.cur.closed && LEVEL.cur.closed.has(Math.floor(b.y - 0.3) * LEVEL.cur.W + Math.floor(b.x));
       let dead = b.life <= 0 || t === LEVEL.WALL || t === LEVEL.VOID || door;
@@ -2061,7 +2081,7 @@
   }
   function useSkill() {
     const P = G.P;
-    if (P.hh || P.lrlCast) return;
+    if (P.hh || P.lrlCast || P.scud) return;
     if (P.skill < 100) { SFX.synth('empty'); UI.toast(`스킬 충전 중 — ${Math.floor(P.skill)}%`, 'warn'); return; }
     P.skill = 0; UI.clearToasts();
     P.ultT = 1.2; // the ultimate's own effects play out over about a second (timed ones extend it below)
@@ -2242,13 +2262,8 @@
         FX.ring(P.x, P.y + 0.3, 0.5, 4, 0xff3d6d, 0.4, 0.6);
         SFX.play('expM', 0.6);
         break;
-      case 'escort':
-        // 블랙 리리스 · 요인 경호: two hits nullified, attack +23.5 % and sure aim for 6 s
-        P.overdrive = P.odMax = 6 + 1.5 * upF(P); P.odDmg = 1.3; P.odRof = 1.2; P.visorT = P.overdrive;
-        P.guardT = P.overdrive; P.emplaceGuard = 2;
-        SFX.play('shield'); SFX.play('reinforce', 0.7);
-        FX.ring(P.x, P.y + 0.6, 0.3, 2.6, 0xc070ff, 0.6); FX.flash(0xc070ff, 0.12);
-        castPillar(P, 0xc070ff); blankWave(P.x, P.y + 0.5, 3.6, false); escortRing(P);
+      case 'scud':
+        startScud(P);
         break;
       case 'eyebeam': {
         P.lrlCast = LRL_BOMB.start(P);
@@ -2684,6 +2699,122 @@
     dirs.forEach((d0) => { for (let i = 0; i < 6; i++) { const b = spawnPBullet(P, rd, P.x, P.y + 0.6, d0 + (i / 5 - 0.5) * 0.4, 22); if (b) b.popSupAny = true; } FX.muzzleFlash(P.x + Math.cos(d0) * 0.5, P.y + 0.6 + Math.sin(d0) * 0.5, d0, 0xc070ff, 2); });
     FX.ring(P.x, P.y + 0.6, 0.3, 2.2, 0xc070ff, 0.3); SFX.play('gun', 0.8);
   }
+  /* Scud: collision-safe rush, airborne crossfire, then a landing execution. */
+  function startScud(P) {
+    P.roll = null; P.dash = null; P.dodgeBuf = 0; P.wildShotEnd = 0;
+    P.reloadT = 0; P.reloadGun = null; P.overdrive = 0; P.guardT = 0; P.emplaceGuard = 0;
+    P.scud = { t: 0, a: P.aim, room: G.room, height: 0, shot: 0, hit: new Set(), k: 1 + 0.2 * upF(P), hands: [] };
+    for (let i = 0; i < 2; i++) {
+      const hand = RIGS.makeHand('blacklilith', donorK('blacklilith'));
+      if (hand) { P.scud.hands.push(hand); scene.add(hand.group); }
+    }
+    P.body.pivot.rotation.z = 0; P.body.c.play('idle'); P.ultT = 3.2;
+    P.iframe = Math.max(P.iframe, 3.3);
+    FX.ring(P.x, P.y + 0.3, 0.3, 2.2, 0xc070ff, 0.2); SFX.play('charge');
+  }
+  function endScud(P) {
+    const s = P.scud; if (!s) return;
+    for (const h of s.hands) { scene.remove(h.group); h.c.dispose(); }
+    P.scud = null; P.ultT = 0; P.body.pivot.rotation.z = 0;
+    P.body.root.position.set(P.x, P.y, 0); P.body.c.play('idle'); P.moving = false;
+    P.iframe = Math.max(P.iframe, 0.25); P.fireCd = Math.max(P.fireCd, 0.15);
+    P.guns.forEach(g => { if (g.hand) g.hand.outer.visible = P.guns[P.gi] === g; });
+  }
+  function scudFinish(P, s) {
+    const damage = 180 * s.k * P.mods.dmg;
+    for (const e of G.enemies) {
+      if (!e.alive || e.spawnT > 0 || Math.hypot(e.x - P.x, e.y - P.y) > 6 + e.r || !LEVEL.los(P.x, P.y + 0.2, e.x, e.y + 0.2)) continue;
+      hurtEnemy(e, damage, true, 0, 0, 'hitB');
+      if (e.alive && e.supT > 0) popStatus(e, damage, 'sup');
+      FX.beam(P.x, P.y + 0.7, e.x, e.y + e.h * 0.42, 0.12, 0xffdf9a, 0.18);
+    }
+    blankWave(P.x, P.y + 0.5, 6, false);
+    FX.ring(P.x, P.y + 0.2, 0.4, 6, 0xffdf9a, 0.35);
+    SFX.play('expM', 0.7); SFX.play('land', 0.8);
+    if (G.opt.shake) FX.shake(0.18);
+  }
+  function updateScud(P, dt) {
+    const s = P.scud;
+    if (P.dead || G.phase !== 'play' || G.room !== s.room) { endScud(P); return; }
+    s.t += dt; P.ultT = Math.max(0, 3.2 - s.t); P.iframe = Math.max(P.iframe, 0.15);
+    P.sk2Cd = Math.max(0, P.sk2Cd - dt);
+    if (s.t < 0.3) {
+      LEVEL.move(P, Math.cos(s.a) * 15 * dt, Math.sin(s.a) * 15 * dt);
+      for (const e of G.enemies) {
+        if (!e.alive || e.spawnT > 0 || s.hit.has(e) || Math.hypot(e.x - P.x, e.y - P.y) > 1.6 + e.r || !LEVEL.los(P.x, P.y + 0.2, e.x, e.y + 0.2)) continue;
+        s.hit.add(e); hurtEnemy(e, 65 * s.k * P.mods.dmg, false, 0, 0, 'hitB');
+        if (e.alive) { e.supT = Math.max(e.supT || 0, 5); if (!e.boss) e.stun = Math.max(e.stun || 0, 0.7); }
+      }
+      FX.particle({ x: P.x, y: P.y + 0.6, life: 0.18, size: 1.3, size1: 0.2, color: 0xc070ff, tex: FX.tex.glow, alpha: 0.35 });
+    } else if (s.t < 2.8) {
+      const mv = INPUT.moveVec(); LEVEL.move(P, mv[0] * P.hero.speed * P.mods.speed * 0.4 * dt, mv[1] * P.hero.speed * P.mods.speed * 0.4 * dt);
+    }
+    s.height = s.t < 0.3 ? 0 : s.t < 0.65 ? Math.sin(Math.min(1, (s.t - 0.3) / 0.35) * Math.PI / 2) * 1.4 : s.t < 2.65 ? 1.4 : Math.max(0, 1 - (s.t - 2.65) / 0.35) * 1.4;
+    P.body.pivot.rotation.z = s.t > 0.3 && s.t < 2.85 ? Math.sin(s.t * 12) * 0.22 : 0;
+    if (s.t >= 0.6 && s.shot < 18) {
+      const due = Math.min(18, Math.floor((s.t - 0.6) / 0.12) + 1);
+      while (s.shot < due) {
+        const turn = s.a + s.shot * Math.PI * 0.37;
+        const rd = { d: Object.assign({}, GUNS.bl_dual, { dmg: 9 * s.k, life: 0.4, size: 0.32, color: 0xffdf9a }) };
+        const targets = G.enemies.filter(e => e.alive && e.spawnT <= 0 && Math.hypot(e.x - P.x, e.y - P.y) < 7 && LEVEL.los(P.x, P.y + 0.2, e.x, e.y + 0.2));
+        for (let k = 0; k < 12; k++) {
+          const a = turn + k * TAU / 12, x = P.x + Math.cos(a) * 0.5, y = P.y + 0.65;
+          const b = spawnPBullet(P, rd, x, y, a, 23); if (b) b.sup = 4;
+          if (k % 6 === 0) FX.muzzleFlash(x, y + s.height, a, 0xffdf9a, 1.5);
+        }
+        for (let side = 0; side < 2 && targets.length; side++) {
+          const e = targets[(s.shot * 2 + side) % targets.length];
+          const x = P.x + Math.cos(turn + side * Math.PI) * 0.55, y = P.y + 0.7 + s.height;
+          FX.beam(x, y, e.x, e.y + e.h * 0.42, 0.045, 0xffdf9a, 0.08);
+          hurtEnemy(e, 8 * s.k * P.mods.dmg, false, 0, 0, 'hitS');
+        }
+        SFX.play('gun', 0.6); if (G.opt.shake && s.shot % 3 === 0) FX.shake(0.035);
+        s.shot++;
+      }
+    }
+    for (let i = 0; i < s.hands.length; i++) {
+      const h = s.hands[i], a = s.a + s.t * 11 + i * Math.PI;
+      h.group.position.set(P.x + Math.cos(a) * 0.65, P.y + 0.75 + s.height + Math.sin(a) * 0.3, 0);
+      h.group.rotation.z = a; h.group.scale.set(1, i ? -1 : 1, 1); h.c.setOrder(ORD(P.y) + 0.001);
+    }
+    if (s.t >= 3 && !s.finished) { s.finished = true; scudFinish(P, s); }
+    if (s.t >= 3.2) endScud(P);
+  }
+  /* Black Lilith: six alternating circular volleys from two opposite pistol positions. */
+  function wildShot(P) {
+    const room = G.room, base = P.aim, sectors = 12, volleys = 6;
+    const preSup = new Set(G.enemies.filter(e => e.alive && e.supT > 0));
+    const rd = { d: Object.assign({}, GUNS.bl_dual, { dmg: GUNS.bl_dual.dmg * 2.5 * (1 + 0.2 * upE(P)), life: 0.26, size: 0.34, color: 0xffdf9a }) };
+    P.wildShotStart = G.t; P.wildShotEnd = G.t + 0.66;
+    for (let wave = 0; wave < volleys; wave++) FX.later(wave * 0.11, () => {
+      if (G.P !== P || P.dead || G.phase !== 'play' || G.room !== room) return;
+      const turn = base + wave * Math.PI / sectors;
+      for (let k = 0; k < sectors; k++) {
+        const angle = turn + k * TAU / sectors;
+        const hand = turn + (k < sectors / 2 ? 0 : Math.PI);
+        const x = P.x + Math.cos(hand) * 0.48, y = P.y + 0.7 + Math.sin(hand) * 0.35;
+        const bullet = spawnPBullet(P, rd, x, y, angle, 22);
+        if (bullet) { bullet.sup = 6.5; if (wave === volleys - 1) bullet.popSet = preSup; }
+      }
+      for (const angle of [turn, turn + Math.PI]) {
+        const x = P.x + Math.cos(angle) * 0.52, y = P.y + 0.7 + Math.sin(angle) * 0.35;
+        FX.muzzleFlash(x, y, angle, 0xffdf9a, 1.25);
+        FX.particle({ x, y, vx: Math.cos(angle + Math.PI / 2) * 2, vy: 1.4, life: 0.22, size: 0.1, size1: 0, color: 0xffd070, tex: FX.tex.dot });
+      }
+      P.recoil = 0.8; SFX.play('gun', 0.65);
+      if (G.opt.shake && wave % 2 === 0) FX.shake(0.045);
+      if (wave === volleys - 1) {
+        blankWave(P.x, P.y + 0.5, 2.5, false);
+        FX.ring(P.x, P.y + 0.4, 0.3, 2.5, 0xffdf9a, 0.22);
+      }
+    });
+  }
+  function wildShotClears(P, b, ox = b.x, oy = b.y) {
+    if (P.dead || !(P.wildShotEnd > G.t)) return false;
+    const dx = b.x - ox, dy = b.y - oy, len = dx * dx + dy * dy;
+    const k = len ? Math.max(0, Math.min(1, ((P.x - ox) * dx + (P.y + 0.5 - oy) * dy) / len)) : 0;
+    return Math.hypot(ox + dx * k - P.x, oy + dy * k - P.y - 0.5) <= 2.5 + (b.r || 0);
+  }
   function rushBlast(P) {
     const a = P.aim, ca = Math.cos(a), sa = Math.sin(a);
     const sg = { d: Object.assign({}, GUNS.sg, { dmg: GUNS.sg.dmg * 2.5, life: 0.3 }) };
@@ -2889,22 +3020,7 @@
       for (let k = 0; k < 10; k++) { const t = rnd(0.5, end); FX.particle({ x: x0 + ca * t, y: y0 + sa * t, vx: rnd(-0.6, 0.6), vy: rnd(0.3, 1), life: 0.5, size: 0.2, size1: 0.05, color: 0xff9af0, tex: FX.tex.glow, alpha: 0.8 }); } // the round's wake
       });
     } else if (sk.id === 'dualburst') {
-      // 블랙 리리스 · 듀얼 버스트: an akimbo burst from both guns; hit targets are suppressed (attack down) — +48 % on them
-      const pw = 1 + 0.2 * upE(P), rd = { d: Object.assign({}, GUNS.bl_dual, { dmg: GUNS.bl_dual.dmg * 3.0 * pw, life: 0.7, size: 0.38, color: 0xd8a0ff }) };
-      const preSup = new Set(G.enemies.filter((e) => e.alive && e.supT > 0)); // only these are staggered by the finale
-      for (let i = 0; i < 20; i++) FX.later(i * 0.03, () => {
-        if (!G.P) return;
-        const aa = G.P.aim, side = i % 2 ? 0.1 : -0.1, [mx, my] = muzzleOf(G.P), ox = -Math.sin(aa) * (i % 2 ? 0.22 : -0.22), oy = Math.cos(aa) * (i % 2 ? 0.22 : -0.22);
-        const cross = (i % 2 ? -1 : 1) * 0.16 * Math.cos(i * 0.9); /* the two streams weave across each other */
-        const b = spawnPBullet(G.P, rd, mx + ox, my + oy, aa + cross + rnd(-0.03, 0.03), 25); if (b) b.sup = 6.5;
-        FX.muzzleFlash(mx + ox, my + oy, aa, 0xc070ff, 1.5); G.P.recoil = Math.min(1, (G.P.recoil || 0) + 0.15);
-        if (i % 2) SFX.play('gun', 0.6); if (i % 5 === 0 && G.opt.shake) FX.shake(0.05);
-        if (i === 19) {
-          for (let k = G.ebul.length - 1; k >= 0; k--) { const q = G.ebul[k], dx = q.x - mx, dy = q.y - my; if (Math.hypot(dx, dy) < 4.5 && Math.abs(angDiff(aa, Math.atan2(dy, dx))) < 0.6) { popEB(q); ebRemove(k); } }
-          for (const sd of [-1, 1]) { const hb = spawnPBullet(G.P, { d: Object.assign({}, rd.d, { dmg: rd.d.dmg * 3, size: 0.6, color: 0xffffff }) }, mx - Math.sin(aa) * 0.22 * sd, my + Math.cos(aa) * 0.22 * sd, aa, 28); if (hb) { hb.popSet = preSup; hb.sup = 6.5; hb.slug = true; hb.slugCol = 0xd8a0ff; } }
-          FX.ring(mx, my, 0.2, 1.8, 0xc070ff, 0.3); FX.muzzleFlash(mx, my, aa, 0xffffff, 3); SFX.play('expS', 0.5); G.slowT = Math.max(G.slowT, 0.06); if (G.opt.shake) FX.shake(0.18);
-        }
-      });
+      wildShot(P);
     } else if (sk.id === 'axe') {
       SFX.voice(vid(P), 'Skill2', 1, true);
       // LRL · 액스 오브 다크니스: a swing of the dragon-slayer axe in front of her — sometimes it finds a weak point (x2.45)
@@ -3006,6 +3122,7 @@
       G.slowT = Math.max(G.slowT, 0.6);
       return;
     }
+    if (P.scud) endScud(P);
     P.dead = true;
     G.slowT = 1.8;
     G.camFocus = { x: P.x, y: P.y + 0.7, t: 3.2 };
@@ -4075,7 +4192,7 @@
     G.lateRigs = [...new Set(Object.values(GUNS).filter((x) => !x.noLoot).map((x) => x.donor)), ...F.elites.map((k) => ELITES[k].rig)];
     // reset
     if (G.deadGun) { G.deadGun.h.c.dispose(); scene.remove(G.deadGun.h.outer); G.deadGun = null; }
-    if (G.P) { if (G.P.hh && G.P.hh.castBody) { G.P.hh.castBody.c.dispose(); scene.remove(G.P.hh.castBody.root); } G.P.body.c.dispose(); scene.remove(G.P.body.root); G.P.guns.forEach((g) => g.hand && g.hand.c.dispose()); scene.remove(G.P.handRoot); FX.kill(G.P.shadow); if (G.P.odAura) FX.kill(G.P.odAura); if (G.P.shieldFx) G.P.shieldFx.forEach((s) => FX.kill(s)); killDrone(G.P); }
+    if (G.P) { if (G.P.scud) endScud(G.P); if (G.P.hh && G.P.hh.castBody) { G.P.hh.castBody.c.dispose(); scene.remove(G.P.hh.castBody.root); } G.P.body.c.dispose(); scene.remove(G.P.body.root); G.P.guns.forEach((g) => g.hand && g.hand.c.dispose()); scene.remove(G.P.handRoot); FX.kill(G.P.shadow); if (G.P.odAura) FX.kill(G.P.odAura); if (G.P.shieldFx) G.P.shieldFx.forEach((s) => FX.kill(s)); killDrone(G.P); }
     // a retry straight from the result screen: drop the last run's floor and any pending FX.later callbacks
     FX.clear(); // (buildFloor below disposes the old floor itself)
     G.seed = (Math.random() * 1e9) >>> 0;
@@ -4135,6 +4252,7 @@
     UI.title();
   }
   function buildFloorCleanup() {
+    if (G.P && G.P.scud) endScud(G.P);
     LEVEL.dispose(G.lv);
     G.props.forEach((p) => { if (p.mesh) killObj(p.mesh); if (p.glow) FX.kill(p.glow); });
     G.objs.forEach((o) => { if (o.m) killObj(o.m); if (o.vis) killObj(o.vis); if (o.tag) killObj(o.tag); if (o.plate) killObj(o.plate); if (o.hand) o.hand.c.dispose(); if (o.keeper) { o.keeper.c.dispose(); scene.remove(o.keeper.root); } [o.glow, o.base, o.rune].forEach((s) => s && FX.kill(s)); });
@@ -4384,7 +4502,7 @@
     if (P) {
       // hero
       const b = P.body;
-      b.root.position.set(P.x, P.y, 0);
+      b.root.position.set(P.x, P.y + (P.scud ? P.scud.height : 0), 0);
       b.c.update(dt);
       if (P.lrlCast) b.root.visible=false;
       if (P.hh) {
@@ -4409,7 +4527,7 @@
         if (P.moving && Math.random() < dt * 6) FX.particle({ x: P.x + rnd(-0.25, 0.25), y: P.y + 0.04, vx: -(P.lastDir ? P.lastDir[0] : 0) * 2.5 + rnd(-0.6, 0.6), vy: rnd(0.3, 1.2), grav: 6, life: 0.3, size: 0.1, size1: 0.02, color: 0xffc070, tex: FX.tex.dot, alpha: 0.9 });
         skateDust(P, dt);
       }
-      const blink = P.iframe > 0 && !P.hh && !P.roll && Math.floor(G.t * 20) % 2 === 0;
+      const blink = P.iframe > 0 && !P.hh && !P.scud && !P.roll && Math.floor(G.t * 20) % 2 === 0;
       b.c.setOpacity(blink ? 0.6 : 1); // a gentle blink: she stays readable in boss rooms
       if (P.hurtFlash > 0) { const on = Math.sin(G.t * 50) > 0; b.c.setTint(on ? 1.7 : 1, on ? 0.55 : 1, on ? 0.55 : 1); } /* a red blink, never a white-out that hides her under explosion FX */ else if (P.hyperT > 0) { const g = 1 + 0.25 * Math.sin(G.t * 20); b.c.setTint(1.7 * g, 1.35 * g, 0.55); } /* 램파리온 Hyper: gold */ else if (P.overdrive > 0) b.c.setTint(1.1, 1.35, 1.0); else b.c.setTint(1, 1, 1);
       // standing "behind" a tall boss / elite would hide her under its sprite: draw her in front instead
