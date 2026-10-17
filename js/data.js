@@ -52,7 +52,7 @@
   // Kits reuse the core skill mechanics in new pairings (perks: the skill upgrades that go with them).
   const HIDDEN = [
     {
-      id: 'blacklilith', name: '블랙 리리스', title: '히든 · 쌍권총 전투 바이오로이드', img: 'c_HID_BlackLilith', gun: 'bl_dual', hp: 10, armor: 1, speed: 6.6, hidden: true,
+      id: 'blacklilith', available: false, name: '블랙 리리스', title: '히든 · 쌍권총 전투 바이오로이드', img: 'c_HID_BlackLilith', gun: 'bl_dual', hp: 10, armor: 1, speed: 6.6, hidden: true,
       skill: 'escort', skillName: '요인 경호', skillDesc: '[기폭] 6초간 피해 무효 2회 · 공격력 +30% · 자동 조준 · 모든 무기 탄약 소모 없음, 경호 드론이 적탄을 먹는다 — 1.2초마다 쏘는 탄이 제압된 적을 경직', color: '#c070ff', upF: 'u_escort', upE: 'u_dual',
       sk2: { id: 'dualburst', name: '듀얼 버스트', icon: 'i_research', cd: 6, desc: '[부여] 쌍권총 20연사 교차 — 맞은 적 6.5초 제압, 마지막 슬러그는 미리 제압돼 있던 적을 경직' },
       stats: { atk: 4, def: 3, mob: 5 }, desc: '쌍권총과 경호의 달인. 탄막 한가운데서 춤추듯 싸운다.',

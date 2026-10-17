@@ -330,7 +330,7 @@
   const ends = (buf, seq) => buf.length >= seq.length && seq.every((c, i) => buf[buf.length - seq.length + i] === c);
   let swipeClickUntil = 0;
   function forceHidden(id, selectNow) {
-    const HID = DATA.HIDDEN || [], k = HID.findIndex((h) => h.id === id);
+    const HID = DATA.HIDDEN || [], k = HID.findIndex((h) => h.id === id && h.available !== false);
     if (k < 0) return;
     forcedHidden = HEROES.length + k;
     const h = HID[k];
@@ -386,19 +386,20 @@
   function dressRandomCard() {
     if (forcedHidden == null) return;
     const h = DATA.HIDDEN[forcedHidden - HEROES.length], rc = el.heroSel && el.heroSel.querySelector('.hcard.rand');
-    if (!h || !rc) return;
+    if (!h || h.available === false || !rc) return;
     rc.style.setProperty('--c', h.color); rc.classList.add('hid');
     rc.innerHTML = `<i style="background-image:${portrait(h)}"></i><b>${h.name}</b><small>히든 대원</small>`;
   }
   // the random card: any unlocked hero, decided when the run starts
   function pickHero() {
+    if (forcedHidden != null && !(DATA.HIDDEN[forcedHidden - HEROES.length] && DATA.HIDDEN[forcedHidden - HEROES.length].available !== false)) forcedHidden = null;
     if (selHero === -1 && forcedHidden != null) return forcedHidden; // the random card, dressed as the cheat's hidden hero
     if (selHero >= 0) return selHero;
     // hidden heroes: 2% each on the random card (indices after the card heroes)
-    const HID = DATA.HIDDEN || [];
+    const HID = (DATA.HIDDEN || []).map((h, index) => ({h, index})).filter(({h}) => h.available !== false);
     const roll = Math.random();
     if (roll < HID.length * 0.02) {
-      const k = Math.min(HID.length - 1, Math.floor(roll / 0.02)), h = HID[k];
+      const {h, index:k} = HID[Math.min(HID.length - 1, Math.floor(roll / 0.02))];
       setTimeout(() => announce('히든 대원 출현', h.name, h.title.replace(/^히든 · /, ''), 3, 'i_random'), 1800); // shown once the run is on screen
       toast(`히든 대원 — ${h.name}!`, 'gem'); SFX.play('rankUpSS', 0.8);
       return HEROES.length + k;
@@ -879,7 +880,7 @@
         ctx.fill();
         if (big) { /* the room name sits along the room's top edge, clear of the icon and the hero dot */
           const lbl = { boss: '보스', treasure: '보급', shop: '상점', start: '출격', challenge: '도전' }[rt], ly = Math.min(cy - rr * 1.7, Y(r.y1) + 15);
-          ctx.font = 'bold 13px Godo, sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.strokeText(lbl, cx, ly); ctx.fillStyle = '#fff'; ctx.fillText(lbl, cx, ly);
+          ctx.font = 'bold 13px Godo, sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.strokeText(I18N.t(lbl), cx, ly); ctx.fillStyle = '#fff'; ctx.fillText(I18N.t(lbl), cx, ly);
         }
       }
     });
@@ -1282,6 +1283,7 @@
   }
 
   window.UI = {
+    refreshLanguage: () => { mapDirty=true; lastHud={}; if (window.GAME) GAME.redraw(); },
     init, gunEmpty, sk2Used, reloadGauge, loading, loaded, title, titleTick, startRun, hud, gunChanged, toggleMap, dmg, toast, clearToasts, banner, chTimer, ammoWarn, levelUp, shock, chTimer, announce, prompt, boss, hideBoss, bossIntro, skillCut, shout, hurt, fade,
     togglePause, result, coach, heat, K, hideBossIntro, keyLabels: () => keyLabels(), mapDirty() { mapDirty = true; }, get sel() { return selHero; }, mapOpen: () => !!el.bigMap && !el.bigMap.hidden, goalHtml,
   };

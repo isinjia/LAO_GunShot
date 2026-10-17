@@ -1,6 +1,14 @@
 // patch notes shown from the title screen (bottom right): the current version only
 window.NOTES = [
   {
+    v: '1.08',
+    items: [
+      '설정에 언어 선택 추가 — 기본값은 시스템 언어, 선택한 언어 자동 저장',
+      '한국어 · English · 日本語 · 简体中文 · 繁體中文 · Español · Português · Русский 지원',
+      '언어 변경 시 메뉴 · 대원과 장비 설명 · 강화 카드 · 전투 안내를 즉시 갱신',
+    ],
+  },
+  {
     v: '1.06',
     items: [
       '성장 개편 — 기본총 전용 숙련 9종을 모든 무기·스킬에 적용되는 대원별 전술 강화로 변경',

@@ -73,12 +73,18 @@
     });
   }
   const texCache = {};
+  const localizedCanvases = new Map();
+  function localizeTextures() {
+    for (const [tex,job] of localizedCanvases) { if (!Object.values(texCache).includes(tex)) { localizedCanvases.delete(tex); continue; } tex.image.width=job.w; tex.image.height=job.h; const ctx=tex.image.getContext('2d'); job.draw(ctx,job.w,job.h); tex.needsUpdate=true; }
+    frozenDrawn=false;
+  }
   function canvasTex(key, w, h, draw) {
     if (texCache[key]) return texCache[key];
     const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
     draw(cv.getContext('2d'), w, h);
     const t = new THREE.CanvasTexture(cv); t.minFilter = THREE.LinearFilter;
     texCache[key] = t;
+    localizedCanvases.set(t,{draw,w,h});
     return t;
   }
   function heartPath(g, x, y, s) {
@@ -119,7 +125,7 @@
       g.fillStyle = col; g.beginPath(); g.moveTo(6, -30); g.lineTo(-12, 2); g.lineTo(0, 2); g.lineTo(-6, 28); g.lineTo(14, -6); g.lineTo(2, -6); g.closePath(); g.fill();
     }
     g.shadowBlur = 0; g.fillStyle = '#ffffff'; g.font = 'bold 20px sans-serif'; g.textAlign = 'center'; g.strokeStyle = '#000'; g.lineWidth = 4;
-    g.strokeText(A.short, 0, 56); g.fillText(A.short, 0, 56);
+    g.strokeText(I18N.t(A.short), 0, 56); g.fillText(I18N.t(A.short), 0, 56);
   }
   function pickupTex(kind) {
     return canvasTex('pk_' + kind, 128, 128, (g) => {
@@ -3183,11 +3189,11 @@
       if (!o) return;
       o.starter = true;
       // the item's name under its icon, readable before walking up (rides on the icon mesh, so it goes away with it)
-      const nt = canvasTex('nm_' + it.id, 320, 64, (g, w, h) => { g.fillStyle = 'rgba(8,10,14,0.8)'; g.fillRect(0, 6, w, h - 12); g.fillStyle = RANKS[it.rank].color; g.font = 'bold 30px Godo, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(it.name, w / 2, h / 2 + 1); });
+      const nt = canvasTex('nm_' + it.id, 320, 64, (g, w, h) => { g.fillStyle = 'rgba(8,10,14,0.8)'; g.fillRect(0, 6, w, h - 12); g.fillStyle = RANKS[it.rank].color; g.font = 'bold 30px Godo, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(I18N.t(it.name), w / 2, h / 2 + 1); });
       const ts = MOBILE || INPUT.isTouch ? 1.45 : 1; /* phones: the names read at >= 12px */ const tag = spriteMesh(nt, 2.2 * ts, 0.44 * ts); tag.position.set(0, -1.32 - (ts - 1) * 0.2, 0.01); tag.renderOrder = 3.35; o.vis.add(tag);
     });
     // a floor label over the three: "출격 보급 · 하나 선택" (removed with the pedestals)
-    const tex = canvasTex('starterLbl', 512, 80, (g, w, h) => { g.fillStyle = 'rgba(8,10,14,0.75)'; g.fillRect(0, 10, w, h - 20); g.fillStyle = '#7fe3ff'; g.font = 'bold 40px Godo, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('출격 보급 · 하나를 고르세요', w / 2, h / 2 + 2); });
+    const tex = canvasTex('starterLbl', 512, 80, (g, w, h) => { g.fillStyle = 'rgba(8,10,14,0.75)'; g.fillRect(0, 10, w, h - 20); g.fillStyle = '#7fe3ff'; g.font = 'bold 40px Godo, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(I18N.t('출격 보급 · 하나를 고르세요'), w / 2, h / 2 + 2); });
     const lbl = spriteMesh(tex, 5.2, 0.8, { alpha: 0.9 }); lbl.position.set(r.cx, Math.max(r.y0 + 2.2, r.cy - 2.5) - 2.3, 0); /* (kept off-scene: with the pedestals right under the hero, the toast and the name tags say it; a floor banner would sit under the HUD) */ lbl.renderOrder = 3.3;
     G.objs.push({ type: 'deco', x: -999, y: -999, m: lbl, starterLbl: true });
   }
@@ -3832,7 +3838,7 @@
     if (old === nt) return;
     o.m.material.map = nt; o.m.material.needsUpdate = true;
     // the previous key layout's texture is released (a rebind no longer leaks a 1024x470 canvas)
-    if (old) { for (const k in texCache) if (texCache[k] === old) delete texCache[k]; old.dispose(); }
+    if (old) { for (const k in texCache) if (texCache[k] === old) delete texCache[k]; localizedCanvases.delete(old); old.dispose(); }
   }
   function guideTex() {
     {
@@ -3845,9 +3851,9 @@
         lines.forEach(([a, b], i) => {
           const y = big ? 62 + i * 112 : 50 + i * 74;
           g.fillStyle = 'rgba(255,204,0,0.9)'; g.beginPath(); g.moveTo(40, y - 24); g.lineTo(60, y - 24); g.lineTo(52, y + 24); g.lineTo(32, y + 24); g.fill();
-          g.font = `bold ${big ? 58 : 40}px Godo, sans-serif`; g.fillStyle = '#ffcc00'; g.fillText(a, 84, y);
-          const aw = g.measureText(a).width;
-          g.font = `bold ${big ? 50 : 36}px Godo, sans-serif`; g.fillStyle = '#e1ffff'; g.fillText(b, 84 + aw + 34, y, w - (84 + aw + 34) - 16);
+          g.font = `bold ${big ? 58 : 40}px Godo, sans-serif`; g.fillStyle = '#ffcc00'; g.fillText(I18N.t(a), 84, y);
+          const aw = g.measureText(I18N.t(a)).width;
+          g.font = `bold ${big ? 50 : 36}px Godo, sans-serif`; g.fillStyle = '#e1ffff'; g.fillText(I18N.t(b), 84 + aw + 34, y, w - (84 + aw + 34) - 16);
         });
       });
       return tex;
@@ -3937,6 +3943,7 @@
     if (!scene || G.phase === 'loading' || G.phase === 'boot') return; // not booted yet / already starting
     heroIdx = Math.floor(Number(heroIdx));
     if (!(heroIdx >= 0 && heroIdx < ALLH.length)) heroIdx = Math.floor(Math.random() * HEROES.length); /* out of range (or the random slot): a random hero */
+    if (ALLH[heroIdx].available === false) heroIdx = 0;
     G.heroIdx = heroIdx;
     G.heat = UI.heat ? UI.heat() : 0;
     G.phase = 'loading';
@@ -4089,7 +4096,7 @@
     if (!scene) return;
     if (i < 0) { clearShow(); showDeco(); G.showDeco.q.visible = true; FX.ring(SHOW.x, SHOW.y + 0.2, 0.4, 3.2, 0xd8dee8, 0.5, 0.9); return; } // the random card: an empty stage
     const hid = i >= HEROES.length, h = hid ? (DATA.HIDDEN || [])[i - HEROES.length] : HEROES[i];
-    if (!h) return;
+    if (!h || h.available === false) return;
     const rid = h.rig || h.id;
     if (!SD.ready(rid) || !SD.ready(GUNS[h.gun].donor)) { SD.prepare(rid).then(() => SD.prepare(GUNS[h.gun].donor)).then(() => { if (G.phase === 'title' && (UI.sel === i || (hid && UI.sel === -1))) showcase(i); }); return; }
     clearShow();
@@ -4644,7 +4651,7 @@
   }
 
   window.GAME = {
-    G, boot, startRun, showcase, screenToWorld, toTitle, endRun, worldToScreen, saveOpt, images, uiImg, MOBILE, HERO_H, makeBody, setFace,
+    G, boot, startRun, localizeTextures, showcase, screenToWorld, toTitle, endRun, worldToScreen, saveOpt, images, uiImg, MOBILE, HERO_H, makeBody, setFace,
     get scene() { return scene; }, get renderer() { return renderer; }, get camera() { return camera; },
     curGun, magSize, maxAmmo, sk2Cool, applyItem, giveGun, spawnPedestal, hurtPlayer, refreshHints: () => refreshHints(), canvasRect: () => rectOf(), redraw: () => { frozenDrawn = false; }, recolorBullets: () => recolorBullets(), skipTutorial: () => tutorialEnd(true), rebuildGuide: () => rebuildGuide(),
     choosePerk, xpNeed, teleportTo,
