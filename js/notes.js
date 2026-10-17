@@ -1,6 +1,15 @@
 // patch notes shown from the title screen (bottom right): the current version only
 window.NOTES = [
   {
+    v: '1.11',
+    items: [
+      '자동 사격 — 레벨업 후 멈추던 문제 수정, 적이 있을 때만 사격',
+      '조준 보조가 켜져 있으면 사격 버튼은 조준 없이 사격만',
+      '세로 모드에서 가방 버튼과 일시정지 버튼이 겹치던 문제 수정',
+      '모바일 인벤토리 개편 — 대원 이미지 양옆에 장비 칸, 장비를 누르면 정보 팝업, 가로 · 세로 모두 가방이 화면에 맞게 표시',
+    ],
+  },
+  {
     v: '1.10',
     items: [
       'RPG 작전 밸런스 수정',
