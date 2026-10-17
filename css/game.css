@@ -1400,107 +1400,39 @@ html:not([lang="ko"]) .tb span { overflow-wrap:anywhere; }
 body.touchui #mapBox .mh::after { content:var(--tap-map-label, '탭: 지도'); }
 #gunBox.no-reload #magBar::after { content:var(--no-reload-label, '장전 없음'); }
 
-/* title: stage mode (stage_ui.js) */
-#title > #rpgOv:not(#_) { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, 0.66); }
-#title > #rpgOv[hidden]:not(#_) { display: none; }
-#rpgOv .sdlg { width: min(980px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; background: rgba(12, 14, 20, 0.97); border: 1px solid rgba(255, 204, 0, 0.45); border-radius: 6px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
-#rpgOv .sh { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-#stageOv h3 { margin: 0; color: #ffd84a; font-size: 22px; } #stageOv h3 small { margin-left: 10px; font-size: 12px; color: rgba(255, 255, 255, 0.45); letter-spacing: 2px; }
-#rpgOv .sbody { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 14px; }
-#stageList { display: flex; flex-direction: column; gap: 8px; }
-#stageList .stg { position: relative; display: grid; grid-template-columns: 74px 1fr auto; align-items: center; gap: 2px 10px; text-align: left; padding: 10px 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 4px; color: #ddd; cursor: pointer; }
-#stageList .stg small { grid-row: span 2; color: #ffd84a; font-size: 12px; letter-spacing: 1px; }
-#stageList .stg b { font-size: 17px; color: #fff; } #stageList .stg em { grid-column: 2; font-style: normal; font-size: 11px; color: rgba(255, 255, 255, 0.4); letter-spacing: 1px; }
-#stageList .stg .stars { grid-column: 3; grid-row: 1 / span 2; display: flex; gap: 4px; }
-#stageList .stg .stars i { width: 12px; height: 12px; transform: rotate(45deg); border: 1px solid var(--c); opacity: 0.35; } #stageList .stg .stars i.on { background: var(--c); opacity: 1; }
-#stageList .stg.on { border-color: #ffd84a; background: rgba(255, 204, 0, 0.1); }
-#stageList .stg.locked { opacity: 0.45; cursor: not-allowed; } #stageList .stg .lock { grid-column: 2 / span 2; font-size: 11px; color: #ff8a6a; }
-#stageInfo b { display: block; font-size: 18px; color: #fff; } #stageInfo small { display: block; margin: 2px 0 8px; font-size: 12px; color: rgba(255, 255, 255, 0.55); }
-#stageInfo ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
-#stageInfo li { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-left: 3px solid var(--c); background: rgba(255, 255, 255, 0.03); font-size: 13px; color: #ddd; }
-#stageInfo li span { min-width: 30px; font-weight: 700; color: var(--c); } #stageInfo li em { margin-left: auto; font-style: normal; font-size: 11px; color: #ff6a4a; }
-#stageDiffs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 0; }
-#stageDiffs .sdf { padding: 8px 4px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; color: var(--c); font-weight: 700; font-size: 15px; cursor: pointer; }
-#stageDiffs .sdf small { display: block; font-weight: 400; font-size: 11px; color: rgba(255, 255, 255, 0.55); }
-#stageDiffs .sdf.on { border-color: var(--c); background: rgba(255, 255, 255, 0.1); box-shadow: 0 0 10px -2px var(--c); }
-#stageDiffs .sdf.locked { opacity: 0.4; cursor: not-allowed; }
-#stageGo { width: 100%; }
-@media (max-width: 720px) { #rpgOv .sbody { grid-template-columns: 1fr; } }
 
-html:not([lang="ko"]) #title .trow { display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)); width:100%; gap:8px; }
-html:not([lang="ko"]) #title .trow .btn.lg { font-size:16px !important; min-width:0 !important; min-height:48px; height:auto !important; white-space:normal !important; line-height:1.25; padding:9px 14px !important; letter-spacing:0; }
-html:not([lang="ko"]) #title .trow #btnStart { min-width:0 !important; font-size:16px !important; }
-html:not([lang="ko"]) #heroSel .hcard b { white-space:normal; overflow:visible; text-overflow:clip; font-size:11px !important; line-height:1.2; }
-@media(max-width:480px) { html:not([lang="ko"]) #title .trow { grid-template-columns:repeat(2,minmax(0,1fr)); } #languageSelect { min-width:150px; flex:1; } }
+/* Combat notifications share one translucent edge lane; detail cards wait for safety. */
+body.playing.fighting #toasts {
+  position: absolute !important; left: max(12px, env(safe-area-inset-left)) !important;
+  right: auto !important; top: calc(max(12px, env(safe-area-inset-top)) + 86px) !important;
+  bottom: auto !important; transform: none !important; width: min(340px, 43vw) !important;
+  pointer-events: none !important; z-index: 6 !important;
+}
+body.playing.fighting #toasts .toast {
+  min-width: 0 !important; max-width: 100% !important; margin: 0 !important;
+  padding: 5px 9px !important; font-size: 12px !important; line-height: 1.35 !important;
+  text-align: left !important; letter-spacing: 0 !important; overflow-wrap: anywhere;
+  background: rgba(8, 12, 18, .32) !important; border: 1px solid rgba(255, 255, 255, .14) !important;
+  box-shadow: none !important; backdrop-filter: none !important; opacity: .78 !important;
+  color: #f0f3f7; text-shadow: 0 1px 2px #000; animation: none !important;
+}
+body.playing.fighting #toasts .toast.warn { opacity: .95 !important; color: #ffe0a8; border-color: rgba(255, 193, 90, .35) !important; }
+body.playing.fighting #announce, body.playing.fighting #skillCut, body.playing.fighting .shout { display: none !important; }
+body.playing #announce .ann { background: rgba(8, 12, 18, .58); box-shadow: none; }
+body.playing #announce .ann em { line-height: 1.4; }
+@media (orientation: portrait) {
+  body.touchui.playing.fighting #toasts {
+    left: max(8px, env(safe-area-inset-left)) !important;
+    top: calc(max(8px, env(safe-area-inset-top)) + 100px) !important;
+    width: min(260px, 62vw) !important;
+  }
+  body.touchui.playing.fighting #toasts .toast { font-size: 11px !important; padding: 4px 7px !important; }
+  body.touchui.playing #announce { top: calc(max(8px, env(safe-area-inset-top)) + 100px) !important; right: 8px !important; transform: none !important; }
+  body.touchui.playing #announce .ann { min-width: 0; max-width: min(300px, 82vw); padding: 8px 10px; }
+  body.touchui.playing #announce .ann b { font-size: 15px; }
+  body.touchui.playing #announce .ann .ic, body.touchui.playing #announce .ann .rk { width: 28px; height: 28px; }
+}
 
-#pauseOv .setrows > label.language-setting { grid-column:1 / -1; grid-template-columns:minmax(80px,1fr) minmax(160px,2fr); }
-html:not([lang="ko"]) #pauseOv .setrows > label:not(.language-setting) { grid-template-columns:7.5em minmax(0,1fr) auto; word-break:normal; }
-@media(max-width:560px) { html:not([lang="ko"]) #pauseOv .setrows > label:not(.language-setting) { grid-template-columns:8em minmax(0,1fr) auto; } }
-
-html:not([lang="ko"]) #pauseOv .seg :is(#optHud,#optTbSize,#optTbAlpha) { flex-direction:column; gap:3px; }
-html:not([lang="ko"]) #pauseOv .seg :is(#optHudV,#optTbSizeV,#optTbAlphaV) { white-space:nowrap; flex-shrink:0; }
-
-/* title: mode select + RPG characters (stage_ui.js) */
-#title > #modeOv:not(#_) { position: fixed; inset: 0; z-index: 59; display: grid; place-items: center; padding: 16px; background: radial-gradient(ellipse at center, rgba(10, 12, 18, 0.95), rgba(0, 0, 0, 0.98)); }
-#title > #modeOv[hidden]:not(#_) { display: none; }
-#modeOv .mwrap { width: min(900px, 100%); display: flex; flex-direction: column; gap: 18px; }
-#modeOv .mh { text-align: center; } #modeOv .mh small { display: block; color: rgba(255, 255, 255, 0.45); letter-spacing: 3px; font-size: 12px; } #modeOv .mh b { font-size: 30px; color: #ffd84a; }
-#modeOv .mcards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-#modeOv .mcard { text-align: left; padding: 22px 22px 26px; min-height: 200px; background: linear-gradient(160deg, rgba(40, 60, 90, 0.55), rgba(10, 12, 18, 0.9)); border: 1px solid rgba(127, 227, 255, 0.4); border-radius: 6px; color: #ddd; cursor: pointer; transition: transform 0.15s, border-color 0.15s; }
-#modeOv .mcard.rpg { background: linear-gradient(160deg, rgba(90, 70, 20, 0.6), rgba(10, 12, 18, 0.9)); border-color: rgba(255, 204, 0, 0.45); }
-#modeOv .mcard:hover, #modeOv .mcard:focus-visible { transform: translateY(-3px); border-color: #fff; }
-#modeOv .mcard small { color: rgba(255, 255, 255, 0.5); letter-spacing: 2px; font-size: 11px; } #modeOv .mcard b { display: block; margin: 6px 0 10px; font-size: 26px; color: #fff; } #modeOv .mcard p { margin: 0; font-size: 14px; line-height: 1.6; color: #cfd6de; }
-#title > #btnMode:not(#_) { position: absolute; left: max(12px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top)); z-index: 5; padding: 5px 12px; font-size: 13px; color: #ffd84a; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 204, 0, 0.45); border-radius: 4px; cursor: pointer; }
-#title > #btnMode[hidden]:not(#_) { display: none; }
-#rpgChars { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
-#rpgChars .rch { flex: 0 0 auto; width: 128px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 4px; color: #ddd; cursor: pointer; }
-#rpgChars .rch i { display: block; flex: 0 0 56px; width: 56px; height: 56px; border-radius: 50%; background: center / cover no-repeat; border: 2px solid var(--c, #888); }
-#rpgChars .rch b { font-size: 14px; color: #fff; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } #rpgChars .rch small { font-size: 11px; color: rgba(255, 255, 255, 0.55); }
-#rpgChars .rch.on { border-color: #ffd84a; background: rgba(255, 204, 0, 0.1); }
-#rpgChars .rch.add b { font-size: 34px; line-height: 56px; color: #ffd84a; }
-#rpgOv .rempty { grid-column: 1 / -1; padding: 30px; text-align: center; color: rgba(255, 255, 255, 0.6); }
-#rpgOv .rcol { display: flex; flex-direction: column; gap: 10px; }
-#rpgOv .rinfo { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-left: 3px solid var(--c); background: rgba(255, 255, 255, 0.04); }
-#rpgOv .rinfo i { width: 44px; height: 44px; border-radius: 50%; background: center / cover no-repeat; } #rpgOv .rinfo b { display: block; font-size: 17px; color: #fff; } #rpgOv .rinfo small { font-size: 12px; color: rgba(255, 255, 255, 0.55); } #rpgOv .rinfo .btn { margin-left: auto; }
-#rpgOv .requip small { font-size: 12px; color: rgba(255, 255, 255, 0.5); } #rpgOv .requip div { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 4px; }
-#rpgOv .requip span { padding: 8px 2px; text-align: center; font-size: 11px; color: rgba(255, 255, 255, 0.35); border: 1px dashed rgba(255, 255, 255, 0.18); border-radius: 3px; }
-#rpgNewOv { position: fixed; inset: 0; z-index: 61; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, 0.7); } #rpgNewOv[hidden] { display: none; }
-#rpgNewOv .rnew { width: min(760px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; padding: 18px; background: rgba(12, 14, 20, 0.98); border: 1px solid rgba(255, 204, 0, 0.45); border-radius: 6px; display: flex; flex-direction: column; gap: 12px; }
-#rpgNewOv h3 { margin: 0; color: #ffd84a; } #rpgNewOv h3 small { margin-left: 10px; font-size: 12px; color: rgba(255, 255, 255, 0.45); letter-spacing: 2px; }
-#rpgNewOv .rheroes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-#rpgNewOv .rh { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 4px; color: #ddd; cursor: pointer; }
-#rpgNewOv .rh i { width: 64px; height: 64px; border-radius: 50%; background: center / cover no-repeat; border: 2px solid var(--c); } #rpgNewOv .rh b { color: #fff; } #rpgNewOv .rh small { font-size: 11px; color: rgba(255, 255, 255, 0.55); text-align: center; }
-#rpgNewOv .rh.on { border-color: var(--c); background: rgba(255, 255, 255, 0.1); box-shadow: 0 0 12px -3px var(--c); }
-#rpgNewOv .rname { display: flex; align-items: center; gap: 10px; } #rpgNewOv .rname span { color: #ffd84a; } #rpgNewOv .rname input { flex: 1; padding: 8px 10px; font-size: 16px; color: #fff; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 4px; }
-#rpgNewOv .row { display: flex; gap: 8px; justify-content: center; }
-@media (max-width: 720px) { #modeOv .mcards { grid-template-columns: 1fr; } #modeOv .mcard { min-height: 0; } #rpgNewOv .rheroes { grid-template-columns: repeat(2, 1fr); } #rpgOv .requip div { grid-template-columns: repeat(3, 1fr); } }
-
-/* RPG inventory (equip.js) */
-#invOv { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 12px; background: rgba(0, 0, 0, 0.7); }
-#invOv[hidden] { display: none; }
-#invOv .ivwin { width: min(1120px, 100%); max-height: calc(100dvh - 24px); overflow: auto; padding: 14px 16px; background: rgba(12, 14, 20, 0.98); border: 1px solid rgba(255, 204, 0, 0.45); border-radius: 6px; color: #ddd; display: flex; flex-direction: column; gap: 10px; }
-#invOv .ivh { display: flex; align-items: center; gap: 14px; } #invOv .ivh h3 { margin: 0; color: #ffd84a; font-size: 20px; } #invOv .ivh h3 small { margin-left: 8px; font-size: 13px; color: rgba(255, 255, 255, 0.6); }
-#invOv .ivxp { position: relative; flex: 1; height: 16px; background: rgba(255, 255, 255, 0.08); border-radius: 8px; overflow: hidden; } #invOv .ivxp i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #3a8cff, #7fe3ff); }
-#invOv .ivxp span { position: relative; display: block; text-align: center; font-size: 11px; line-height: 16px; color: #fff; }
-#invOv .ivbody { display: grid; grid-template-columns: 250px auto minmax(220px, 1fr); gap: 14px; align-items: start; }
-#invOv .ivdoll { display: grid; grid-template-columns: repeat(3, 76px); grid-template-rows: 64px 96px 64px 52px; gap: 6px; grid-template-areas: 'helm amulet ring1' 'weapon armor gloves' 'ring2 belt boots' '. . .'; }
-#invOv .ivslot { position: relative; border: 1px solid var(--rc); background: rgba(255, 255, 255, 0.04); border-radius: 4px; cursor: pointer; padding: 0; }
-#invOv .ivslot i { position: absolute; inset: 3px; background: center / contain no-repeat; } #invOv .ivslot span { font-size: 11px; color: rgba(255, 255, 255, 0.35); }
-#invOv .ivslot.empty { border-style: dashed; } #invOv .ivslot.on { box-shadow: 0 0 0 2px #fff; }
-#invOv .s_helm { grid-area: helm; } #invOv .s_amulet { grid-area: amulet; } #invOv .s_ring1 { grid-area: ring1; } #invOv .s_weapon { grid-area: weapon; } #invOv .s_armor { grid-area: armor; } #invOv .s_gloves { grid-area: gloves; } #invOv .s_ring2 { grid-area: ring2; } #invOv .s_belt { grid-area: belt; } #invOv .s_boots { grid-area: boots; }
-#invOv .ivstats small { font-size: 12px; color: rgba(255, 255, 255, 0.5); } #invOv ul { margin: 4px 0 0; padding-left: 16px; font-size: 13px; line-height: 1.55; color: #9fd0ff; } #invOv ul li.h { list-style: none; margin-left: -16px; color: rgba(255, 255, 255, 0.45); font-size: 11px; }
-#invOv .ivtabs { display: flex; gap: 4px; margin-bottom: 6px; } #invOv .ivtabs button { padding: 4px 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: #ccc; border-radius: 3px; cursor: pointer; } #invOv .ivtabs button.on { border-color: #ffd84a; color: #ffd84a; }
-#invOv .ivgrid { position: relative; width: calc(var(--w) * 44px); height: calc(var(--h) * 44px); background-color: rgba(255, 255, 255, 0.03); background-image: linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px); background-size: 44px 44px; border: 1px solid rgba(255, 255, 255, 0.15); }
-#invOv .ivit { position: absolute; margin: 1px; padding: 0; border: 1px solid var(--rc); background: rgba(10, 12, 18, 0.85); border-radius: 3px; cursor: pointer; }
-#invOv .ivit i { position: absolute; inset: 2px; background: center / contain no-repeat; } #invOv .ivit em { position: absolute; right: 2px; bottom: 1px; font-style: normal; font-size: 10px; color: #fff; text-shadow: 0 0 3px #000; }
-#invOv .ivit.on { box-shadow: 0 0 0 2px #fff; z-index: 1; }
-#invOv .ivtip { padding: 10px 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 4px; min-height: 180px; }
-#invOv .ivtip > b { display: block; font-size: 17px; } #invOv .ivtip > small { display: block; font-size: 12px; color: rgba(255, 255, 255, 0.55); } #invOv .ivtip .bad { color: #ff5a4a; }
-#invOv .ivhint { font-size: 13px; color: rgba(255, 255, 255, 0.5); }
-#invOv .ivsock { display: flex; gap: 4px; margin: 6px 0; } #invOv .ivsock i { width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(0, 0, 0, 0.5) center / contain no-repeat; }
-#invOv .ivacts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; } #invOv .ivacts .btn { padding: 6px 12px; min-width: 0; height: auto; font-size: 13px; } #invOv .ivacts .btn.on { box-shadow: 0 0 0 2px #7fe3ff; }
-@media (max-width: 900px) { #invOv .ivbody { grid-template-columns: 1fr; } #invOv .ivgrid { transform-origin: 0 0; } }
-#btnInv { position: fixed; right: max(12px, env(safe-area-inset-right)); top: 120px; z-index: 30; padding: 6px 12px; font-size: 13px; font-weight: 700; color: #ffd84a; background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 204, 0, 0.5); border-radius: 4px; cursor: pointer; }
-#btnInv[hidden] { display: none; }
-#rpgOv .requip span.on { color: #ffd84a; border-style: solid; border-color: rgba(255, 204, 0, 0.5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#rpgOv .requip .btn { margin-top: 6px; }
+body.playing.fighting #toasts { align-items: flex-start !important; }
+body.playing.fighting #toasts .notice-icon { display: inline-block; width: 18px; height: 18px; margin-right: 5px; vertical-align: middle; background: center / contain no-repeat; }
+body.playing.fighting #banner { display: none !important; }

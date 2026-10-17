@@ -26,7 +26,7 @@
   };
   // slots and their bases (원본 장비 이름): w x h cells, reqLv, sockets max, base stat (scaled by ilvl), icons
   const SLOTS = [
-    { id: 'weapon', name: '무기 코어' }, { id: 'armor', name: '갑옷' }, { id: 'helm', name: '헬멧' }, { id: 'gloves', name: '장갑' }, { id: 'boots', name: '신발' },
+    { id: 'weapon', name: '무기 코어' }, { id: 'armor', name: '방어구' }, { id: 'helm', name: '헬멧' }, { id: 'gloves', name: '글러브' }, { id: 'boots', name: '신발' },
     { id: 'belt', name: '벨트' }, { id: 'ring1', name: '반지', kind: 'ring' }, { id: 'ring2', name: '반지', kind: 'ring' }, { id: 'amulet', name: '목걸이' },
   ];
   const BASES = [
@@ -303,48 +303,68 @@
   const glow = (it) => (it.gem ? parseInt(GEMS[it.gem].color.slice(1), 16) : it.rune ? 0xff9a3a : RAR[it.rar].hex);
 
   // ── inventory window (I) ──
-  let invChar = null, selItem = null, socketing = null, wasPaused = false, tab = 'bag';
-  const CELL = 44;
+  // drag an item onto a slot to equip it, onto the grid to move it, a gem / rune onto a gear item to socket it;
+  // double-click equips / unequips; the tooltip compares a bag item with what that slot already wears
+  let invChar = null, selItem = null, socketing = null, wasPaused = false, tab = 'bag', drag = null, noClick = 0;
+  let CELL = 50; // recomputed per render: the 10-wide bag always fits the window
   function el(q) { return document.querySelector(q); }
-  function statLines(st) { return Object.keys(st).filter((k) => st[k] && STAT[k]).map((k) => `<li>${STAT[k].n} ${STAT[k].f(st[k])}</li>`).join(''); }
+  function statLines(st, cmp) {
+    const keys = Object.keys(STAT).filter((k) => (st[k] || (cmp && cmp[k])) && STAT[k]);
+    return keys.map((k) => {
+      const v = st[k] || 0, d = cmp ? Math.round((v - (cmp[k] || 0)) * 10) / 10 : 0;
+      return `<li${v ? '' : ' class="zero"'}><span>${STAT[k].n}</span><b>${v ? STAT[k].f(v) : '—'}</b>${cmp && d ? `<em class="${(k === 'roll' || k === 'sk2' ? -d : d) > 0 ? 'up' : 'dn'}">${d > 0 ? '▲' : '▼'}${Math.abs(d)}</em>` : ''}</li>`;
+    }).join('');
+  }
+  const slotFor = (c, it) => { const s0 = baseOf(it.base).slot; return s0 === 'ring' ? (!c.equip.ring1 ? 'ring1' : !c.equip.ring2 ? 'ring2' : 'ring1') : s0; };
+  const slotOk = (it, slot) => { if (!isGear(it)) return false; const s0 = baseOf(it.base).slot; return s0 === slot || (s0 === 'ring' && /^ring/.test(slot)); };
   function tooltip(it, c) {
-    if (!it) return '<p class="ivhint">아이템을 선택하세요. 젬·룬을 고른 뒤 「소켓에 박기」를 누르고 장비를 클릭하면 박힙니다.</p>';
+    if (!it) return `<div class="ivempty"><b>아이템을 선택하세요</b><ul class="ivhelp">${matchMedia('(pointer: coarse)').matches ? '<li><b>탭</b>으로 선택 → 빈 슬롯을 <b>탭</b>하면 장착</li><li><b>끌어 놓기</b>로 장착 · 이동 · 소켓에 박기</li>' : '<li><b>끌어 놓기</b>로 장착 · 이동 · 소켓에 박기</li><li><b>더블클릭</b>으로 장착 / 해제</li>'}<li>젬 3개 → <b>합성</b>으로 상위 등급</li><li>흰색(일반) 장비 + 룬 순서 = <b>룬워드</b></li></ul></div>`;
     const col = itemColor(it);
-    if (it.gem) { const G = GEMS[it.gem]; const k = G.k[it.grade]; return `<b style="color:${col}">${itemName(it)}</b><small>보석 · 등급 ${it.grade + 1}/3</small><ul><li class="h">무기</li>${statLines(add({}, G.fx[0], k))}<li class="h">방어구</li>${statLines(add({}, G.fx[1], k))}<li class="h">장신구</li>${statLines(add({}, G.fx[2], k))}</ul>`; }
-    if (it.rune) { const R = RUNES.find((r) => r.id === it.rune); return `<b style="color:${col}">${itemName(it)}</b><small>룬 · ${RUNES.indexOf(R) + 1}단계</small><ul><li class="h">무기</li>${statLines(R.fx[0])}<li class="h">방어구</li>${statLines(R.fx[1])}<li class="h">장신구</li>${statLines(R.fx[2])}</ul>`; }
+    const head = (sub) => `<div class="tth" style="--rc:${col}"><i style="background-image:url(${itemIcon(it)})"></i><div><b>${esc(itemName(it))}</b><small>${sub}</small></div></div>`;
+    if (it.gem) { const G = GEMS[it.gem], k = G.k[it.grade]; return head(`보석 · 등급 ${it.grade + 1} / 3`) + `<div class="ttb"><small class="h">무기</small><ul>${statLines(add({}, G.fx[0], k))}</ul><small class="h">방어구</small><ul>${statLines(add({}, G.fx[1], k))}</ul><small class="h">장신구</small><ul>${statLines(add({}, G.fx[2], k))}</ul></div>`; }
+    if (it.rune) { const R = RUNES.find((r) => r.id === it.rune); return head(`룬 · ${RUNES.indexOf(R) + 1}단계`) + `<div class="ttb"><small class="h">무기</small><ul>${statLines(R.fx[0])}</ul><small class="h">방어구</small><ul>${statLines(R.fx[1])}</ul><small class="h">장신구</small><ul>${statLines(R.fx[2])}</ul></div>`; }
     const B = baseOf(it.base), st = itemStats(it), lowLv = c && c.lv < it.req;
-    const sock = it.sockets ? `<div class="ivsock">${Array.from({ length: it.sockets }, (_, i) => { const s = it.socketed[i]; return `<i title="${s ? esc(itemName(s)) : '빈 소켓'}" style="${s ? `background-image:url(${itemIcon(s)})` : ''}"></i>`; }).join('')}</div>` : '';
-    return `<b style="color:${col}">${esc(itemName(it))}</b>${it.rw ? `<small style="color:#c8a050">룬워드 · ${esc(it.name)}</small>` : ''}<small>${RAR[it.rar].name} ${it.sub ? esc(it.sub) : B.name} · ${SLOTS.find((s) => s.id === B.slot || (B.slot === 'ring' && s.kind === 'ring')).name}</small>
-      <small>아이템 레벨 ${it.ilvl} · <span class="${lowLv ? 'bad' : ''}">요구 레벨 ${it.req}</span>${it.set ? ` · <span style="color:#40e060">세트: ${SETS[it.set].name}</span>` : ''}</small>${sock}<ul>${statLines(st)}</ul>`;
+    const worn = c && Object.values(c.equip).some((o) => o && o.id === it.id);
+    const other = !worn && c ? c.equip[slotFor(c, it)] : null;
+    const sock = it.sockets ? `<div class="ivsock">${Array.from({ length: it.sockets }, (_, i) => { const s = it.socketed[i]; return `<i class="${s ? 'on' : ''}" title="${s ? esc(itemName(s)) : '빈 소켓'}" style="${s ? `background-image:url(${itemIcon(s)})` : ''}"></i>`; }).join('')}<small>소켓 ${it.socketed.length} / ${it.sockets}</small></div>` : '';
+    return head(`${RAR[it.rar].name} · ${it.sub ? esc(it.sub) : B.name} · ${SLOTS.find((s) => s.id === B.slot || (B.slot === 'ring' && s.kind === 'ring')).name}`)
+      + `<div class="ttb"><p class="slotl">장착 부위 <b>${SLOTS.find((s) => s.id === B.slot || (B.slot === 'ring' && s.kind === 'ring')).name}</b></p>${it.rw ? `<p class="rw">룬워드 「${esc(it.rw)}」</p>` : ''}<p class="meta">아이템 레벨 <b>${it.ilvl}</b> · <span class="${lowLv ? 'bad' : ''}">요구 레벨 <b>${it.req}</b></span>${it.set ? ` · <span class="set">${SETS[it.set].name}</span>` : ''}${worn ? ' · <span class="worn">장착 중</span>' : ''}</p>
+      ${sock}<ul>${statLines(st, other ? itemStats(other) : !worn ? {} : null)}</ul>${it.socketed && it.socketed.length ? `<small class="h">소켓 효과 (위 합계에 포함)</small><ul class="sockfx">${statLines(socketStats(it))}</ul>` : ''}${other ? `<p class="cmp">▲▼ 장착 중인 「${esc(itemName(other))}」과 비교</p>` : ''}</div>`;
   }
   function bagHtml(list, W, H, which) {
-    return `<div class="ivgrid" data-c="${which}" style="--w:${W};--h:${H}">${list.map((it) => `<button type="button" class="ivit${selItem && selItem.id === it.id ? ' on' : ''}" data-id="${it.id}" data-c="${which}" style="left:${it.x * CELL}px;top:${it.y * CELL}px;width:${it.w * CELL - 2}px;height:${it.h * CELL - 2}px;--rc:${itemColor(it)}"><i style="background-image:url(${itemIcon(it)})"></i>${it.sockets ? `<em>${it.socketed.length}/${it.sockets}</em>` : ''}</button>`).join('')}</div>`;
+    return `<div class="ivgrid" data-c="${which}" style="--w:${W};--h:${H};--cell:${CELL}px">${list.map((it) => `<button type="button" class="ivit r_${it.gem ? 'gem' : it.rune ? 'rune' : it.rw ? 'rw' : it.rar}${selItem && selItem.id === it.id ? ' on' : ''}" data-id="${it.id}" data-c="${which}" style="left:${it.x * CELL}px;top:${it.y * CELL}px;width:${it.w * CELL - 2}px;height:${it.h * CELL - 2}px;--rc:${itemColor(it)}" aria-label="${esc(itemName(it))}"><i style="background-image:url(${itemIcon(it)})"></i>${it.sockets ? `<em>${'●'.repeat(it.socketed.length)}${'○'.repeat(it.sockets - it.socketed.length)}</em>` : ''}</button>`).join('')}</div>`;
   }
   function render() {
     const ov = el('#invOv'); if (!ov || ov.hidden) return;
     const { c } = getChar(invChar); if (!c) { ov.hidden = true; return; }
     norm(c);
+    { // the bag gets what is left of the window after the paper doll (268), the tooltip (300) and the gutters
+      const vw = window.innerWidth, modal = Math.min(vw - 28, 1180), avail = vw <= 1000 ? vw - 34 : modal - 36 - 268 - 300 - 40;
+      CELL = Math.max(vw <= 1000 ? 40 : 30, Math.min(vw <= 1000 ? 54 : 60, Math.floor(avail / 10)));
+    }
     const H = window.DATA.HEROES.find((h) => h.id === c.hero) || {};
     const st = charStats(c), need = xpNeed(c.lv);
-    const doll = SLOTS.map((s) => { const it = c.equip[s.id]; return `<button type="button" class="ivslot s_${s.id}${it ? '' : ' empty'}${selItem && it && selItem.id === it.id ? ' on' : ''}" data-slot="${s.id}" style="--rc:${it ? itemColor(it) : '#444'}">${it ? `<i style="background-image:url(${itemIcon(it)})"></i>` : `<span>${s.name}</span>`}</button>`; }).join('');
+    const doll = SLOTS.map((s) => { const it = c.equip[s.id]; return `<button type="button" class="ivslot s_${s.id}${it ? ' full' : ''}${selItem && isGear(selItem) && !Object.values(c.equip).some((o) => o && o.id === selItem.id) && slotOk(selItem, s.id) ? (c.lv < selItem.req ? ' lockslot' : ' can') : ''}${selItem && it && selItem.id === it.id ? ' on' : ''}" data-slot="${s.id}" style="--rc:${it ? itemColor(it) : 'rgba(255,255,255,0.18)'}" aria-label="${s.name}${it ? ' — ' + esc(itemName(it)) : ''}">${it ? `<i style="background-image:url(${itemIcon(it)})"></i>` : ''}<span>${s.name}</span></button>`; }).join('');
     const sel = selItem;
     const inBag = sel && (c.bag.some((o) => o.id === sel.id) || c.stash.some((o) => o.id === sel.id));
     const equipped = sel && Object.values(c.equip).some((o) => o && o.id === sel.id);
     const canCombine = sel && sel.gem && sel.grade < 2 && c.bag.concat(c.stash).filter((o) => o.gem === sel.gem && o.grade === sel.grade).length >= 3;
     const acts = !sel ? '' : [
-      inBag && isGear(sel) ? '<button type="button" class="btn" data-a="equip">장착</button>' : '',
-      equipped ? '<button type="button" class="btn d" data-a="unequip">해제</button>' : '',
-      inBag && (sel.gem || sel.rune) ? `<button type="button" class="btn${socketing ? ' on' : ''}" data-a="socket">${socketing ? '대상 장비 클릭…' : '소켓에 박기'}</button>` : '',
-      canCombine ? '<button type="button" class="btn" data-a="combine">합성 (3개 → 상위)</button>' : '',
-      inBag ? `<button type="button" class="btn d" data-a="move">${c.bag.some((o) => o.id === sel.id) ? '창고로' : '가방으로'}</button>` : '',
-      inBag ? '<button type="button" class="btn d" data-a="drop">버리기</button>' : '',
+      inBag && isGear(sel) ? (c.lv < sel.req ? `<button type="button" class="ia lock" data-a="equip" aria-disabled="true">Lv.${sel.req} 필요</button>` : '<button type="button" class="ia pri" data-a="equip">장착</button>') : '',
+      equipped ? '<button type="button" class="ia" data-a="unequip">해제</button>' : '',
+      inBag && (sel.gem || sel.rune) ? `<button type="button" class="ia pri${socketing ? ' on' : ''}" data-a="socket">${socketing ? '장비를 클릭하세요…' : '소켓에 박기'}</button>` : '',
+      canCombine ? '<button type="button" class="ia pri" data-a="combine">합성 3 → 1</button>' : '',
+      inBag ? `<button type="button" class="ia" data-a="move">${c.bag.some((o) => o.id === sel.id) ? '창고로' : '가방으로'}</button>` : '',
+      inBag ? '<button type="button" class="ia warn" data-a="drop">버리기</button>' : '',
     ].join('');
-    ov.querySelector('.ivwin').innerHTML = `<div class="ivh"><h3>${esc(c.name)}<small>Lv.${c.lv} · ${H.name || ''}</small></h3>
-        <div class="ivxp"><i style="width:${Math.min(100, c.xp / need * 100)}%"></i><span>${c.lv >= MAX_LV ? 'MAX' : `EXP ${c.xp} / ${need}`}</span></div>
-        <button type="button" class="btn d" id="invClose">닫기 (I)</button></div>
+    const used = (list) => list.reduce((n, o) => n + o.w * o.h, 0);
+    ov.querySelector('.ivwin').innerHTML = `<div class="ivh"><i class="ivpt" style="background-image:url(assets/ui/f_${c.hero}.webp);--c:${H.color || '#888'}"></i>
+        <div class="ivn"><small>INVENTORY · ${H.name || ''}</small><h3>${esc(c.name)}</h3></div>
+        <div class="ivlv"><b class="num">Lv.${c.lv}</b><div class="ivxp"><i style="width:${Math.min(100, c.xp / need * 100)}%"></i></div><small class="num">${c.lv >= MAX_LV ? 'MAX' : `${c.xp} / ${need}`}</small></div>
+        <button type="button" class="ivx" id="invClose" aria-label="닫기">닫기 <kbd>I</kbd></button></div>
       <div class="ivbody">
-        <div class="ivleft"><div class="ivdoll">${doll}</div><div class="ivstats"><small>장비 · 레벨 합계</small><ul>${statLines(st) || '<li>없음</li>'}</ul></div></div>
-        <div class="ivmid"><div class="ivtabs"><button type="button" data-t="bag" class="${tab === 'bag' ? 'on' : ''}">가방</button><button type="button" data-t="stash" class="${tab === 'stash' ? 'on' : ''}">창고</button></div>
+        <div class="ivleft"><div class="ivdoll">${doll}</div><div class="ivstats"><small>능력치 합계 · 레벨 + 장비</small><ul>${statLines(st) || '<li class="zero"><span>Lv.1 기본 능력치 · 장비 없음</span><b>—</b></li>'}</ul></div></div>
+        <div class="ivmid"><div class="ivtabs"><button type="button" data-t="bag" class="${tab === 'bag' ? 'on' : ''}">가방 <small>${used(c.bag)} / ${BAG_W * BAG_H}</small></button><button type="button" data-t="stash" class="${tab === 'stash' ? 'on' : ''}">창고 <small>${used(c.stash)} / ${STASH_W * STASH_H}</small></button></div>
           ${tab === 'bag' ? bagHtml(c.bag, BAG_W, BAG_H, 'bag') : bagHtml(c.stash, STASH_W, STASH_H, 'stash')}</div>
         <div class="ivtip">${tooltip(sel, c)}<div class="ivacts">${acts}</div></div>
       </div>`;
@@ -354,43 +374,45 @@
     for (const s in c.equip) if (c.equip[s] && c.equip[s].id === id) return { it: c.equip[s], where: 'equip', slot: s };
     return null;
   }
-  function act(a) {
+  function equipTo(c, f, slot) {
+    const it = f.it;
+    if (c.lv < it.req) { SFX.play('fail', 0.5); UI.toast(`요구 레벨 ${it.req} — 현재 Lv.${c.lv}. 스테이지를 돌아 레벨을 올리세요`, 'warn'); const b = el('#invOv .ia.lock'); if (b) { b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); } return false; }
+    if (f.where === 'equip') { if (f.slot === slot) return false; const o = c.equip[slot]; c.equip[slot] = it; if (o) c.equip[f.slot] = o; else delete c.equip[f.slot]; return true; } // ring1 <-> ring2
+    c[f.where] = c[f.where].filter((o) => o.id !== it.id);
+    const old = c.equip[slot]; c.equip[slot] = it; delete it.x; delete it.y;
+    if (old && !stow(c, old)) { c.equip[slot] = old; stow(c, it); UI.toast('가방이 가득 찼습니다', 'warn'); return false; }
+    SFX.play('uiEquip', 0.8); return true;
+  }
+  async function act(a) {
     const { db, c } = getChar(invChar); if (!c || !selItem) return;
     norm(c);
     const f = find(c, selItem.id); if (!f) return;
     const it = f.it;
-    const msg = (t, w) => { UI.toast(t, w || ''); };
-    if (a === 'equip') {
-      if (c.lv < it.req) { SFX.play('fail', 0.5); return msg(`요구 레벨 ${it.req} — 현재 Lv.${c.lv}`, 'warn'); }
-      const slot0 = baseOf(it.base).slot, slot = slot0 === 'ring' ? (!c.equip.ring1 ? 'ring1' : !c.equip.ring2 ? 'ring2' : 'ring1') : slot0;
-      c[f.where] = c[f.where].filter((o) => o.id !== it.id);
-      const old = c.equip[slot]; c.equip[slot] = it; delete it.x; delete it.y;
-      if (old && !stow(c, old)) { c.equip[slot] = old; stow(c, it); return msg('가방이 가득 찼습니다', 'warn'); }
-      SFX.play('uiEquip', 0.8);
-    } else if (a === 'unequip') {
-      if (!stow(c, it)) return msg('가방이 가득 찼습니다', 'warn');
-      delete c.equip[f.slot]; SFX.play('uiEquip', 0.6);
-    } else if (a === 'drop') {
-      if (!window.confirm(`${itemName(it)}을(를) 버릴까요?`)) return;
-      c[f.where] = c[f.where].filter((o) => o.id !== it.id); selItem = null;
+    if (a === 'equip') { if (!equipTo(c, f, slotFor(c, it))) return render(); }
+    else if (a === 'unequip') { if (!stow(c, it)) return UI.toast('가방이 가득 찼습니다', 'warn'); delete c.equip[f.slot]; SFX.play('uiEquip', 0.6); }
+    else if (a === 'drop') {
+      const ok = window.STAGE_UI && STAGE_UI.confirm ? await STAGE_UI.confirm('아이템 버리기', `<b style="color:${itemColor(it)}">${esc(itemName(it))}</b>을(를) 버립니다. 되돌릴 수 없습니다.`, '버리기', { danger: it.rar === 'unique' || it.rar === 'set' || it.rar === 'rare' || !!it.rw }) : true;
+      if (!ok) return;
+      const r2 = getChar(invChar); if (!r2.c) return; norm(r2.c); const f2 = find(r2.c, it.id); if (!f2) return;
+      r2.c[f2.where] = r2.c[f2.where].filter((o) => o.id !== it.id); selItem = null; saveAll(r2.db); reapply(GAME.G); SFX.play('swing', 0.4); render(); return;
     } else if (a === 'move') {
       const to = f.where === 'bag' ? 'stash' : 'bag', W = to === 'bag' ? BAG_W : STASH_W, H = to === 'bag' ? BAG_H : STASH_H;
       const rest = c[f.where].filter((o) => o.id !== it.id);
-      if (!place(c[to], W, H, it)) return msg(`${to === 'bag' ? '가방' : '창고'}이 가득 찼습니다`, 'warn');
-      c[f.where] = rest; tab = to;
+      if (!place(c[to], W, H, it)) return UI.toast(`${to === 'bag' ? '가방' : '창고'}이 가득 찼습니다`, 'warn');
+      c[f.where] = rest; tab = to; SFX.play('uiPick', 0.4);
     } else if (a === 'combine') {
       const same = c.bag.concat(c.stash).filter((o) => o.gem === it.gem && o.grade === it.grade).slice(0, 3), ids = new Set(same.map((o) => o.id));
       c.bag = c.bag.filter((o) => !ids.has(o.id)); c.stash = c.stash.filter((o) => !ids.has(o.id));
       const up = { id: uid(), gem: it.gem, grade: it.grade + 1, w: 1, h: 1 }; stow(c, up); selItem = up;
-      SFX.play('rankUp', 0.7); msg(`${itemName(up)} 합성`, 'gem');
+      SFX.play('rankUp', 0.7); UI.toast(`${itemName(up)} 합성`, 'gem');
     } else if (a === 'socket') { socketing = socketing ? null : it.id; render(); return; }
     saveAll(db); reapply(GAME.G); render();
   }
-  function socketInto(target) {
+  function socketInto(target, srcId) {
     const { db, c } = getChar(invChar); if (!c) return;
     norm(c);
-    const f = find(c, socketing), t = find(c, target.id); socketing = null;
-    if (!f || !t || !isGear(t.it)) return render();
+    const f = find(c, srcId || socketing), t = find(c, target.id); socketing = null;
+    if (!f || !t || !isGear(t.it) || !(f.it.gem || f.it.rune)) return render();
     if (t.it.socketed.length >= t.it.sockets) { SFX.play('fail', 0.5); UI.toast(t.it.sockets ? '빈 소켓이 없습니다' : '소켓이 없는 장비입니다', 'warn'); return render(); }
     c[f.where] = c[f.where].filter((o) => o.id !== f.it.id);
     const s = { gem: f.it.gem, grade: f.it.grade, rune: f.it.rune };
@@ -398,8 +420,65 @@
     t.it.socketed.push(s);
     const w = checkRuneword(t.it);
     SFX.play(w ? 'pickSS' : 'uiEquip', 0.8);
-    UI.toast(w ? `룬워드 완성 — ${w.name}!` : `${itemName(f.it)} → ${itemName(t.it)}`, 'gem');
+    UI.toast(w ? `룬워드 완성 — ${w.name}!` : `${itemName(f.it)} → ${esc(itemName(t.it))}`, 'gem');
     selItem = t.it; saveAll(db); reapply(GAME.G); render();
+  }
+  // drag and drop (pointer events: mouse, pen and touch alike)
+  function wrongSlot(it, s) {
+    SFX.play('fail', 0.4);
+    const need = isGear(it) ? SLOTS.find((x) => slotOk(it, x.id)).name : null;
+    UI.toast(need ? `${need} 슬롯 전용 장비입니다` : '보석 · 룬은 장비 위에 놓아 소켓에 박습니다', 'warn');
+    if (s) { s.classList.remove('shake'); void s.offsetWidth; s.classList.add('shake'); }
+  }
+  function dragStart(e, b) {
+    const { c } = getChar(invChar); if (!c) return; norm(c);
+    const it = b.classList.contains('ivslot') ? c.equip[b.dataset.slot] : (find(c, b.dataset.id) || {}).it;
+    if (!it) return;
+    drag = { it, b, x0: e.clientX, y0: e.clientY, on: false, ghost: null };
+  }
+  function dragMove(e) {
+    if (!drag) return;
+    if (!drag.on) {
+      if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 6) return;
+      drag.on = true; selItem = drag.it; render();
+      const g = document.createElement('div'); g.className = 'ivghost'; g.style.cssText = `width:${drag.it.w * CELL}px;height:${drag.it.h * CELL}px;--rc:${itemColor(drag.it)};background-image:url(${itemIcon(drag.it)})`;
+      document.body.appendChild(g); drag.ghost = g; el('#invOv').classList.add('dragging');
+      { const cc = getChar(invChar).c; const low = cc && isGear(drag.it) && cc.lv < drag.it.req; document.querySelectorAll('#invOv .ivslot').forEach((x) => x.classList.add(slotOk(drag.it, x.dataset.slot) ? (low ? 'lockslot' : 'can') : 'nope')); }
+    }
+    drag.ghost.style.transform = `translate(${e.clientX - drag.it.w * CELL / 2}px, ${e.clientY - drag.it.h * CELL / 2}px)`;
+    $$hl(e);
+  }
+  function $$hl(e) {
+    document.querySelectorAll('#invOv .hot').forEach((x) => x.classList.remove('hot', 'bad'));
+    const t = document.elementFromPoint(e.clientX, e.clientY); if (!t) return;
+    const s = t.closest('.ivslot'), it = t.closest('.ivit');
+    if (s) s.classList.add('hot', slotOk(drag.it, s.dataset.slot) ? 'ok' : 'bad');
+    else if (it && it.dataset.id !== drag.it.id && (drag.it.gem || drag.it.rune)) it.classList.add('hot');
+  }
+  function dragEnd(e) {
+    const d = drag; drag = null;
+    if (!d) return;
+    if (d.ghost) d.ghost.remove();
+    el('#invOv').classList.remove('dragging');
+    document.querySelectorAll('#invOv .hot, #invOv .can, #invOv .nope, #invOv .lockslot').forEach((x) => x.classList.remove('hot', 'bad', 'ok', 'can', 'nope', 'lockslot'));
+    if (!d.on) return;
+    noClick = performance.now() + 250; // the click that ends a drag is not a selection toggle
+    const t = document.elementFromPoint(e.clientX, e.clientY);
+    const { db, c } = getChar(invChar); if (!c) return; norm(c);
+    const f = find(c, d.it.id); if (!f) return;
+    const s = t && t.closest('.ivslot'), tgtIt = t && t.closest('.ivit'), grid = t && t.closest('.ivgrid');
+    if (s) { if (!slotOk(d.it, s.dataset.slot)) { wrongSlot(d.it, s); return render(); } if (equipTo(c, f, s.dataset.slot)) { saveAll(db); reapply(GAME.G); } return render(); }
+    if (tgtIt && tgtIt.dataset.id !== d.it.id && (d.it.gem || d.it.rune)) { const tg = find(c, tgtIt.dataset.id); if (tg) return socketInto(tg.it, d.it.id); }
+    if (grid) {
+      const which = grid.dataset.c, W = which === 'bag' ? BAG_W : STASH_W, H = which === 'bag' ? BAG_H : STASH_H, r = grid.getBoundingClientRect();
+      const x = Math.round((e.clientX - r.left) / CELL - d.it.w / 2), y = Math.round((e.clientY - r.top) / CELL - d.it.h / 2);
+      const list = c[which].filter((o) => o.id !== d.it.id);
+      if (!fits(list, W, H, d.it, x, y)) { SFX.play('fail', 0.4); return render(); }
+      if (f.where === 'equip') delete c.equip[f.slot]; else c[f.where] = c[f.where].filter((o) => o.id !== d.it.id);
+      d.it.x = x; d.it.y = y; c[which] = list.concat(d.it);
+      saveAll(db); reapply(GAME.G); SFX.play('uiPick', 0.4); return render();
+    }
+    render();
   }
   function open(on, charId) {
     const ov = el('#invOv'); if (!ov) return;
@@ -420,37 +499,56 @@
   function init() {
     if (el('#invOv')) return;
     const ov = document.createElement('div');
-    ov.id = 'invOv'; ov.hidden = true; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', '인벤토리');
+    ov.id = 'invOv'; ov.hidden = true; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', '인벤토리');
     ov.innerHTML = '<div class="ivwin"></div>';
+    window.addEventListener('resize', () => { if (!ov.hidden) render(); });
     document.body.appendChild(ov);
     ov.addEventListener('click', (e) => {
       const t = e.target;
-      if (t.id === 'invClose' || t === ov) return open(false);
-      const tb = t.closest('.ivtabs button'); if (tb) { tab = tb.dataset.t; return render(); }
+      if (t.closest('#invClose')) return open(false); // (no close on a stray outside click: a missed drop never loses the window)
+      if (performance.now() < noClick && t.closest('.ivit, .ivslot')) return;
+      const tb = t.closest('.ivtabs button'); if (tb) { tab = tb.dataset.t; SFX.play('uiPick', 0.3); return render(); }
       const ab = t.closest('[data-a]'); if (ab) return act(ab.dataset.a);
       const b = t.closest('.ivit, .ivslot');
       if (b) {
         const { c } = getChar(invChar); if (!c) return; norm(c);
+        if (b.classList.contains('ivslot') && selItem && !Object.values(c.equip).some((o) => o && o.id === selItem.id) && isGear(selItem)) {
+          const f = find(c, selItem.id);
+          if (f && !slotOk(selItem, b.dataset.slot)) { wrongSlot(selItem, b); return; }
+          if (f && !c.equip[b.dataset.slot] || (f && c.equip[b.dataset.slot])) { const r3 = getChar(invChar); norm(r3.c); const f3 = find(r3.c, selItem.id); if (f3 && equipTo(r3.c, f3, b.dataset.slot)) { saveAll(r3.db); reapply(GAME.G); } return render(); }
+        }
         const it = b.classList.contains('ivslot') ? c.equip[b.dataset.slot] : (find(c, b.dataset.id) || {}).it;
         if (!it) return;
         if (socketing && isGear(it)) return socketInto(it);
         selItem = selItem && selItem.id === it.id ? null : it; socketing = null; render(); SFX.play('uiPick', 0.4);
       }
     });
+    ov.addEventListener('dblclick', (e) => {
+      const b = e.target.closest('.ivit, .ivslot'); if (!b) return;
+      const { c } = getChar(invChar); if (!c) return; norm(c);
+      const it = b.classList.contains('ivslot') ? c.equip[b.dataset.slot] : (find(c, b.dataset.id) || {}).it;
+      if (!it || !isGear(it)) return;
+      selItem = it; act(b.classList.contains('ivslot') ? 'unequip' : 'equip');
+    });
+    ov.addEventListener('pointerdown', (e) => { const b = e.target.closest('.ivit, .ivslot.full'); if (b && e.button === 0) dragStart(e, b); });
+    window.addEventListener('pointermove', dragMove);
+    window.addEventListener('pointerup', dragEnd);
     // HUD button (in a stage run) and the I key
     const hb = document.createElement('button');
-    hb.type = 'button'; hb.id = 'btnInv'; hb.textContent = '가방 (I)'; hb.hidden = true;
+    hb.type = 'button'; hb.id = 'btnInv'; hb.innerHTML = '<i></i><span>가방</span><kbd>I</kbd>'; hb.hidden = true; hb.setAttribute('aria-label', '인벤토리 (I)');
     hb.onclick = () => open(true);
     document.body.appendChild(hb);
-    setInterval(() => { const G = window.GAME && GAME.G; hb.hidden = !(G && G.phase === 'play' && runChar); }, 400);
+    setInterval(() => { const G = window.GAME && GAME.G; hb.hidden = !(G && G.phase === 'play' && runChar && !G.paused); }, 300);
     window.addEventListener('keydown', (e) => {
       if (e.code !== 'KeyI' || (e.target && /INPUT|TEXTAREA/.test(e.target.tagName))) return;
       const G = window.GAME && GAME.G; if (!G) return;
+      const cf = document.getElementById('uiConfirm'); if (cf && !cf.hidden) return;
       if (!ov.hidden) { open(false); e.preventDefault(); return; }
+      const nw = document.getElementById('rpgNewOv'); if (nw && !nw.hidden) return;
       if ((G.phase === 'play' && runChar && !G.choosing) || (G.phase === 'title' && window.STAGE_UI && STAGE_UI.cur && STAGE_UI.cur())) { open(true); e.preventDefault(); }
     }, true);
-    window.addEventListener('keydown', (e) => { if (!ov.hidden && e.code === 'Escape') { open(false); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+    window.addEventListener('keydown', (e) => { const cf = document.getElementById('uiConfirm'); if (!ov.hidden && e.code === 'Escape' && (!cf || cf.hidden)) { open(false); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
   }
-  window.EQUIP = { onRunStart, onKill, onChest, onBoss, onRunEnd, collect, tex, glow, reapply, open, charStats, xpNeed, genItem, genGem, genRune, itemName, SLOTS, RUNEWORDS, get runChar() { return runChar; } };
+  window.EQUIP = { onRunStart, onKill, onChest, onBoss, onRunEnd, collect, tex, glow, reapply, open, charStats, xpNeed, genItem, genGem, genRune, itemName, iconOf: itemIcon, SLOTS, RUNEWORDS, get runChar() { return runChar; } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

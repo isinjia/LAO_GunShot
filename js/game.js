@@ -4121,13 +4121,14 @@
   }
   }
   function showcase(i) {
+    G.showWant = i; // the latest request wins once its rig has streamed in (classic title or RPG hub alike)
     if (!scene) return;
-    if (i < 0) { clearShow(); showDeco(); G.showDeco.q.visible = true; FX.ring(SHOW.x, SHOW.y + 0.2, 0.4, 3.2, 0xd8dee8, 0.5, 0.9); return; } // the random card: an empty stage
+    if (i < 0) { clearShow(); showDeco(); G.showDeco.q.visible = !G.quietStage; G.showDeco.glow.hidden = !!G.quietStage; if (!G.quietStage) FX.ring(SHOW.x, SHOW.y + 0.2, 0.4, 3.2, 0xd8dee8, 0.5, 0.9); return; } // quietStage: the RPG hub with no operator yet // the random card: an empty stage
     const hid = i >= HEROES.length, h = hid ? (DATA.HIDDEN || [])[i - HEROES.length] : HEROES[i];
     if (!h || h.available === false) return;
     const rid = h.rig || h.id;
-    if (!SD.ready(rid) || !SD.ready(GUNS[h.gun].donor)) { SD.prepare(rid).then(() => SD.prepare(GUNS[h.gun].donor)).then(() => { if (G.phase === 'title' && (UI.sel === i || (hid && UI.sel === -1))) showcase(i); }); return; }
-    clearShow();
+    if (!SD.ready(rid) || !SD.ready(GUNS[h.gun].donor)) { SD.prepare(rid).then(() => SD.prepare(GUNS[h.gun].donor)).then(() => { if (G.phase === 'title' && G.showWant === i) showcase(i); }); return; }
+    clearShow(); if (G.showDeco) G.showDeco.glow.hidden = false;
     const H = 3.6;
     const body = makeBody(rid, H, RIGS[rid].hide, !!h.rigFlip);
     body.root.position.set(SHOW.x, SHOW.y, 0);
@@ -4167,7 +4168,7 @@
       o.position.set(SHOW.x + ax, SHOW.y + ay + Math.sin(show.t * 3) * 0.03, 0);
       o.rotation.z = a;
     }
-    if (Math.random() < dt * 10) FX.particle({ x: SHOW.x + rnd(-2.2, 2.2), y: SHOW.y + rnd(-0.3, 0.3), vy: rnd(0.6, 1.6), life: 1.6, size: 0.1, size1: 0, color: 0xffd34d, tex: FX.tex.dot, alpha: 0.8 });
+    if (!G.quietStage && Math.random() < dt * 10) FX.particle({ x: SHOW.x + rnd(-2.2, 2.2), y: SHOW.y + rnd(-0.3, 0.3), vy: rnd(0.6, 1.6), life: 1.6, size: 0.1, size1: 0, color: 0xffd34d, tex: FX.tex.dot, alpha: 0.8 });
   }
 
   // ── main loop ──────────────────────────────────────────

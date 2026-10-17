@@ -1,0 +1,327 @@
+/* Front end before a run (stage_ui.js): mode select, the RPG operator hub, operator creation, confirm dialog.
+   LAST ORIGIN look: charcoal panels, yellow (--y) accent, cyan secondary, cut corners, Exo2 captions over Godo titles. */
+:root { --fr-cut: 14px; --fr-ease: cubic-bezier(.2, .8, .2, 1); --fr-panel: rgba(10, 12, 16, 0.82); --fr-line: rgba(255, 255, 255, 0.1); }
+.fr-cut { clip-path: polygon(var(--fr-cut) 0, 100% 0, 100% calc(100% - var(--fr-cut)), calc(100% - var(--fr-cut)) 100%, 0 100%, 0 var(--fr-cut)); }
+#title.rpgmode > *:not(#modeOv):not(#rpgOv):not(#titleBg):not(.ver) { visibility: hidden; }
+kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin: 0 1px; font: 700 11px/1.6 var(--en); text-align: center; color: #e8eef4; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.22); border-bottom-width: 2px; border-radius: 3px; }
+
+/* ── mode select ─────────────────────────────── */
+#title > #modeOv:not(#_) { position: fixed; inset: 0; z-index: 59; display: grid; place-items: center; padding: 24px; overflow: hidden; background: #07080b; }
+#title > #modeOv[hidden]:not(#_) { display: none; }
+#modeOv .mbg { position: absolute; inset: -4%; background: url(../assets/ui/mode_bg.webp) center / cover no-repeat; opacity: 0.55; animation: frPan 40s ease-in-out infinite alternate; }
+#modeOv .mbg::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 70% 60% at 50% 45%, transparent 0%, rgba(4, 5, 8, 0.75) 70%, #040508 100%), repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px); }
+@keyframes frPan { from { transform: scale(1.04) translate(-1%, -1%); } to { transform: scale(1.1) translate(1.5%, 1%); } }
+#modeOv .mwrap { position: relative; width: min(1080px, 100%); display: flex; flex-direction: column; align-items: center; gap: clamp(14px, 3vh, 30px); }
+#modeOv .mh { text-align: center; animation: frRise 0.6s var(--fr-ease) both; }
+#modeOv .mlogo { width: min(340px, 60vw); aspect-ratio: 520 / 90; margin: 0 auto 10px; background: var(--s-logo, none) center / contain no-repeat; }
+#modeOv .mh small { display: block; font: 600 12px/1 var(--en); letter-spacing: 6px; color: var(--cy); opacity: 0.85; }
+#modeOv .mh b { display: block; margin-top: 8px; font-size: clamp(24px, 3.4vw, 36px); letter-spacing: 3px; color: #fff; text-shadow: 0 2px 18px rgba(255, 204, 0, 0.25); }
+#modeOv .mcards { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: clamp(14px, 2vw, 28px); }
+#modeOv .mcard { --a: 0; position: relative; display: flex; flex-direction: column; justify-content: flex-end; height: clamp(300px, 52vh, 470px); padding: 26px 28px 24px; text-align: left; overflow: hidden; color: #e6edf3;
+  border: 1px solid rgba(255, 255, 255, 0.14); background: #0c0e12; clip-path: polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px);
+  transition: transform 0.35s var(--fr-ease), border-color 0.3s, box-shadow 0.3s; animation: frRise 0.7s var(--fr-ease) both; }
+#modeOv .mcard:nth-child(2) { animation-delay: 0.08s; }
+#modeOv .mcard .art { position: absolute; inset: 0; background: var(--art) center 35% / cover no-repeat; filter: saturate(0.9) brightness(0.72); transform: scale(1.04); transition: transform 0.8s var(--fr-ease), filter 0.4s; }
+#modeOv .mcard::before { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(6, 8, 12, 0.1) 0%, rgba(6, 8, 12, 0.35) 40%, rgba(6, 8, 12, 0.94) 78%); }
+#modeOv .mcard::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; z-index: 2; background: var(--cy); transform: scaleX(0); transform-origin: left; transition: transform 0.45s var(--fr-ease); }
+#modeOv .mcard.rpg::after { background: var(--y); }
+#modeOv .mcard > *:not(.art) { position: relative; z-index: 2; }
+#modeOv .mcard .tag { position: absolute; top: 20px; left: 26px; padding: 3px 10px; font: 700 11px/1.4 var(--en); letter-spacing: 2px; color: #061016; background: var(--cy); }
+#modeOv .mcard .tag.new { background: var(--y); color: #1a1400; }
+#modeOv .mcard .mt small { display: block; font: 600 12px/1 var(--en); letter-spacing: 3px; color: var(--cy); }
+#modeOv .mcard.rpg .mt small { color: var(--y); }
+#modeOv .mcard .mt b { display: block; margin: 8px 0 12px; font-size: clamp(26px, 2.8vw, 36px); color: #fff; letter-spacing: 1px; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8); }
+#modeOv .mcard ul { margin: 0 0 16px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #c9d3dc; }
+#modeOv .mcard li { position: relative; padding-left: 16px; } #modeOv .mcard li::before { content: ''; position: absolute; left: 0; top: 0.55em; width: 7px; height: 7px; background: var(--cy); transform: rotate(45deg); }
+#modeOv .mcard.rpg li::before { background: var(--y); }
+#modeOv .mcard .meta { font-size: 12px; color: var(--y); margin: -6px 0 12px; }
+#modeOv .mcard .cta { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; font-weight: 700; font-size: 15px; color: #fff; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.25); transition: background 0.25s, color 0.25s; }
+#modeOv .mcard:hover, #modeOv .mcard.focus { transform: translateY(-6px); border-color: rgba(51, 209, 250, 0.7); box-shadow: 0 18px 40px -12px rgba(51, 209, 250, 0.35); }
+#modeOv .mcard.rpg:hover, #modeOv .mcard.rpg.focus { border-color: rgba(255, 204, 0, 0.75); box-shadow: 0 18px 40px -12px rgba(255, 204, 0, 0.35); }
+#modeOv .mcard:hover .art, #modeOv .mcard.focus .art { transform: scale(1.1); filter: saturate(1.05) brightness(0.8); }
+#modeOv .mcard:hover::after, #modeOv .mcard.focus::after { transform: scaleX(1); }
+#modeOv .mcard.focus .cta { background: var(--cy); color: #061016; border-color: var(--cy); }
+#modeOv .mcard.rpg.focus .cta { background: var(--y); color: #1a1400; border-color: var(--y); }
+#modeOv .mcard.go { animation: frPick 0.28s ease-out both; }
+@keyframes frPick { 50% { transform: translateY(-6px) scale(1.03); filter: brightness(1.5); } 100% { transform: translateY(-6px) scale(1.01); opacity: 0.4; } }
+#modeOv .mfoot { display: flex; gap: 22px; font-size: 12px; color: rgba(255, 255, 255, 0.55); animation: frRise 0.8s var(--fr-ease) 0.15s both; }
+@keyframes frRise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+/* ── RPG hub ──────────────────────────────────── */
+#title > #rpgOv:not(#_) { position: fixed; inset: 0; z-index: 58; pointer-events: none; animation: frFade 0.35s ease both; }
+#title > #rpgOv[hidden]:not(#_) { display: none; }
+#rpgOv > * { pointer-events: auto; }
+#rpgOv, #modeOv, #rpgNewOv, #uiConfirm { text-align: left; }
+#modeOv .mh, #modeOv .mfoot { text-align: center; }
+@keyframes frFade { from { opacity: 0; } to { opacity: 1; } }
+#rpgOv::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(5, 6, 9, 0.96) 0%, rgba(5, 6, 9, 0.9) 50%, rgba(5, 6, 9, 0.25) 66%, rgba(5, 6, 9, 0) 78%), linear-gradient(0deg, rgba(5, 6, 9, 0.7), transparent 30%); }
+#rpgOv .rtop { position: absolute; left: 0; right: 0; top: 0; height: 58px; display: flex; align-items: center; gap: 18px; padding: 0 max(18px, env(safe-area-inset-left)); background: linear-gradient(180deg, rgba(4, 5, 8, 0.95), rgba(4, 5, 8, 0.7)); border-bottom: 1px solid rgba(255, 204, 0, 0.3); }
+#rpgOv .rback, #title > #btnMode:not(#_) { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; font-size: 13px; font-weight: 700; color: #e6edf3; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.2); clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px); transition: background 0.2s, color 0.2s; }
+#rpgOv .rback span, #title > #btnMode:not(#_) span { color: var(--y); font-size: 10px; }
+#rpgOv .rback:hover, #title > #btnMode:not(#_):hover { background: var(--y); color: #1a1400; } #rpgOv .rback:hover span, #title > #btnMode:hover span { color: #1a1400; }
+#title > #btnMode:not(#_) { position: absolute; left: max(14px, env(safe-area-inset-left)); top: max(12px, env(safe-area-inset-top)); z-index: 5; }
+#title > #btnMode[hidden]:not(#_) { display: none; }
+#rpgOv .rtt small { display: block; font: 600 10px/1 var(--en); letter-spacing: 3px; color: var(--y); } #rpgOv .rtt b { font-size: 19px; letter-spacing: 1px; }
+#rpgOv .rkeys { margin-left: auto; display: flex; gap: 14px; font-size: 12px; color: rgba(255, 255, 255, 0.55); }
+#rpgOv .rcols { position: absolute; top: 74px; bottom: 18px; left: max(18px, env(safe-area-inset-left)); display: grid; grid-template-columns: 236px minmax(0, 540px); gap: 16px; width: min(800px, calc(62vw)); }
+#rpgOv .rhd { margin-bottom: 8px; font-size: 15px; font-weight: 700; color: #fff; } #rpgOv .rhd small { margin-left: 8px; font: 600 10px var(--en); letter-spacing: 2px; color: rgba(255, 255, 255, 0.4); }
+#rpgOv .rcol1 { display: flex; flex-direction: column; min-height: 0; }
+#rpgRoster { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 4px; }
+#rpgRoster .rr { position: relative; display: grid; grid-template-columns: 58px 1fr; gap: 10px; align-items: center; padding: 8px 10px 8px 8px; text-align: left; background: var(--fr-panel); border: 1px solid var(--fr-line); clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); transition: border-color 0.2s, background 0.2s, transform 0.2s var(--fr-ease); }
+#rpgRoster .rr i { width: 58px; height: 58px; background: #111 center / cover no-repeat; border-bottom: 3px solid var(--c, #666); }
+#rpgRoster .rr b { display: block; font-size: 15px; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } #rpgRoster .rr small { display: block; font-size: 11px; color: rgba(255, 255, 255, 0.5); }
+#rpgRoster .rlv { display: flex; align-items: center; gap: 6px; margin-top: 4px; } #rpgRoster .rlv em { font-style: normal; font-size: 12px; color: var(--y); }
+.xp { flex: 1; height: 4px; background: rgba(255, 255, 255, 0.1); overflow: hidden; } .xp > span { display: block; height: 100%; background: linear-gradient(90deg, #2f86ff, #7fe3ff); }
+#rpgRoster .rr:hover { transform: translateX(3px); border-color: rgba(255, 255, 255, 0.3); }
+#rpgRoster .rr.on { background: linear-gradient(90deg, rgba(255, 204, 0, 0.16), rgba(10, 12, 16, 0.85) 70%); border-color: var(--y); }
+#rpgRoster .rr.on::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--y); }
+#rpgRoster .rr.add { border-style: dashed; border-color: rgba(255, 204, 0, 0.45); background: rgba(255, 204, 0, 0.04); }
+#rpgRoster .rr.add i { position: relative; background: rgba(255, 204, 0, 0.08); border-bottom-color: var(--y); }
+#rpgRoster .rr.add i::before, #rpgRoster .rr.add i::after { content: ''; position: absolute; left: 50%; top: 50%; width: 22px; height: 3px; background: var(--y); transform: translate(-50%, -50%); } #rpgRoster .rr.add i::after { transform: translate(-50%, -50%) rotate(90deg); }
+#rpgRoster .rr.add b { color: var(--y); }
+#rpgOv .rcol2 { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto; padding-right: 4px; }
+#rpgOv .rempty { margin: auto 0; padding: 40px 30px; text-align: center; background: var(--fr-panel); border: 1px solid var(--fr-line); }
+#rpgOv .rempty b { display: block; font-size: 20px; color: #fff; } #rpgOv .rempty p { margin: 10px 0 20px; color: rgba(255, 255, 255, 0.6); line-height: 1.6; }
+/* chapters: the original map-preview cards */
+#rpgOv .chaps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+#rpgOv .chp { position: relative; aspect-ratio: 3 / 3.4; overflow: hidden; border: 1px solid var(--fr-line); background: #0b0d11; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); transition: transform 0.25s var(--fr-ease), border-color 0.2s; }
+#rpgOv .chp i { position: absolute; inset: 0; background: center 35% / cover no-repeat; filter: brightness(0.75) saturate(0.9); transition: filter 0.3s, transform 0.5s var(--fr-ease); }
+#rpgOv .chp::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 35%, rgba(4, 6, 9, 0.92)); }
+#rpgOv .chp .cn { position: absolute; left: 8px; top: 6px; z-index: 1; font-size: 20px; color: #fff; text-shadow: 0 1px 4px #000; }
+#rpgOv .chp .cnm { position: absolute; left: 7px; right: 6px; bottom: 18px; z-index: 1; font-size: 11px; line-height: 1.25; color: #e6edf3; text-align: left; }
+#rpgOv .chp .st { position: absolute; left: 7px; bottom: 6px; z-index: 1; display: flex; gap: 3px; } #rpgOv .chp .st b { width: 7px; height: 7px; transform: rotate(45deg); border: 1px solid var(--c); opacity: 0.4; } #rpgOv .chp .st b.on { background: var(--c); opacity: 1; box-shadow: 0 0 5px var(--c); }
+#rpgOv .chp:hover i { filter: brightness(0.95); transform: scale(1.06); }
+#rpgOv .chp.on { border-color: var(--y); transform: translateY(-2px); } #rpgOv .chp.on i { filter: brightness(1) saturate(1.1); } #rpgOv .chp.on::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; z-index: 1; background: var(--y); }
+#rpgOv .chp.locked i { filter: grayscale(1) brightness(0.35); }
+#rpgOv .chp .lk { position: absolute; left: 50%; top: 42%; z-index: 1; width: 22px; height: 18px; transform: translate(-50%, -50%); border: 2px solid rgba(255, 255, 255, 0.7); border-radius: 3px; }
+#rpgOv .chp .lk::before { content: ''; position: absolute; left: 3px; right: 3px; top: -11px; height: 10px; border: 2px solid rgba(255, 255, 255, 0.7); border-bottom: 0; border-radius: 8px 8px 0 0; }
+/* the selected stage */
+#rpgOv .sban { position: relative; padding: 18px 20px 16px; min-height: 148px; background: center / cover no-repeat; border: 1px solid var(--fr-line); border-left: 3px solid var(--y); animation: frFade 0.3s ease; }
+#rpgOv .sban small { font: 600 11px/1 var(--en); letter-spacing: 2px; color: var(--y); } #rpgOv .sban h2 { margin: 6px 0 8px; font-size: 28px; color: #fff; letter-spacing: 1px; text-shadow: 0 2px 8px #000; }
+#rpgOv .sban p { margin: 0; max-width: 360px; font-size: 13px; line-height: 1.55; color: #c9d3dc; }
+#rpgOv .sban .rec { position: absolute; right: 14px; top: 14px; padding: 4px 10px; font-size: 12px; font-weight: 700; color: #1a1400; background: var(--y); } #rpgOv .sban .rec.low { color: #fff; background: #c8322a; }
+#rpgOv .path { position: relative; margin: 0; padding: 12px 6px 8px; list-style: none; display: grid; grid-template-columns: repeat(var(--n, 5), 1fr); grid-auto-flow: column; background: var(--fr-panel); border: 1px solid var(--fr-line); }
+#rpgOv .path::before { content: ''; position: absolute; left: 10%; right: 10%; top: 34px; height: 2px; background: linear-gradient(90deg, rgba(255, 255, 255, 0.15), rgba(255, 204, 0, 0.5), rgba(255, 60, 60, 0.6)); }
+#rpgOv .path li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
+#rpgOv .path .nd { position: relative; z-index: 1; width: 44px; height: 44px; display: grid; place-items: center; background: #11141a; border: 2px solid var(--c); transform: rotate(45deg) scale(0.72); }
+#rpgOv .path .nd em { transform: rotate(-45deg); font-style: normal; font-size: 16px; color: #fff; }
+#rpgOv .path li.mid .nd, #rpgOv .path li.fin .nd { transform: none; border-radius: 50%; overflow: hidden; border-color: #ff9a3a; box-shadow: 0 0 12px rgba(255, 120, 40, 0.5); }
+#rpgOv .path li.fin .nd { border-color: #ff3d3d; box-shadow: 0 0 16px rgba(255, 50, 50, 0.65); width: 50px; height: 50px; margin-top: -3px; }
+#rpgOv .path .nd i { position: absolute; inset: 0; background: center / cover no-repeat; }
+#rpgOv .path small { font-size: 10px; color: rgba(255, 255, 255, 0.45); } #rpgOv .path b { font-size: 11px; font-weight: 400; color: #dfe6ec; line-height: 1.25; } #rpgOv .path u { text-decoration: none; font-size: 10px; font-weight: 700; color: #ff7a4a; }
+#rpgOv .diffs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+#rpgOv .df { position: relative; padding: 9px 10px 8px; text-align: left; background: var(--fr-panel); border: 1px solid var(--fr-line); border-top: 3px solid color-mix(in srgb, var(--c) 45%, transparent); transition: background 0.2s, border-color 0.2s; }
+#rpgOv .df b { display: block; font-size: 16px; color: var(--c); } #rpgOv .df small { display: block; margin-top: 2px; font-size: 11px; color: rgba(255, 255, 255, 0.55); }
+#rpgOv .df kbd { position: absolute; right: 8px; top: 8px; opacity: 0.6; }
+#rpgOv .df:hover { background: rgba(255, 255, 255, 0.06); } #rpgOv .df.on { border-color: var(--c); background: linear-gradient(180deg, color-mix(in srgb, var(--c) 22%, transparent), rgba(10, 12, 16, 0.85)); box-shadow: inset 0 0 0 1px var(--c); }
+#rpgOv .df.locked { opacity: 0.45; } #rpgOv .df.locked b { color: rgba(255, 255, 255, 0.6); }
+#rpgOv .rwd { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 8px 12px; font-size: 12px; color: rgba(255, 255, 255, 0.7); background: rgba(255, 255, 255, 0.03); border: 1px solid var(--fr-line); }
+#rpgOv .rwd b { color: var(--y); } #rpgOv .rwd .ri { display: inline-block; width: 8px; height: 8px; margin-right: 6px; transform: rotate(45deg); background: var(--y); } #rpgOv .rwd .ri.rune { background: #ff9a3a; } #rpgOv .rwd .ri.chip { background: var(--cy); }
+#rpgOv #stageGo { width: 100%; height: 66px; flex: none; gap: 14px; } #rpgOv #stageGo span { font-size: 26px; letter-spacing: 6px; } #rpgOv #stageGo small { font-size: 13px; letter-spacing: 0; opacity: 0.75; }
+#rpgOv #stageGo.fire { animation: frFire 0.22s ease-out both; } @keyframes frFire { 50% { filter: brightness(1.8); transform: scale(1.02); } }
+/* nameplate beside the 3D operator */
+#rpgPlate { position: fixed; right: max(20px, env(safe-area-inset-right)); bottom: 22px; width: min(330px, 30vw); padding: 14px 16px; background: linear-gradient(180deg, rgba(8, 10, 14, 0.55), rgba(8, 10, 14, 0.92)); border: 1px solid var(--fr-line); border-top: 2px solid var(--y); animation: frRise 0.4s var(--fr-ease) both; }
+#rpgPlate[hidden] { display: none; }
+#rpgPlate .pnh small { font-size: 11px; color: rgba(255, 255, 255, 0.55); } #rpgPlate .pnh h3 { margin: 2px 0 2px; font-size: 26px; color: #fff; } #rpgPlate .pnh .cls { font-size: 12px; font-weight: 700; color: var(--c); }
+#rpgPlate .pnlv { display: flex; align-items: center; gap: 8px; margin: 10px 0 6px; } #rpgPlate .pnlv b { color: var(--y); font-size: 18px; } #rpgPlate .pnlv small { font-size: 11px; color: rgba(255, 255, 255, 0.5); }
+#rpgPlate .pnpw { display: flex; align-items: baseline; justify-content: space-between; padding: 6px 10px; margin-bottom: 8px; background: rgba(255, 204, 0, 0.08); border-left: 3px solid var(--y); }
+#rpgPlate .pnpw small { font-size: 12px; color: rgba(255, 255, 255, 0.7); } #rpgPlate .pnpw b { font-size: 22px; color: #fff; }
+#rpgPlate .pneq { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; margin-bottom: 10px; }
+#rpgPlate .pneq span { position: relative; aspect-ratio: 1; border: 1px solid var(--rc); background: rgba(255, 255, 255, 0.03); display: grid; place-items: center; overflow: hidden; }
+#rpgPlate .pneq span i { position: absolute; inset: 1px; background: center / contain no-repeat; } #rpgPlate .pneq em { font-style: normal; font-size: 8px; color: rgba(255, 255, 255, 0.3); text-align: center; line-height: 1.05; }
+#rpgPlate .pnact { display: flex; align-items: center; gap: 10px; } #rpgPlate .pnact .btn { flex: 1; height: 42px; font-size: 15px; }
+#rpgPlate .pndel { font-size: 12px; color: rgba(255, 255, 255, 0.45); text-decoration: underline; text-underline-offset: 3px; } #rpgPlate .pndel:hover { color: #ff6a5a; }
+/* operator creation */
+#rpgNewOv { position: fixed; inset: 0; z-index: 62; display: grid; place-items: center; padding: 16px; background: rgba(3, 4, 6, 0.55); backdrop-filter: blur(2px); animation: frFade 0.25s ease both; }
+#rpgNewOv[hidden] { display: none; }
+#rpgNewOv .cw { width: min(1040px, 100%); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; background: rgba(9, 11, 15, 0.97); border: 1px solid rgba(255, 204, 0, 0.35); clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px); animation: frRise 0.35s var(--fr-ease) both; }
+#rpgNewOv .chd { display: flex; align-items: baseline; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--fr-line); }
+#rpgNewOv .chd small { font: 600 11px var(--en); letter-spacing: 3px; color: var(--y); } #rpgNewOv .chd h3 { margin: 0; font-size: 22px; color: #fff; }
+#rpgNewOv .ckeys { margin-left: auto; font-size: 12px; color: rgba(255, 255, 255, 0.5); } #rpgNewOv .cx { width: 34px; height: 34px; font-size: 16px; color: #ccc; background: rgba(255, 255, 255, 0.06); } #rpgNewOv .cx:hover { background: #c8322a; color: #fff; }
+#rpgNewOv .cbody { display: grid; grid-template-columns: minmax(260px, 0.85fr) 1.15fr; gap: 0; min-height: 0; overflow-y: auto; }
+#rpgNewOv .cprev { position: relative; min-height: 420px; overflow: hidden; background: #0b1424 url(../assets/ui/creator_bg.webp) center / cover no-repeat; border-right: 1px solid var(--fr-line); }
+#rpgNewOv .cprev::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--c) 30%, transparent), transparent 55%); }
+#rpgNewOv .cprev i { position: absolute; left: 50%; top: 42%; width: min(250px, 70%); aspect-ratio: 1; transform: translate(-50%, -50%) rotate(45deg); background: center / cover no-repeat; border: 3px solid var(--c); box-shadow: 0 0 30px color-mix(in srgb, var(--c) 50%, transparent); clip-path: inset(0); animation: frRise 0.35s var(--fr-ease); }
+#rpgNewOv .cprev i { transform: translate(-50%, -50%); border-radius: 50%; }
+#rpgNewOv .cpn { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 18px; background: linear-gradient(0deg, rgba(5, 7, 10, 0.95), transparent); }
+#rpgNewOv .cpn small { font-size: 12px; color: rgba(255, 255, 255, 0.6); } #rpgNewOv .cpn b { display: block; font-size: 26px; color: #fff; border-left: 4px solid var(--c); padding-left: 10px; margin-top: 4px; }
+#rpgNewOv .cinfo { display: flex; flex-direction: column; gap: 12px; padding: 16px 20px 18px; }
+#rpgNewOv .cgrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+#rpgNewOv .cg { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--fr-line); transition: border-color 0.2s, background 0.2s; }
+#rpgNewOv .cg i { width: 100%; aspect-ratio: 1; background: center / cover no-repeat; border-bottom: 3px solid var(--c); filter: grayscale(0.4) brightness(0.8); transition: filter 0.2s; } #rpgNewOv .cg b { font-size: 12px; color: #dfe6ec; }
+#rpgNewOv .cg:hover i, #rpgNewOv .cg.on i { filter: none; } #rpgNewOv .cg.on { border-color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); box-shadow: inset 0 0 0 1px var(--c); }
+#rpgNewOv .cdesc { margin: 0; font-size: 14px; line-height: 1.6; color: #c9d3dc; }
+#rpgNewOv .cstat { display: grid; grid-template-columns: auto 1fr auto 1fr auto 1fr; align-items: center; gap: 6px 10px; font-size: 12px; color: rgba(255, 255, 255, 0.6); }
+#rpgNewOv .bar { height: 6px; background: rgba(255, 255, 255, 0.1); } #rpgNewOv .bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--y), #ffe680); }
+#rpgNewOv .cskill { display: flex; flex-direction: column; gap: 6px; }
+#rpgNewOv .cskill > div { display: grid; grid-template-columns: 46px 1fr; grid-template-rows: auto auto; column-gap: 10px; padding: 7px 10px; background: rgba(255, 255, 255, 0.03); border-left: 2px solid rgba(255, 204, 0, 0.5); }
+#rpgNewOv .cskill kbd { grid-row: span 2; align-self: center; justify-self: center; min-width: 40px; } #rpgNewOv .cskill b { font-size: 14px; color: #fff; } #rpgNewOv .cskill small { font-size: 12px; line-height: 1.45; color: rgba(255, 255, 255, 0.55); }
+#rpgNewOv .cname { display: flex; align-items: center; gap: 10px; } #rpgNewOv .cname span { flex: none; font-size: 13px; color: var(--y); font-weight: 700; }
+#rpgNewOv .cname input { flex: 1; min-width: 0; height: 42px; padding: 0 12px; font: 600 17px var(--kr); color: #fff; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); outline: none; transition: border-color 0.2s; user-select: text; -webkit-user-select: text; }
+#rpgNewOv .cname input:focus { border-color: var(--y); box-shadow: 0 0 0 2px rgba(255, 204, 0, 0.2); } #rpgNewOv .cname input.bad { border-color: #ff4a3a; animation: frShake 0.3s; }
+#rpgNewOv .cname button { flex: none; height: 42px; padding: 0 12px; font: 700 11px var(--en); letter-spacing: 1px; color: var(--y); border: 1px solid rgba(255, 204, 0, 0.4); background: rgba(255, 204, 0, 0.06); } #rpgNewOv .cname button:hover { background: rgba(255, 204, 0, 0.18); }
+@keyframes frShake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+#rpgNewOv .cact { display: flex; justify-content: flex-end; } #rpgNewOv .cact .btn { min-width: 240px; }
+/* confirm */
+#uiConfirm { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, 0.6); animation: frFade 0.2s ease; }
+#uiConfirm[hidden] { display: none; }
+#uiConfirm .ucbox { width: min(440px, 100%); padding: 20px 22px 18px; background: rgba(12, 14, 18, 0.98); border: 1px solid rgba(255, 204, 0, 0.4); border-top: 3px solid var(--y); animation: frRise 0.25s var(--fr-ease); }
+#uiConfirm h4 { margin: 0 0 8px; font-size: 18px; color: #fff; } #uiConfirm p { margin: 0 0 18px; font-size: 14px; line-height: 1.6; color: #c9d3dc; }
+#uiConfirm .ucrow { display: flex; gap: 10px; justify-content: flex-end; } #uiConfirm .btn { height: 42px; min-width: 110px; }
+/* compact layouts */
+@media (max-width: 1100px) { #rpgOv .rkeys { display: none; } }
+@media (max-width: 900px), (max-aspect-ratio: 1/1) {
+  #modeOv .mcards { grid-template-columns: 1fr; } #modeOv .mcard { height: clamp(190px, 30vh, 260px); padding: 18px; } #modeOv .mcard ul { display: none; } #modeOv .mlogo { display: none; } #modeOv .mfoot { display: none; }
+  /* the hub becomes one scrolling column: top bar, operators, stage, nameplate */
+  #title > #rpgOv:not(#_) { overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 12px; padding: 0 10px 16px; background: rgba(5, 6, 9, 0.94); touch-action: pan-y; }
+  #rpgOv::before { display: none; }
+  #rpgOv .rtop { position: sticky; top: 0; z-index: 3; margin: 0 -10px; height: 54px; }
+  #rpgOv .rcols { position: static; width: auto; display: flex; flex-direction: column; gap: 12px; }
+  #rpgRoster { flex-direction: row; overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; } #rpgRoster .rr { flex: 0 0 196px; }
+  #rpgOv .rcol2 { overflow: visible; padding: 0; }
+  #rpgOv .chaps { display: flex; overflow-x: auto; padding-bottom: 4px; } #rpgOv .chp { flex: 0 0 104px; }
+  #rpgOv .sban h2 { font-size: 22px; } #rpgOv .sban .rec { position: static; display: inline-block; margin-top: 8px; }
+  #rpgOv .path { overflow-x: auto; grid-template-columns: repeat(var(--n, 5), 76px); justify-content: start; } #rpgOv .path::before { left: 30px; right: auto; width: calc((var(--n, 5) - 1) * 76px); }
+  #rpgOv .df { padding: 8px 6px; } #rpgOv .df b { font-size: 14px; } #rpgOv .df small { font-size: 10px; } #rpgOv .df kbd { display: none; }
+  #rpgOv #stageGo { height: 58px; } #rpgOv #stageGo small { display: none; }
+  #rpgPlate { position: static; width: auto; animation: none; } #rpgPlate .pneq { grid-template-columns: repeat(9, minmax(0, 1fr)); }
+  #rpgNewOv .cbody { grid-template-columns: 1fr; } #rpgNewOv .cprev { min-height: 220px; } #rpgNewOv .cgrid { grid-template-columns: repeat(3, 1fr); } #rpgNewOv .ckeys { display: none; } #rpgNewOv .cact .btn { width: 100%; min-width: 0; }
+}
+@media (hover: none) { .mcard kbd, #rpgOv .rkeys, #rpgOv .df kbd, #rpgPlate kbd { display: none !important; } }
+@media (prefers-reduced-motion: reduce) { #modeOv .mbg, #modeOv .mcard, #modeOv .mh, #modeOv .mfoot, #rpgOv, #rpgPlate, #rpgNewOv .cw { animation: none !important; } }
+
+/* ── inventory (equip.js) ─────────────────────── */
+#invOv { --cell: 46px; position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 14px; background: rgba(3, 4, 6, 0.72); backdrop-filter: blur(2px); animation: frFade 0.2s ease; text-align: left; }
+#invOv[hidden] { display: none; }
+#invOv .ivwin { width: min(1180px, 100%); max-height: calc(100dvh - 28px); overflow: auto; display: flex; flex-direction: column; background: rgba(9, 11, 15, 0.97); border: 1px solid rgba(255, 204, 0, 0.35); border-top: 3px solid var(--y); clip-path: polygon(0 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%); color: #dfe6ec; animation: frRise 0.3s var(--fr-ease); }
+#invOv .ivh { display: flex; align-items: center; gap: 14px; padding: 12px 18px; border-bottom: 1px solid var(--fr-line); background: linear-gradient(90deg, rgba(255, 204, 0, 0.07), transparent 50%); }
+#invOv .ivpt { width: 48px; height: 48px; flex: none; background: #111 center / cover no-repeat; border-bottom: 3px solid var(--c); }
+#invOv .ivn small { font: 600 10px var(--en); letter-spacing: 2px; color: var(--y); } #invOv .ivn h3 { margin: 2px 0 0; font-size: 22px; color: #fff; }
+#invOv .ivlv { display: flex; align-items: center; gap: 10px; flex: 1; max-width: 420px; margin-left: 10px; } #invOv .ivlv b { color: var(--y); font-size: 18px; } #invOv .ivlv small { font-size: 11px; color: rgba(255, 255, 255, 0.5); white-space: nowrap; }
+#invOv .ivxp { flex: 1; height: 6px; background: rgba(255, 255, 255, 0.1); } #invOv .ivxp i { display: block; height: 100%; background: linear-gradient(90deg, #2f86ff, #7fe3ff); }
+#invOv .ivx { margin-left: auto; height: 36px; padding: 0 14px; font-size: 13px; font-weight: 700; color: #e6edf3; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.2); } #invOv .ivx:hover { background: var(--y); color: #1a1400; }
+#invOv .ivbody { display: grid; grid-template-columns: 268px auto minmax(250px, 1fr); gap: 18px; padding: 16px 18px 18px; align-items: start; }
+#invOv .ivdoll { display: grid; grid-template-columns: repeat(3, 80px); grid-template-rows: 70px 112px 70px; gap: 8px; justify-content: center; padding: 12px; background: radial-gradient(ellipse at 50% 45%, rgba(51, 209, 250, 0.08), transparent 70%); border: 1px solid var(--fr-line);
+  grid-template-areas: "helm amulet ring1" "weapon armor gloves" "ring2 belt boots"; }
+#invOv .ivslot { position: relative; display: grid; place-items: end center; padding-bottom: 3px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--rc); transition: border-color 0.15s, background 0.15s, box-shadow 0.15s; touch-action: none; }
+#invOv .ivslot span { position: relative; z-index: 1; font-size: 10px; color: rgba(255, 255, 255, 0.4); }
+#invOv .ivslot:not(.full) { border-style: dashed; } #invOv .ivslot.full span { display: none; }
+#invOv .ivslot i { position: absolute; inset: 4px; background: center / contain no-repeat; pointer-events: none; }
+#invOv .ivslot.full { background: radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--rc) 22%, transparent), rgba(10, 12, 16, 0.9) 75%); cursor: grab; }
+#invOv .ivslot:hover { background-color: rgba(255, 255, 255, 0.07); } #invOv .ivslot.on { box-shadow: 0 0 0 2px #fff; }
+#invOv .ivslot.hot.ok { box-shadow: 0 0 0 2px var(--gr), 0 0 14px var(--gr); } #invOv .ivslot.hot.bad { box-shadow: 0 0 0 2px #ff4a3a; opacity: 0.7; }
+#invOv .s_helm { grid-area: helm; } #invOv .s_amulet { grid-area: amulet; } #invOv .s_ring1 { grid-area: ring1; } #invOv .s_weapon { grid-area: weapon; } #invOv .s_armor { grid-area: armor; } #invOv .s_gloves { grid-area: gloves; } #invOv .s_ring2 { grid-area: ring2; } #invOv .s_belt { grid-area: belt; } #invOv .s_boots { grid-area: boots; }
+#invOv .ivstats { margin-top: 10px; padding: 10px 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--fr-line); } #invOv .ivstats > small { font-size: 11px; color: rgba(255, 255, 255, 0.5); }
+#invOv ul { margin: 6px 0 0; padding: 0; list-style: none; } #invOv ul li { display: flex; gap: 8px; align-items: baseline; padding: 2px 0; font-size: 13px; border-bottom: 1px dotted rgba(255, 255, 255, 0.06); }
+#invOv ul li span { flex: 1; color: rgba(255, 255, 255, 0.65); } #invOv ul li b { color: #9fd0ff; font-family: var(--en); } #invOv ul li.zero b { color: rgba(255, 255, 255, 0.3); }
+#invOv ul li em { font-style: normal; font-size: 11px; font-family: var(--en); } #invOv ul li em.up { color: var(--gr); } #invOv ul li em.dn { color: #ff5a4a; }
+#invOv .ivtabs { display: flex; gap: 4px; margin-bottom: 8px; } #invOv .ivtabs button { padding: 6px 16px; font-size: 13px; font-weight: 700; color: #aab3bb; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--fr-line); border-bottom: 2px solid transparent; }
+#invOv .ivtabs button small { margin-left: 6px; font: 400 11px var(--en); color: rgba(255, 255, 255, 0.4); } #invOv .ivtabs button.on { color: var(--y); border-bottom-color: var(--y); background: rgba(255, 204, 0, 0.06); }
+#invOv .ivgrid { position: relative; width: calc(var(--w) * var(--cell)); height: calc(var(--h) * var(--cell)); background-color: rgba(0, 0, 0, 0.35); background-image: linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px); background-size: var(--cell) var(--cell); border: 1px solid rgba(255, 255, 255, 0.16); }
+#invOv .ivit { position: absolute; margin: 1px; padding: 0; border: 1px solid var(--rc); background: radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--rc) 26%, transparent), rgba(8, 10, 14, 0.92) 75%); cursor: grab; touch-action: none; transition: box-shadow 0.12s; }
+#invOv .ivit:hover { box-shadow: 0 0 10px -2px var(--rc); z-index: 2; } #invOv .ivit.on { box-shadow: 0 0 0 2px #fff, 0 0 12px var(--rc); z-index: 3; } #invOv .ivit.hot { box-shadow: 0 0 0 2px var(--gr), 0 0 14px var(--gr); }
+#invOv .ivit i { position: absolute; inset: 3px; background: center / contain no-repeat; pointer-events: none; }
+#invOv .ivit em { position: absolute; left: 0; right: 0; bottom: 1px; font-style: normal; font-size: 9px; letter-spacing: 1px; color: #fff; text-shadow: 0 0 3px #000; text-align: center; pointer-events: none; }
+#invOv .ivit.r_unique, #invOv .ivit.r_set, #invOv .ivit.r_rw { animation: ivShine 2.4s ease-in-out infinite; } @keyframes ivShine { 50% { box-shadow: 0 0 12px -2px var(--rc); } }
+#invOv.dragging .ivit, #invOv.dragging .ivslot { cursor: grabbing; }
+.ivghost { position: fixed; left: 0; top: 0; z-index: 95; pointer-events: none; background: center / contain no-repeat rgba(8, 10, 14, 0.8); border: 1px solid var(--rc); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.6), 0 0 14px var(--rc); opacity: 0.92; }
+#invOv .ivtip { padding: 0; background: rgba(255, 255, 255, 0.025); border: 1px solid var(--fr-line); min-height: 230px; }
+#invOv .tth { display: flex; gap: 10px; align-items: center; padding: 10px 12px; background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 22%, transparent), transparent); border-bottom: 1px solid color-mix(in srgb, var(--rc) 50%, transparent); }
+#invOv .tth i { width: 52px; height: 52px; flex: none; background: center / contain no-repeat; } #invOv .tth b { display: block; font-size: 17px; color: var(--rc); } #invOv .tth small { font-size: 12px; color: rgba(255, 255, 255, 0.6); }
+#invOv .ttb { padding: 8px 12px 4px; } #invOv .ttb .h { display: block; margin-top: 6px; font-size: 11px; color: rgba(255, 255, 255, 0.4); }
+#invOv .ttb .meta { margin: 0 0 6px; font-size: 12px; color: rgba(255, 255, 255, 0.55); } #invOv .ttb .meta b { color: #fff; } #invOv .ttb .bad, #invOv .ttb .bad b { color: #ff5a4a; } #invOv .ttb .set { color: #40e060; } #invOv .ttb .worn { color: var(--y); }
+#invOv .ttb .rw { margin: 0 0 4px; font-weight: 700; color: #c8a050; } #invOv .ttb .cmp { margin: 6px 0 0; font-size: 11px; color: rgba(255, 255, 255, 0.4); }
+#invOv .ivsock { display: flex; align-items: center; gap: 5px; margin: 4px 0 6px; } #invOv .ivsock i { width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.35); background: rgba(0, 0, 0, 0.6) center / contain no-repeat; box-shadow: inset 0 0 6px #000; } #invOv .ivsock i.on { border-color: #ff9a3a; } #invOv .ivsock small { margin-left: 4px; font-size: 11px; color: rgba(255, 255, 255, 0.45); }
+#invOv .ivempty { padding: 16px; } #invOv .ivempty > b { font-size: 15px; color: #fff; } #invOv .ivhelp li { display: block; border: 0; font-size: 12px; line-height: 1.9; color: rgba(255, 255, 255, 0.6); } #invOv .ivhelp b { color: var(--y); font-family: var(--kr); }
+#invOv .ivacts { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 12px; }
+#invOv .ia { height: 36px; padding: 0 16px; font-size: 13px; font-weight: 700; color: #e6edf3; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.2); clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px); transition: background 0.15s, color 0.15s; }
+#invOv .ia:hover:not(:disabled) { background: rgba(255, 255, 255, 0.14); } #invOv .ia.pri { color: #1a1400; background: var(--y); border-color: var(--y); } #invOv .ia.pri:hover:not(:disabled) { filter: brightness(1.1); background: var(--y); }
+#invOv .ia.warn:hover { background: #c8322a; color: #fff; } #invOv .ia.on { box-shadow: 0 0 0 2px var(--cy); } #invOv .ia:disabled { opacity: 0.4; }
+@media (max-width: 1000px) { #invOv .ivbody { grid-template-columns: 1fr; } #invOv .ivlv { display: none; } }
+/* the in-run bag button */
+#btnInv { position: fixed; right: max(12px, env(safe-area-inset-right)); top: 150px; z-index: 30; display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; font-size: 13px; font-weight: 700; color: #fff; background: rgba(8, 10, 14, 0.72); border: 1px solid rgba(255, 204, 0, 0.5); clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px); }
+#btnInv i { width: 16px; height: 14px; border: 2px solid var(--y); border-top-width: 4px; } #btnInv:hover { background: rgba(255, 204, 0, 0.2); }
+#btnInv[hidden] { display: none; }
+
+/* ── review pass 1 ─────────────────────────────── */
+#title.rpgmode { overflow: hidden; }
+/* hub: readable nameplate, banner contrast, reward chips */
+#rpgPlate { display: grid; grid-template-columns: 64px 1fr; column-gap: 12px; }
+#rpgPlate > *:not(.pnpt):not(.pnh) { grid-column: 1 / -1; }
+#rpgPlate .pnpt { width: 64px; height: 64px; background: #111 center / cover no-repeat; border-bottom: 3px solid var(--c); }
+#rpgPlate .pnh { align-self: center; } #rpgPlate .pnh h3 { font-size: 24px; }
+#rpgPlate .pneq { grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; margin-bottom: 2px; }
+#rpgPlate .pneq span { border-width: 1px; } #rpgPlate .pneq span.on { box-shadow: inset 0 0 8px color-mix(in srgb, var(--rc) 45%, transparent); }
+#rpgPlate .pneq em { font-size: 10px; color: rgba(255, 255, 255, 0.35); }
+#rpgPlate .pneqc { display: block; margin-bottom: 10px; font-size: 11px; color: rgba(255, 255, 255, 0.5); text-align: right; }
+#rpgOv .sban { background-size: cover; } #rpgOv .sban::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(5, 7, 10, 0.85), transparent 75%); pointer-events: none; }
+#rpgOv .sban > * { position: relative; z-index: 1; } #rpgOv .sban .rec { position: absolute; z-index: 1; }
+#rpgOv .sban p { font-size: 14px; color: #e3eaf0; text-shadow: 0 1px 3px #000; }
+#rpgOv .rwd { align-items: center; gap: 8px; padding: 8px 10px; }
+#rpgOv .rwd > small { font-size: 11px; color: rgba(255, 255, 255, 0.45); margin-right: 2px; }
+#rpgOv .rwd .rc { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; font-size: 12px; color: #e3eaf0; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); }
+#rpgOv .rwd .rc i { width: 9px; height: 9px; transform: rotate(45deg); background: var(--y); } #rpgOv .rwd .rc.rune i { background: #ff9a3a; } #rpgOv .rwd .rc.chip i { background: var(--cy); } #rpgOv .rwd .rc.xp i { background: #7fe3ff; border-radius: 50%; transform: none; }
+#rpgOv .rwd .rc b { color: var(--y); margin-left: 2px; }
+/* creation: bigger portrait, graded stats, roomier skills */
+#rpgNewOv .cprev i { width: min(330px, 78%); top: 44%; }
+#rpgNewOv .cstat { grid-template-columns: auto 1fr 18px auto 1fr 18px auto 1fr 18px; font-size: 13px; }
+#rpgNewOv .cstat b { font-size: 13px; color: var(--y); text-align: center; }
+#rpgNewOv .cskill b { font-size: 15px; } #rpgNewOv .cskill small { font-size: 13px; line-height: 1.55; color: rgba(255, 255, 255, 0.65); }
+#rpgNewOv .cdesc { font-size: 15px; }
+/* inventory: larger type, level lock, filled tooltip column */
+#invOv ul li { font-size: 14px; } #invOv .ivslot span { font-size: 11px; } #invOv .ivstats > small, #invOv .ttb .meta { font-size: 12px; }
+#invOv .tth b { font-size: 18px; } #invOv .tth small { font-size: 13px; }
+#invOv .ivtip { align-self: stretch; display: flex; flex-direction: column; } #invOv .ivacts { margin-top: auto; }
+#invOv .ia.lock { color: #ffb0a8; background: rgba(200, 50, 42, 0.18); border-color: rgba(255, 90, 74, 0.5); cursor: not-allowed; }
+#invOv .ia.shake { animation: frShake 0.3s; }
+#invOv .ivdoll { grid-template-columns: repeat(3, 84px); grid-template-rows: 74px 118px 74px; }
+.ivrar { display: flex; gap: 10px; margin-top: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.5); }
+/* touch: no keyboard hints */
+@media (hover: none), (pointer: coarse) { #modeOv kbd, #modeOv .mfoot, #rpgOv .rkeys, #rpgOv kbd, #rpgPlate kbd, #invOv kbd, #rpgNewOv .ckeys, #btnInv kbd { display: none !important; } }
+@media (max-width: 900px), (max-aspect-ratio: 1/1) {
+  #modeOv { padding: 16px !important; } #modeOv .mlogo { display: block; width: min(220px, 60vw); margin-bottom: 4px; } #modeOv .mcard { clip-path: none; }
+  #title > #rpgOv:not(#_) { padding: 0 16px 84px; }
+  #rpgOv .rtop { margin: 0 -16px; padding: 0 16px; background: #06070a; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6); }
+  #rpgRoster, #rpgOv .chaps, #rpgOv .path { -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); padding-right: 28px; }
+  #rpgOv .path { grid-template-columns: repeat(var(--n, 5), 70px); } #rpgOv .path::before { width: calc((var(--n, 5) - 1) * 70px); }
+  #rpgOv .diffs { grid-template-columns: 1fr; } #rpgOv .df { display: flex; align-items: baseline; gap: 10px; padding: 10px 12px; } #rpgOv .df small { margin: 0; font-size: 12px; }
+  #rpgOv #stageGo { position: fixed; left: 16px; right: 16px; bottom: max(12px, env(safe-area-inset-bottom)); width: auto; z-index: 4; box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.7); }
+  #rpgPlate { grid-template-columns: 56px 1fr; } #rpgPlate .pnpt { width: 56px; height: 56px; }
+  #invOv { padding: 0; } #invOv .ivwin { max-height: 100dvh; height: 100dvh; clip-path: none; }
+  #invOv .ivbody { padding: 12px; gap: 12px; } #invOv .ivleft { display: grid; gap: 10px; }
+  #invOv .ivdoll { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, 64px); padding: 8px; }
+  #invOv .ivmid { overflow-x: auto; } #invOv .ivh { flex-wrap: wrap; padding: 10px 12px; } #invOv .ivn h3 { font-size: 18px; }
+  #invOv ul li b { white-space: nowrap; }
+}
+
+/* ── review pass 2 ─────────────────────────────── */
+#title > #btnMode:not(#_) { left: auto; right: max(16px, env(safe-area-inset-right)); top: max(14px, env(safe-area-inset-top)); height: 38px; padding: 0 16px; font-size: 14px; background: rgba(8, 10, 14, 0.75); }
+#rpgOv.empty .rkeys, #rpgOv.empty #rpgPlate { display: none; }
+#rpgOv .rempty small { display: block; font: 600 11px var(--en); letter-spacing: 3px; color: var(--y); margin-bottom: 6px; }
+#rpgOv .rempty ol { display: flex; justify-content: center; gap: 18px; margin: 0 0 22px; padding: 0; list-style: none; font-size: 13px; color: #c9d3dc; }
+#rpgOv .rempty li em { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 6px; font: 700 12px var(--en); font-style: normal; color: #1a1400; background: var(--y); }
+/* drag: valid slots light up, the rest fade */
+#invOv .ivslot.can { box-shadow: 0 0 0 1px var(--gr), 0 0 12px -2px var(--gr); border-color: var(--gr); }
+#invOv.dragging .ivslot.nope { opacity: 0.35; }
+#invOv .ivslot.shake, #invOv .ia.shake { animation: frShake 0.3s; }
+#invOv .ttb .slotl { margin: 0 0 4px; font-size: 12px; color: rgba(255, 255, 255, 0.55); } #invOv .ttb .slotl b { color: var(--y); }
+#invOv .ttb ul.sockfx li b { color: #ffb070; }
+#invOv .ivwin { height: min(760px, calc(100dvh - 28px)); } #invOv .ivbody { flex: 1; min-height: 0; align-items: stretch; } #invOv .ivtip { overflow-y: auto; }
+/* confirm: destructive variant */
+#uiConfirm .ucok { height: 42px; min-width: 120px; padding: 0 18px; font-weight: 700; color: #1a1400; background: var(--y); }
+#uiConfirm .ucok.danger { color: #ffb0a8; background: transparent; border: 1px solid #ff5a4a; } #uiConfirm .ucok.danger:hover:not(:disabled) { background: #c8322a; color: #fff; }
+#uiConfirm .ucok:disabled { opacity: 0.35; cursor: not-allowed; }
+#uiConfirm .ucbox.danger { border-top-color: #ff5a4a; }
+#uiConfirm .uctype { display: flex; flex-direction: column; gap: 6px; margin: -6px 0 16px; font-size: 13px; color: rgba(255, 255, 255, 0.65); } #uiConfirm .uctype b { color: #fff; }
+#uiConfirm .uctype input { height: 40px; padding: 0 10px; font: 600 15px var(--kr); color: #fff; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.25); outline: none; user-select: text; -webkit-user-select: text; } #uiConfirm .uctype input:focus { border-color: #ff5a4a; }
+#rpgNewOv .cg:focus-visible { outline: 2px solid var(--y); outline-offset: 2px; }
+@media (max-width: 900px), (max-aspect-ratio: 1/1) { #invOv .ivwin { height: 100dvh; } #invOv .ivbody { overflow-y: auto; } }
+/* ── review pass 3 ── */
+#invOv .ivwin { height: auto; } #invOv .ivtip { min-height: 380px; }
+#invOv .ivslot.lockslot { box-shadow: 0 0 0 1px #ff5a4a, 0 0 10px -2px #ff5a4a; border-color: #ff5a4a; }
+#invOv .ivacts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); } #invOv .ia { padding: 0 8px; white-space: nowrap; }
+#rpgPlate .pneq em { width: 8px; height: 8px; transform: rotate(45deg); border: 1px solid rgba(255, 255, 255, 0.25); }
+#title > #btnMode:not(#_) { height: 42px; font-size: 15px; border-color: rgba(255, 204, 0, 0.6); background: rgba(8, 10, 14, 0.85); }
+@media (max-width: 900px), (max-aspect-ratio: 1/1) { #invOv .ivwin { height: 100dvh; } #invOv .ivtip { min-height: 0; } #invOv .ivempty { display: none; } #invOv .ivmid { overflow: auto hidden; scrollbar-width: none; } #invOv .ivmid::-webkit-scrollbar { display: none; } }
+#invOv .ivwin { overflow-x: hidden; } #invOv .ivbody { grid-template-columns: 268px auto minmax(300px, 1fr); }
+#invOv .ivtip { min-width: 0; } #invOv .tth b { font-size: 16px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
