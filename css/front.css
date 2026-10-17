@@ -2,7 +2,7 @@
    LAST ORIGIN look: charcoal panels, yellow (--y) accent, cyan secondary, cut corners, Exo2 captions over Godo titles. */
 :root { --fr-cut: 14px; --fr-ease: cubic-bezier(.2, .8, .2, 1); --fr-panel: rgba(10, 12, 16, 0.82); --fr-line: rgba(255, 255, 255, 0.1); }
 .fr-cut { clip-path: polygon(var(--fr-cut) 0, 100% 0, 100% calc(100% - var(--fr-cut)), calc(100% - var(--fr-cut)) 100%, 0 100%, 0 var(--fr-cut)); }
-#title.rpgmode > *:not(#modeOv):not(#rpgOv):not(#titleBg):not(.ver) { visibility: hidden; }
+#title.rpgmode > *:not(#modeOv):not(#rpgOv):not(#titleBg):not(.ver):not(#notesOv) { visibility: hidden; }
 kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin: 0 1px; font: 700 11px/1.6 var(--en); text-align: center; color: #e8eef4; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.22); border-bottom-width: 2px; border-radius: 3px; }
 
 /* ── mode select ─────────────────────────────── */
