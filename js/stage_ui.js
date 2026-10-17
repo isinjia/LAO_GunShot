@@ -206,8 +206,10 @@
           <span class="mt"><small>OPERATION RECORD</small><b>오르카 작전 기록</b></span>
           <ul><li>매 작전 Lv.1부터 · 장비는 영구 보존</li><li>스테이지 5개 · 쉬움 / 보통 / 어려움</li><li>장비 · 소켓 · 보석 · 룬워드 파밍</li></ul><span class="meta" id="mcRpgMeta"></span><span class="cta">시작 <kbd>2</kbd></span></button>
       </div>
-      <div class="mfoot"><span><kbd>←</kbd><kbd>→</kbd> 선택</span><span><kbd>Enter</kbd> 결정</span></div></div>`;
+      <div class="mfoot"><span><kbd>←</kbd><kbd>→</kbd> 선택</span><span><kbd>Enter</kbd> 결정</span></div></div>
+      <button type="button" class="mnotes" id="mNotes">패치 노트<b>v${(window.NOTES && NOTES[0] && NOTES[0].v) || ""}</b></button>`;
     title.appendChild(m);
+    m.querySelector('#mNotes').onclick = (e) => { e.stopPropagation(); const n = document.getElementById('btnNotes'); if (n) n.click(); };
     m.onclick = (e) => { const b = e.target.closest('.mcard'); if (b) pickMode(b.dataset.m); };
     m.onmouseover = (e) => { const b = e.target.closest('.mcard'); if (!b) return; const i = $$('.mcard').indexOf(b); if (i !== modeFocus) { modeFocus = i; renderMode(); sfx('uiPick', 0.25); } };
     // RPG hub
