@@ -1,7 +1,7 @@
 // patch notes shown from the title screen (bottom right): the current version only
 window.NOTES = [
   {
-    v: '1.09',
+    v: '1.081',
     items: [
       '전투 알림 개선 — 획득 안내를 화면 가장자리 한 자리로 통합하고 반투명 처리',
       '연속 회복·탄약 획득량을 합산하고, 아이템은 아이콘과 이름만 간결하게 표시',
