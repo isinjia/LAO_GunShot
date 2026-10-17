@@ -19,10 +19,11 @@
   const cleared = (p, i) => Math.max(0, Math.min(3, Math.floor(Number(p['s' + i]) || 0)));
   const stageOpen = (p, i) => i === 0 || cleared(p, i - 1) >= 1;
   const diffOpen = (p, i, d) => stageOpen(p, i) && cleared(p, i) >= d;
-  const recLv = (s, d) => 1 + s * 9 + d * 5;
+  // recommended gear power per stage / difficulty (the run itself always starts at Lv.1)
+  const recPow = (s, d) => s === 0 && d === 0 ? 0 : 120 + s * 90 + d * 60;
   const RCOL = { normal: '#d8d8d8', magic: '#6a8cff', rare: '#ffd84a', unique: '#d8a040', set: '#40e060' };
   const sfx = (k, v) => { if (window.SFX) SFX.play(k, v == null ? 0.5 : v); };
-  const power = (c) => { const st = window.EQUIP ? EQUIP.charStats(c) : {}; return Math.round(100 + (c.lv || 1) * 12 + (st.dmg || 0) * 4 + (st.hp || 0) * 30 + (st.armor || 0) * 40 + (st.crit || 0) * 5 + (st.rof || 0) * 3 + (st.speed || 0) * 2 + (st.skill || 0) * 2); };
+  const power = (c) => (window.EQUIP ? EQUIP.gearPower(EQUIP.charStats(c)) : 100);
 
   // ── a styled confirm (replaces window.confirm) ──
   function confirmBox(title, text, okLabel, opt) {
@@ -75,21 +76,21 @@
     if (curChar) curChar = list.find((c) => c.id === curChar.id) || null;
     if (!curChar && list.length) curChar = list[0];
     $('#rpgRoster').innerHTML = list.map((c) => {
-      const h = heroOf(c), need = window.EQUIP ? EQUIP.xpNeed(c.lv || 1) : 1;
+      const h = heroOf(c), ne = Object.values(c.equip || {}).filter(Boolean).length;
       return `<button type="button" class="rr${curChar && c.id === curChar.id ? ' on' : ''}" data-id="${c.id}" style="--c:${h.color}">
         <i style="background-image:url(${portrait(h)})"></i><div><b>${esc(c.name)}</b><small>${h.name}</small>
-        <span class="rlv"><em class="num">Lv.${c.lv || 1}</em><span class="xp"><span style="width:${Math.min(100, (c.xp || 0) / need * 100)}%"></span></span></span></div></button>`;
+        <span class="rlv"><em class="num">전투력 ${power(c).toLocaleString()}</em><small>장비 ${ne}/9</small></span></div></button>`;
     }).join('') + (list.length < MAX_CHARS ? `<button type="button" class="rr add" id="rpgNew"><i></i><div><b>새 대원 등록</b><small>${list.length} / ${MAX_CHARS}</small></div></button>` : '');
     const body = $('#rpgStage'), plate = $('#rpgPlate');
     $('#rpgOv').classList.toggle('empty', !curChar);
     if (!curChar) {
-      body.innerHTML = `<div class="rempty"><small>OPERATION RECORD</small><b>첫 대원을 등록하세요</b><p>대원을 고르고 이름을 붙이면, 그 대원이 레벨과 장비를 쌓으며 스테이지 5개를 공략합니다.</p><ol><li><em>1</em>대원 등록</li><li><em>2</em>스테이지 · 난이도 선택</li><li><em>3</em>출격해 장비 파밍</li></ol><button type="button" class="btn lg" id="rpgNew2">새 대원 등록</button></div>`;
+      body.innerHTML = `<div class="rempty"><small>OPERATION RECORD</small><b>첫 대원을 등록하세요</b><p>대원을 고르고 이름을 붙이면, 작전마다 Lv.1부터 다시 싸우며 모은 장비가 그 대원에게 쌓입니다.</p><ol><li><em>1</em>대원 등록</li><li><em>2</em>스테이지 · 난이도 선택</li><li><em>3</em>출격해 장비 파밍</li></ol><button type="button" class="btn lg" id="rpgNew2">새 대원 등록</button></div>`;
       plate.hidden = true; return;
     }
     const p = prog(), h = heroOf(curChar), S = D().STAGES, Df = D().DIFFS;
     if (!stageOpen(p, sel)) sel = 0;
     if (!diffOpen(p, sel, diff)) diff = 0;
-    const St = S[sel], floors = D().stageFloors(sel), lv = curChar.lv || 1, rec = recLv(sel, diff);
+    const St = S[sel], floors = D().stageFloors(sel), pw = power(curChar), rec = recPow(sel, diff);
     const chap = S.map((s, i) => {
       const open = stageOpen(p, i), c = cleared(p, i);
       return `<button type="button" class="chp${i === sel ? ' on' : ''}${open ? '' : ' locked'}" data-i="${i}" aria-label="스테이지 ${i + 1} ${s.name}${open ? '' : ' (잠김)'}">
@@ -106,16 +107,16 @@
       <div class="sban" style="background-image:linear-gradient(90deg, rgba(8,10,14,0.92) 0%, rgba(8,10,14,0.45) 50%, rgba(8,10,14,0) 100%), url(${UIP}stage_${sel + 1}.webp)">
         <small class="num">STAGE ${String(sel + 1).padStart(2, '0')} · ${St.en}</small><h2>${St.name}</h2>
         <p>${floors.length}개 층 · 3층 중간 보스 · ${floors.length}층 최종 보스<br>층마다 경비 구역을 제압하고 승강기로 내려갑니다.</p>
-        <span class="rec${lv < rec ? ' low' : ''}">권장 Lv.${rec}${lv < rec ? ' · 레벨 부족' : ''}</span></div>
+        ${rec ? `<span class="rec${pw < rec ? ' low' : ''}">권장 전투력 ${rec}${pw < rec ? ' · 장비 부족' : ''}</span>` : '<span class="rec">입문 스테이지</span>'}</div>
       <ol class="path" style="--n:${floors.length}">${path}</ol>
-      <div class="diffs" role="radiogroup" aria-label="난이도">${Df.map((d, k) => { const open = diffOpen(p, sel, k); return `<button type="button" role="radio" aria-checked="${k === diff}" class="df${k === diff ? ' on' : ''}${open ? '' : ' locked'}" data-d="${k}" style="--c:${d.color}"><b>${d.name}</b><small>${open ? `적 체력 x${d.hp} · 경험치 x${[1, 1.6, 2.4][k]}` : `${Df[k - 1].name} 클리어 시 개방`}</small><kbd>${k + 1}</kbd></button>`; }).join('')}</div>
-      <div class="rwd"><small>획득 보상</small><span class="rc gear"><i></i>장비<b class="num">Lv ${ilv0}~${ilv1}</b></span><span class="rc rune"><i></i>보석 · 룬</span><span class="rc chip"><i></i>데이터 칩<b>소량</b></span><span class="rc xp"><i></i>경험치<b class="num">x${[1, 1.6, 2.4][diff]}</b></span></div>
+      <div class="diffs" role="radiogroup" aria-label="난이도">${Df.map((d, k) => { const open = diffOpen(p, sel, k); return `<button type="button" role="radio" aria-checked="${k === diff}" class="df${k === diff ? ' on' : ''}${open ? '' : ' locked'}" data-d="${k}" style="--c:${d.color}"><b>${d.name}</b><small>${open ? `적 체력 x${d.hp} · 드롭 ${['기본', '향상', '최고'][k]}` : `${Df[k - 1].name} 클리어 시 개방`}</small><kbd>${k + 1}</kbd></button>`; }).join('')}</div>
+      <div class="rwd"><small>획득 보상</small><span class="rc gear"><i></i>장비<b class="num">Lv ${ilv0}~${ilv1}</b></span><span class="rc rune"><i></i>보석 · 룬</span><span class="rc chip"><i></i>데이터 칩<b>소량</b></span></div>
       <button type="button" class="btn lg go" id="stageGo"><span>출격</span><small>${St.name} · ${Df[diff].name}</small></button>`;
     // the nameplate beside the 3D stage
     plate.hidden = false;
-    const need = window.EQUIP ? EQUIP.xpNeed(lv) : 1, eq = curChar.equip || {}, slots = window.EQUIP ? EQUIP.SLOTS : [];
+    const eq = curChar.equip || {}, slots = window.EQUIP ? EQUIP.SLOTS : [];
     plate.innerHTML = `<i class="pnpt" style="background-image:url(${portrait(h)});--c:${h.color}"></i><div class="pnh" style="--c:${h.color}"><small>${h.title}</small><h3>${esc(curChar.name)}</h3><span class="cls">${h.name}</span></div>
-      <div class="pnlv"><b class="num">Lv.${lv}</b><span class="xp"><span style="width:${Math.min(100, (curChar.xp || 0) / need * 100)}%"></span></span><small class="num">${curChar.xp || 0} / ${need}</small></div>
+      <div class="pnlv"><small>작전마다 <b>Lv.1</b>부터 성장 · 무기도 초기화 · 장비만 유지</small></div>
       <div class="pnpw"><small>전투력</small><b class="num">${power(curChar).toLocaleString()}</b></div>
       <div class="pneq">${slots.map((s) => { const it = eq[s.id]; return `<span class="${it ? 'on' : ''}" title="${it ? esc(EQUIP.itemName(it)) : s.name}" style="--rc:${it ? (it.rw ? '#c8a050' : RCOL[it.rar] || '#888') : 'rgba(255,255,255,0.15)'}">${it ? `<i style="background-image:url(${EQUIP.iconOf(it)})"></i>` : `<em aria-hidden="true"></em>`}</span>`; }).join('')}</div><small class="pneqc">장착 ${slots.filter((s) => eq[s.id]).length} / ${slots.length}</small>
       <div class="pnact"><button type="button" class="btn d" id="rpgInv">인벤토리 <kbd>I</kbd></button><button type="button" class="pndel" id="rpgDel">대원 삭제</button></div>`;
@@ -154,14 +155,14 @@
     const h = D().HEROES[newHero], inp = $('#rpgName');
     const name = (inp.value || '').trim().slice(0, 12) || h.name.replace(/^T-\d+\s*/, '');
     if (chars().some((c) => c.name === name)) { inp.classList.add('bad'); UI.toast('같은 이름의 대원이 이미 있습니다', 'warn'); sfx('fail', 0.5); return; }
-    const c = { id: 'c' + Date.now().toString(36), name, hero: h.id, lv: 1, xp: 0, equip: {}, bag: [], stash: [], made: Date.now() };
+    const c = { id: 'c' + Date.now().toString(36), name, hero: h.id, equip: {}, bag: [], stash: [], made: Date.now() };
     const list = chars(); list.push(c); setChars(list); curChar = c; sel = 0; diff = 0;
     $('#rpgNewOv').hidden = true; sfx('rankUp', 0.7); UI.toast(`대원 등록 — ${esc(name)} (${h.name})`, 'gem');
     renderRpg(); stageShow();
   }
   async function delChar() {
     if (!curChar) return;
-    const ok = await confirmBox('대원 삭제', `<b>${esc(curChar.name)}</b> (Lv.${curChar.lv || 1})을(를) 삭제합니다.<br>레벨 · 장비 · 스테이지 진행이 모두 사라지며 되돌릴 수 없습니다.`, '영구 삭제', { danger: true, typeName: (curChar.lv || 1) >= 5 ? curChar.name : null });
+    const ok = await confirmBox('대원 삭제', `<b>${esc(curChar.name)}</b> (전투력 ${power(curChar)})을(를) 삭제합니다.<br>장비 · 창고 · 스테이지 진행이 모두 사라지며 되돌릴 수 없습니다.`, '영구 삭제', { danger: true, typeName: Object.values(curChar.equip || {}).some(Boolean) || (curChar.bag || []).length || (curChar.stash || []).length ? curChar.name : null });
     if (!ok) return;
     setChars(chars().filter((c) => c.id !== curChar.id));
     const all = load(STAGE_KEY) || {}; delete all[curChar.id]; save(STAGE_KEY, all);
@@ -179,8 +180,16 @@
   function setStage(i) { if (!stageOpen(prog(), i)) { sfx('fail', 0.4); UI.toast('이전 스테이지를 쉬움 이상으로 클리어하면 열립니다', 'warn'); return; } if (i === sel) return; sel = i; diff = Math.min(diff, cleared(prog(), i)); renderRpg(); sfx('uiPick', 0.5); }
   function setDiff(k) { if (!diffOpen(prog(), sel, k)) { sfx('fail', 0.4); UI.toast(`${D().DIFFS[k - 1].name} 난이도를 먼저 클리어하세요`, 'warn'); return; } if (k === diff) return; diff = k; renderRpg(); sfx('uiPick', 0.5); }
 
+  // one uniform scale per window size: every screen is laid out at a fixed design size (1600 x 900 for the hub,
+  // 1180 x 760 for the inventory) and only zoomed as a whole, so panels, cards and slots never resize on their own
+  function fitScale() {
+    const vw = window.innerWidth, vh = window.innerHeight, r = document.documentElement.style;
+    r.setProperty('--fs', Math.min(1.35, Math.max(0.5, Math.min(vw / 1600, vh / 900))).toFixed(3));
+    r.setProperty('--fsi', Math.min(1.25, Math.max(0.5, Math.min((vw - 24) / 1180, (vh - 24) / 760))).toFixed(3));
+  }
   function init() {
     const title = $('#title');
+    fitScale(); window.addEventListener('resize', fitScale);
     if (!title || $('#modeOv')) return;
     // mode select
     const m = document.createElement('div');
@@ -193,7 +202,7 @@
           <ul><li>대원을 골라 B1 ~ B6 연속 돌파</li><li>장비 없이 그 판의 성장만으로 승부</li><li>데이터 칩을 모아 연구소 영구 강화</li></ul><span class="cta">시작 <kbd>1</kbd></span></button>
         <button type="button" class="mcard rpg" data-m="rpg" style="--art:url(${UIP}mode_hero.webp)"><span class="art"></span><span class="tag new">NEW · RPG</span>
           <span class="mt"><small>OPERATION RECORD</small><b>오르카 작전 기록</b></span>
-          <ul><li>나만의 대원을 등록해 레벨업</li><li>스테이지 5개 · 쉬움 / 보통 / 어려움</li><li>장비 · 소켓 · 보석 · 룬워드 파밍</li></ul><span class="meta" id="mcRpgMeta"></span><span class="cta">시작 <kbd>2</kbd></span></button>
+          <ul><li>매 작전 Lv.1부터 · 장비는 영구 보존</li><li>스테이지 5개 · 쉬움 / 보통 / 어려움</li><li>장비 · 소켓 · 보석 · 룬워드 파밍</li></ul><span class="meta" id="mcRpgMeta"></span><span class="cta">시작 <kbd>2</kbd></span></button>
       </div>
       <div class="mfoot"><span><kbd>←</kbd><kbd>→</kbd> 선택</span><span><kbd>Enter</kbd> 결정</span></div></div>`;
     title.appendChild(m);

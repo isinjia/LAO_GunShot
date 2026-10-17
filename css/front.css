@@ -331,3 +331,31 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin: 0 1px; fo
 /* the classic title's way back: same size as the hub button, on a dark plate so it reads over the city art */
 #title > #btnMode:not(#_) { height: 44px; padding: 0 18px; font-size: 15px; color: #fff; background: rgba(6, 8, 12, 0.92); border: 1px solid rgba(255, 204, 0, 0.75); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
 #title > #btnMode:not(#_):hover { background: var(--y); color: #1a1400; }
+
+/* ── fixed design sizes, one uniform scale (landscape) ─────────────────
+   Every panel keeps its design size; --fs / --fsi (stage_ui.js fitScale) zoom it as a whole. */
+@media (min-width: 901px) and (min-aspect-ratio: 1/1) {
+  #modeOv .mwrap { width: 1080px; zoom: var(--fs, 1); gap: 28px; }
+  #modeOv .mh b { font-size: 36px; } #modeOv .mlogo { width: 340px; }
+  #modeOv .mcards { grid-template-columns: 520px 520px; gap: 40px; }
+  #modeOv .mcard { height: 470px; } #modeOv .mcard .mt b { font-size: 36px; }
+  #rpgOv .rtop { height: 58px; zoom: var(--fs, 1); }
+  #rpgOv .rcols { width: 800px; grid-template-columns: 236px 548px; top: 74px; bottom: 18px; zoom: var(--fs, 1); }
+  #rpgOv .chp { aspect-ratio: auto; height: 118px; }
+  #rpgOv .sban { height: 156px; min-height: 0; }
+  #rpgOv .path { height: 118px; } #rpgOv .df { height: 64px; } #rpgOv .rwd { min-height: 46px; flex-wrap: nowrap; } #rpgOv .rwd .rc { white-space: nowrap; }
+  #rpgRoster .rr { height: 76px; flex: none; }
+  #rpgPlate { width: 340px; right: 20px; bottom: 22px; zoom: var(--fs, 1); }
+  #rpgNewOv .cw { width: 1040px; height: 680px; zoom: var(--fs, 1); }
+  #rpgNewOv .cbody { flex: 1; grid-template-columns: 420px 1fr; } #rpgNewOv .cprev { min-height: 0; }
+  #rpgNewOv .cinfo { overflow-y: auto; } #rpgNewOv .cskill > div { min-height: 64px; }
+  #uiConfirm .ucbox { width: 440px; zoom: var(--fs, 1); }
+  #invOv .ivwin { width: 1180px; height: 760px; max-height: none; zoom: var(--fsi, 1); }
+  #invOv .ivbody { grid-template-columns: 268px 522px 1fr; }
+  #invOv .ivtip { min-height: 0; height: 100%; }
+  #title > #btnMode:not(#_) { zoom: var(--fs, 1); }
+  #btnInv { zoom: var(--fs, 1); }
+}
+@media (max-width: 900px), (max-aspect-ratio: 1/1) {
+  #modeOv .mwrap, #rpgOv .rtop, #rpgOv .rcols, #rpgPlate, #rpgNewOv .cw, #invOv .ivwin { zoom: 1; }
+}

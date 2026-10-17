@@ -199,7 +199,8 @@
   function saveAll(db) { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { /* no storage */ } }
   function getChar(id) { const db = load(); return { db, c: db.list.find((x) => x.id === id) || null }; }
   function norm(c) { c.lv = c.lv || 1; c.xp = c.xp || 0; c.equip = c.equip || {}; c.bag = Array.isArray(c.bag) ? c.bag : []; c.stash = Array.isArray(c.stash) ? c.stash : []; return c; }
-  const xpNeed = (lv) => Math.round(60 * Math.pow(lv, 1.55));
+  // the character keeps only its gear: the level is the run's own (back to Lv.1 every sortie, like the weapons)
+  const gearPower = (st) => Math.round(100 + (st.dmg || 0) * 4 + (st.hp || 0) * 30 + (st.armor || 0) * 40 + (st.crit || 0) * 5 + (st.rof || 0) * 3 + (st.speed || 0) * 2 + (st.skill || 0) * 2 + (st.pierce || 0) * 25 + (st.reload || 0) + (st.roll || 0));
   // grid placement: items carry x / y in their container
   function fits(list, W, H, it, x, y, ignore) {
     if (x < 0 || y < 0 || x + it.w > W || y + it.h > H) return false;
@@ -212,7 +213,6 @@
   function stow(c, it) { if (place(c.bag, BAG_W, BAG_H, it)) return 'bag'; if (place(c.stash, STASH_W, STASH_H, it)) return 'stash'; return null; }
   function charStats(c) {
     const o = {};
-    o.dmg = (c.lv - 1) * 1; o.hp = Math.floor((c.lv - 1) / 6); // the level itself: +1 % damage per level, +25 HP every 6
     const sets = {};
     Object.values(c.equip).forEach((it) => { if (!it) return; add(o, itemStats(it)); if (it.set) sets[it.set] = (sets[it.set] || 0) + 1; });
     for (const k in sets) { const S = SETS[k]; for (const n in S.bonus) if (sets[k] >= +n) add(o, S.bonus[n]); }
@@ -247,7 +247,7 @@
     const { c } = getChar(id); if (!c) return;
     norm(c); runChar = id;
     apply(G.P, charStats(c));
-    G.runGear = { items: 0, xp0: c.xp, lv0: c.lv };
+    G.runGear = { items: 0 };
   }
   function reapply(G) { if (!runChar || !G.P) return; const { c } = getChar(runChar); if (!c) return; unapply(G.P); apply(G.P, charStats(norm(c))); }
   const ilvlNow = () => { const G = GAME.G; return 1 + (G.stageI || 0) * 9 + (G.diff ? ['easy', 'normal', 'hard'].indexOf(G.diff.id) * 5 : 0) + G.fi * 2; };
@@ -285,12 +285,9 @@
     if (!runChar) return;
     const { db, c } = getChar(runChar); if (!c) return;
     norm(c);
-    const s = G.stats, xp = Math.round((s.kills * 2 + s.roomsCleared * 6 + s.bosses * 60 + (win ? 120 : 0)) * (G.diff ? [1, 1.6, 2.4][['easy', 'normal', 'hard'].indexOf(G.diff.id)] : 1) * (1 + (G.stageI || 0) * 0.4));
-    c.xp += xp; let ups = 0;
-    while (c.lv < MAX_LV && c.xp >= xpNeed(c.lv)) { c.xp -= xpNeed(c.lv); c.lv++; ups++; }
+    G.stats.charGear = G.runGear ? G.runGear.items : 0; // items picked up this run (already saved)
+    if (G.stats.charGear) setTimeout(() => UI.toast(`${esc(c.name)} — 이번 작전 장비 ${G.stats.charGear}개 회수 (보관 완료)`, 'gem'), 900);
     saveAll(db);
-    s.charXp = xp; s.charLv = c.lv; s.charUp = ups;
-    setTimeout(() => UI.toast(`${esc(c.name)} 경험치 +${xp}${ups ? ` · 레벨 업! Lv.${c.lv}` : ''}`, 'gem'), 900);
     runChar = null; applied = null;
   }
   // ground sprite: the item's own icon
@@ -323,12 +320,12 @@
     const head = (sub) => `<div class="tth" style="--rc:${col}"><i style="background-image:url(${itemIcon(it)})"></i><div><b>${esc(itemName(it))}</b><small>${sub}</small></div></div>`;
     if (it.gem) { const G = GEMS[it.gem], k = G.k[it.grade]; return head(`보석 · 등급 ${it.grade + 1} / 3`) + `<div class="ttb"><small class="h">무기</small><ul>${statLines(add({}, G.fx[0], k))}</ul><small class="h">방어구</small><ul>${statLines(add({}, G.fx[1], k))}</ul><small class="h">장신구</small><ul>${statLines(add({}, G.fx[2], k))}</ul></div>`; }
     if (it.rune) { const R = RUNES.find((r) => r.id === it.rune); return head(`룬 · ${RUNES.indexOf(R) + 1}단계`) + `<div class="ttb"><small class="h">무기</small><ul>${statLines(R.fx[0])}</ul><small class="h">방어구</small><ul>${statLines(R.fx[1])}</ul><small class="h">장신구</small><ul>${statLines(R.fx[2])}</ul></div>`; }
-    const B = baseOf(it.base), st = itemStats(it), lowLv = c && c.lv < it.req;
+    const B = baseOf(it.base), st = itemStats(it);
     const worn = c && Object.values(c.equip).some((o) => o && o.id === it.id);
     const other = !worn && c ? c.equip[slotFor(c, it)] : null;
     const sock = it.sockets ? `<div class="ivsock">${Array.from({ length: it.sockets }, (_, i) => { const s = it.socketed[i]; return `<i class="${s ? 'on' : ''}" title="${s ? esc(itemName(s)) : '빈 소켓'}" style="${s ? `background-image:url(${itemIcon(s)})` : ''}"></i>`; }).join('')}<small>소켓 ${it.socketed.length} / ${it.sockets}</small></div>` : '';
     return head(`${RAR[it.rar].name} · ${it.sub ? esc(it.sub) : B.name} · ${SLOTS.find((s) => s.id === B.slot || (B.slot === 'ring' && s.kind === 'ring')).name}`)
-      + `<div class="ttb"><p class="slotl">장착 부위 <b>${SLOTS.find((s) => s.id === B.slot || (B.slot === 'ring' && s.kind === 'ring')).name}</b></p>${it.rw ? `<p class="rw">룬워드 「${esc(it.rw)}」</p>` : ''}<p class="meta">아이템 레벨 <b>${it.ilvl}</b> · <span class="${lowLv ? 'bad' : ''}">요구 레벨 <b>${it.req}</b></span>${it.set ? ` · <span class="set">${SETS[it.set].name}</span>` : ''}${worn ? ' · <span class="worn">장착 중</span>' : ''}</p>
+      + `<div class="ttb"><p class="slotl">장착 부위 <b>${SLOTS.find((s) => s.id === B.slot || (B.slot === 'ring' && s.kind === 'ring')).name}</b></p>${it.rw ? `<p class="rw">룬워드 「${esc(it.rw)}」</p>` : ''}<p class="meta">아이템 레벨 <b>${it.ilvl}</b>${it.set ? ` · <span class="set">${SETS[it.set].name}</span>` : ''}${worn ? ' · <span class="worn">장착 중</span>' : ''}</p>
       ${sock}<ul>${statLines(st, other ? itemStats(other) : !worn ? {} : null)}</ul>${it.socketed && it.socketed.length ? `<small class="h">소켓 효과 (위 합계에 포함)</small><ul class="sockfx">${statLines(socketStats(it))}</ul>` : ''}${other ? `<p class="cmp">▲▼ 장착 중인 「${esc(itemName(other))}」과 비교</p>` : ''}</div>`;
   }
   function bagHtml(list, W, H, which) {
@@ -338,19 +335,16 @@
     const ov = el('#invOv'); if (!ov || ov.hidden) return;
     const { c } = getChar(invChar); if (!c) { ov.hidden = true; return; }
     norm(c);
-    { // the bag gets what is left of the window after the paper doll (268), the tooltip (300) and the gutters
-      const vw = window.innerWidth, modal = Math.min(vw - 28, 1180), avail = vw <= 1000 ? vw - 34 : modal - 36 - 268 - 300 - 40;
-      CELL = Math.max(vw <= 1000 ? 40 : 30, Math.min(vw <= 1000 ? 54 : 60, Math.floor(avail / 10)));
-    }
+    CELL = window.innerWidth <= 900 || window.innerWidth < window.innerHeight ? 40 : 52; // fixed: the window scales as a whole (--fsi), cells never change size
     const H = window.DATA.HEROES.find((h) => h.id === c.hero) || {};
-    const st = charStats(c), need = xpNeed(c.lv);
-    const doll = SLOTS.map((s) => { const it = c.equip[s.id]; return `<button type="button" class="ivslot s_${s.id}${it ? ' full' : ''}${selItem && isGear(selItem) && !Object.values(c.equip).some((o) => o && o.id === selItem.id) && slotOk(selItem, s.id) ? (c.lv < selItem.req ? ' lockslot' : ' can') : ''}${selItem && it && selItem.id === it.id ? ' on' : ''}" data-slot="${s.id}" style="--rc:${it ? itemColor(it) : 'rgba(255,255,255,0.18)'}" aria-label="${s.name}${it ? ' — ' + esc(itemName(it)) : ''}">${it ? `<i style="background-image:url(${itemIcon(it)})"></i>` : ''}<span>${s.name}</span></button>`; }).join('');
+    const st = charStats(c);
+    const doll = SLOTS.map((s) => { const it = c.equip[s.id]; return `<button type="button" class="ivslot s_${s.id}${it ? ' full' : ''}${selItem && isGear(selItem) && !Object.values(c.equip).some((o) => o && o.id === selItem.id) && slotOk(selItem, s.id) ? ' can' : ''}${selItem && it && selItem.id === it.id ? ' on' : ''}" data-slot="${s.id}" style="--rc:${it ? itemColor(it) : 'rgba(255,255,255,0.18)'}" aria-label="${s.name}${it ? ' — ' + esc(itemName(it)) : ''}">${it ? `<i style="background-image:url(${itemIcon(it)})"></i>` : ''}<span>${s.name}</span></button>`; }).join('');
     const sel = selItem;
     const inBag = sel && (c.bag.some((o) => o.id === sel.id) || c.stash.some((o) => o.id === sel.id));
     const equipped = sel && Object.values(c.equip).some((o) => o && o.id === sel.id);
     const canCombine = sel && sel.gem && sel.grade < 2 && c.bag.concat(c.stash).filter((o) => o.gem === sel.gem && o.grade === sel.grade).length >= 3;
     const acts = !sel ? '' : [
-      inBag && isGear(sel) ? (c.lv < sel.req ? `<button type="button" class="ia lock" data-a="equip" aria-disabled="true">Lv.${sel.req} 필요</button>` : '<button type="button" class="ia pri" data-a="equip">장착</button>') : '',
+      inBag && isGear(sel) ? '<button type="button" class="ia pri" data-a="equip">장착</button>' : '',
       equipped ? '<button type="button" class="ia" data-a="unequip">해제</button>' : '',
       inBag && (sel.gem || sel.rune) ? `<button type="button" class="ia pri${socketing ? ' on' : ''}" data-a="socket">${socketing ? '장비를 클릭하세요…' : '소켓에 박기'}</button>` : '',
       canCombine ? '<button type="button" class="ia pri" data-a="combine">합성 3 → 1</button>' : '',
@@ -360,10 +354,10 @@
     const used = (list) => list.reduce((n, o) => n + o.w * o.h, 0);
     ov.querySelector('.ivwin').innerHTML = `<div class="ivh"><i class="ivpt" style="background-image:url(assets/ui/f_${c.hero}.webp);--c:${H.color || '#888'}"></i>
         <div class="ivn"><small>INVENTORY · ${H.name || ''}</small><h3>${esc(c.name)}</h3></div>
-        <div class="ivlv"><b class="num">Lv.${c.lv}</b><div class="ivxp"><i style="width:${Math.min(100, c.xp / need * 100)}%"></i></div><small class="num">${c.lv >= MAX_LV ? 'MAX' : `${c.xp} / ${need}`}</small></div>
+        <div class="ivlv"><small>장비 전투력</small><b class="num">${gearPower(st).toLocaleString()}</b><small>레벨은 매 작전 Lv.1에서 시작</small></div>
         <button type="button" class="ivx" id="invClose" aria-label="닫기">닫기 <kbd>I</kbd></button></div>
       <div class="ivbody">
-        <div class="ivleft"><div class="ivdoll">${doll}</div><div class="ivstats"><small>능력치 합계 · 레벨 + 장비</small><ul>${statLines(st) || '<li class="zero"><span>Lv.1 기본 능력치 · 장비 없음</span><b>—</b></li>'}</ul></div></div>
+        <div class="ivleft"><div class="ivdoll">${doll}</div><div class="ivstats"><small>장비 능력치 합계 · 작전 시작 시 적용</small><ul>${statLines(st) || '<li class="zero"><span>장착한 장비 없음</span><b>—</b></li>'}</ul></div></div>
         <div class="ivmid"><div class="ivtabs"><button type="button" data-t="bag" class="${tab === 'bag' ? 'on' : ''}">가방 <small>${used(c.bag)} / ${BAG_W * BAG_H}</small></button><button type="button" data-t="stash" class="${tab === 'stash' ? 'on' : ''}">창고 <small>${used(c.stash)} / ${STASH_W * STASH_H}</small></button></div>
           ${tab === 'bag' ? bagHtml(c.bag, BAG_W, BAG_H, 'bag') : bagHtml(c.stash, STASH_W, STASH_H, 'stash')}</div>
         <div class="ivtip">${tooltip(sel, c)}<div class="ivacts">${acts}</div></div>
@@ -376,7 +370,6 @@
   }
   function equipTo(c, f, slot) {
     const it = f.it;
-    if (c.lv < it.req) { SFX.play('fail', 0.5); UI.toast(`요구 레벨 ${it.req} — 현재 Lv.${c.lv}. 스테이지를 돌아 레벨을 올리세요`, 'warn'); const b = el('#invOv .ia.lock'); if (b) { b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); } return false; }
     if (f.where === 'equip') { if (f.slot === slot) return false; const o = c.equip[slot]; c.equip[slot] = it; if (o) c.equip[f.slot] = o; else delete c.equip[f.slot]; return true; } // ring1 <-> ring2
     c[f.where] = c[f.where].filter((o) => o.id !== it.id);
     const old = c.equip[slot]; c.equip[slot] = it; delete it.x; delete it.y;
@@ -443,7 +436,7 @@
       drag.on = true; selItem = drag.it; render();
       const g = document.createElement('div'); g.className = 'ivghost'; g.style.cssText = `width:${drag.it.w * CELL}px;height:${drag.it.h * CELL}px;--rc:${itemColor(drag.it)};background-image:url(${itemIcon(drag.it)})`;
       document.body.appendChild(g); drag.ghost = g; el('#invOv').classList.add('dragging');
-      { const cc = getChar(invChar).c; const low = cc && isGear(drag.it) && cc.lv < drag.it.req; document.querySelectorAll('#invOv .ivslot').forEach((x) => x.classList.add(slotOk(drag.it, x.dataset.slot) ? (low ? 'dlock' : 'dcan') : 'nope')); }
+      { const cc = getChar(invChar).c; const low = false; document.querySelectorAll('#invOv .ivslot').forEach((x) => x.classList.add(slotOk(drag.it, x.dataset.slot) ? (low ? 'dlock' : 'dcan') : 'nope')); }
     }
     drag.ghost.style.transform = `translate(${e.clientX - drag.it.w * CELL / 2}px, ${e.clientY - drag.it.h * CELL / 2}px)`;
     $$hl(e);
@@ -501,7 +494,7 @@
     const ov = document.createElement('div');
     ov.id = 'invOv'; ov.hidden = true; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', '인벤토리');
     ov.innerHTML = '<div class="ivwin"></div>';
-    window.addEventListener('resize', () => { if (!ov.hidden) render(); });
+
     document.body.appendChild(ov);
     ov.addEventListener('click', (e) => {
       const t = e.target;
@@ -549,6 +542,6 @@
     }, true);
     window.addEventListener('keydown', (e) => { const cf = document.getElementById('uiConfirm'); if (!ov.hidden && e.code === 'Escape' && (!cf || cf.hidden)) { open(false); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
   }
-  window.EQUIP = { onRunStart, onKill, onChest, onBoss, onRunEnd, collect, tex, glow, reapply, open, charStats, xpNeed, genItem, genGem, genRune, itemName, iconOf: itemIcon, SLOTS, RUNEWORDS, get runChar() { return runChar; } };
+  window.EQUIP = { onRunStart, onKill, onChest, onBoss, onRunEnd, collect, tex, glow, reapply, open, charStats, gearPower, genItem, genGem, genRune, itemName, iconOf: itemIcon, SLOTS, RUNEWORDS, get runChar() { return runChar; } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
