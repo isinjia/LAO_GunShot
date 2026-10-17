@@ -443,7 +443,7 @@
       drag.on = true; selItem = drag.it; render();
       const g = document.createElement('div'); g.className = 'ivghost'; g.style.cssText = `width:${drag.it.w * CELL}px;height:${drag.it.h * CELL}px;--rc:${itemColor(drag.it)};background-image:url(${itemIcon(drag.it)})`;
       document.body.appendChild(g); drag.ghost = g; el('#invOv').classList.add('dragging');
-      { const cc = getChar(invChar).c; const low = cc && isGear(drag.it) && cc.lv < drag.it.req; document.querySelectorAll('#invOv .ivslot').forEach((x) => x.classList.add(slotOk(drag.it, x.dataset.slot) ? (low ? 'lockslot' : 'can') : 'nope')); }
+      { const cc = getChar(invChar).c; const low = cc && isGear(drag.it) && cc.lv < drag.it.req; document.querySelectorAll('#invOv .ivslot').forEach((x) => x.classList.add(slotOk(drag.it, x.dataset.slot) ? (low ? 'dlock' : 'dcan') : 'nope')); }
     }
     drag.ghost.style.transform = `translate(${e.clientX - drag.it.w * CELL / 2}px, ${e.clientY - drag.it.h * CELL / 2}px)`;
     $$hl(e);
@@ -460,7 +460,7 @@
     if (!d) return;
     if (d.ghost) d.ghost.remove();
     el('#invOv').classList.remove('dragging');
-    document.querySelectorAll('#invOv .hot, #invOv .can, #invOv .nope, #invOv .lockslot').forEach((x) => x.classList.remove('hot', 'bad', 'ok', 'can', 'nope', 'lockslot'));
+    document.querySelectorAll('#invOv .hot, #invOv .dcan, #invOv .nope, #invOv .dlock').forEach((x) => x.classList.remove('hot', 'bad', 'ok', 'dcan', 'nope', 'dlock'));
     if (!d.on) return;
     noClick = performance.now() + 250; // the click that ends a drag is not a selection toggle
     const t = document.elementFromPoint(e.clientX, e.clientY);

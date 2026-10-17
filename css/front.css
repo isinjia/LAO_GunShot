@@ -325,3 +325,9 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin: 0 1px; fo
 @media (max-width: 900px), (max-aspect-ratio: 1/1) { #invOv .ivwin { height: 100dvh; } #invOv .ivtip { min-height: 0; } #invOv .ivempty { display: none; } #invOv .ivmid { overflow: auto hidden; scrollbar-width: none; } #invOv .ivmid::-webkit-scrollbar { display: none; } }
 #invOv .ivwin { overflow-x: hidden; } #invOv .ivbody { grid-template-columns: 268px auto minmax(300px, 1fr); }
 #invOv .ivtip { min-width: 0; } #invOv .tth b { font-size: 16px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* drag-only highlights (the selection's own .can / .lockslot stay as rendered) */
+#invOv .ivslot.dcan { box-shadow: 0 0 0 1px var(--gr), 0 0 12px -2px var(--gr); border-color: var(--gr); }
+#invOv .ivslot.dlock { box-shadow: 0 0 0 1px #ff5a4a, 0 0 10px -2px #ff5a4a; border-color: #ff5a4a; }
+/* the classic title's way back: same size as the hub button, on a dark plate so it reads over the city art */
+#title > #btnMode:not(#_) { height: 44px; padding: 0 18px; font-size: 15px; color: #fff; background: rgba(6, 8, 12, 0.92); border: 1px solid rgba(255, 204, 0, 0.75); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+#title > #btnMode:not(#_):hover { background: var(--y); color: #1a1400; }
