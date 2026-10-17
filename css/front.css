@@ -431,3 +431,5 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin: 0 1px; fo
 }
 @media (max-height: 560px) and (min-aspect-ratio: 1/1) { #invOv .ivstats { display: none; } #invOv .ivdoll { height: 100%; aspect-ratio: auto; } }
 @media (max-aspect-ratio: 1/1) { #invOv .ivleft { display: contents; } #invOv .ivdoll { order: 0; } #invOv .ivmid { order: 1; } #invOv .ivstats { order: 2; } }
+@media (max-aspect-ratio: 1/1) { #invOv .ivdoll { max-width: 340px; aspect-ratio: auto; grid-template-columns: 64px minmax(0, 1fr) 64px; grid-template-rows: repeat(5, 54px); } #invOv .ivart { background-size: contain; background-position: center; } }
+@media (max-aspect-ratio: 1/1) { #invOv .ivart { background-size: auto 62%; } }
