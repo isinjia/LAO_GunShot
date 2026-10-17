@@ -20,7 +20,9 @@
   const stageOpen = (p, i) => i === 0 || cleared(p, i - 1) >= 1;
   const diffOpen = (p, i, d) => stageOpen(p, i) && cleared(p, i) >= d;
   // recommended gear power per stage / difficulty (the run itself always starts at Lv.1)
-  const recPow = (s, d) => s === 0 && d === 0 ? 0 : 120 + s * 90 + d * 60;
+  // entry gate: the SUM of the item levels of everything worn (9 slots) must reach the stage / difficulty's entry level
+  const gearIl = (c) => Object.values(c.equip || {}).reduce((n, it) => n + (it && it.ilvl ? it.ilvl : 0), 0);
+  const reqIl = (s, d) => 9 * Math.max(0, s * 9 + d * 5 - 4);
   const RCOL = { normal: '#d8d8d8', magic: '#6a8cff', rare: '#ffd84a', unique: '#d8a040', set: '#40e060' };
   const sfx = (k, v) => { if (window.SFX) SFX.play(k, v == null ? 0.5 : v); };
   const power = (c) => (window.EQUIP ? EQUIP.gearPower(EQUIP.charStats(c)) : 100);
@@ -79,7 +81,7 @@
       const h = heroOf(c), ne = Object.values(c.equip || {}).filter(Boolean).length;
       return `<button type="button" class="rr${curChar && c.id === curChar.id ? ' on' : ''}" data-id="${c.id}" style="--c:${h.color}">
         <i style="background-image:url(${portrait(h)})"></i><div><b>${esc(c.name)}</b><small>${h.name}</small>
-        <span class="rlv"><em class="num">전투력 ${power(c).toLocaleString()}</em><small>장비 ${ne}/9</small></span></div></button>`;
+        <span class="rlv"><em class="num">아이템 Lv ${gearIl(c)}</em><small>장비 ${ne}/9</small></span></div></button>`;
     }).join('') + (list.length < MAX_CHARS ? `<button type="button" class="rr add" id="rpgNew"><i></i><div><b>새 대원 등록</b><small>${list.length} / ${MAX_CHARS}</small></div></button>` : '');
     const body = $('#rpgStage'), plate = $('#rpgPlate');
     $('#rpgOv').classList.toggle('empty', !curChar);
@@ -90,7 +92,7 @@
     const p = prog(), h = heroOf(curChar), S = D().STAGES, Df = D().DIFFS;
     if (!stageOpen(p, sel)) sel = 0;
     if (!diffOpen(p, sel, diff)) diff = 0;
-    const St = S[sel], floors = D().stageFloors(sel), pw = power(curChar), rec = recPow(sel, diff);
+    const St = S[sel], floors = D().stageFloors(sel), il = gearIl(curChar), rec = reqIl(sel, diff), short = il < rec;
     const chap = S.map((s, i) => {
       const open = stageOpen(p, i), c = cleared(p, i);
       return `<button type="button" class="chp${i === sel ? ' on' : ''}${open ? '' : ' locked'}" data-i="${i}" aria-label="스테이지 ${i + 1} ${s.name}${open ? '' : ' (잠김)'}">
@@ -107,17 +109,17 @@
       <div class="sban" style="background-image:linear-gradient(90deg, rgba(8,10,14,0.92) 0%, rgba(8,10,14,0.45) 50%, rgba(8,10,14,0) 100%), url(${UIP}stage_${sel + 1}.webp)">
         <small class="num">STAGE ${String(sel + 1).padStart(2, '0')} · ${St.en}</small><h2>${St.name}</h2>
         <p>${floors.length}개 층 · 3층 중간 보스 · ${floors.length}층 최종 보스<br>층마다 경비 구역을 제압하고 승강기로 내려갑니다.</p>
-        ${rec ? `<span class="rec${pw < rec ? ' low' : ''}">권장 전투력 ${rec}${pw < rec ? ' · 장비 부족' : ''}</span>` : '<span class="rec">입문 스테이지</span>'}</div>
+        ${rec ? `<span class="rec${short ? ' low' : ''}">입장 아이템 레벨 ${rec}${short ? ` · 현재 ${il}` : ''}</span>` : '<span class="rec">입문 스테이지 · 제한 없음</span>'}</div>
       <ol class="path" style="--n:${floors.length}">${path}</ol>
-      <div class="diffs" role="radiogroup" aria-label="난이도">${Df.map((d, k) => { const open = diffOpen(p, sel, k); return `<button type="button" role="radio" aria-checked="${k === diff}" class="df${k === diff ? ' on' : ''}${open ? '' : ' locked'}" data-d="${k}" style="--c:${d.color}"><b>${d.name}</b><small>${open ? `적 체력 x${d.hp} · 드롭 ${['기본', '향상', '최고'][k]}` : `${Df[k - 1].name} 클리어 시 개방`}</small><kbd>${k + 1}</kbd></button>`; }).join('')}</div>
+      <div class="diffs" role="radiogroup" aria-label="난이도">${Df.map((d, k) => { const open = diffOpen(p, sel, k); return `<button type="button" role="radio" aria-checked="${k === diff}" class="df${k === diff ? ' on' : ''}${open ? '' : ' locked'}" data-d="${k}" style="--c:${d.color}"><b>${d.name}</b><small>${open ? `적 체력 x${d.hp} · 입장 Lv ${reqIl(sel, k)}` : `${Df[k - 1].name} 클리어 시 개방`}</small><kbd>${k + 1}</kbd></button>`; }).join('')}</div>
       <div class="rwd"><small>획득 보상</small><span class="rc gear"><i></i>장비<b class="num">Lv ${ilv0}~${ilv1}</b></span><span class="rc rune"><i></i>보석 · 룬</span><span class="rc chip"><i></i>데이터 칩<b>소량</b></span></div>
-      <button type="button" class="btn lg go" id="stageGo"><span>출격</span><small>${St.name} · ${Df[diff].name}</small></button>`;
+      ${short ? `<button type="button" class="btn lg go blocked" id="stageGo" aria-disabled="true"><span>입장 불가</span><small>아이템 레벨 합 ${il} / ${rec} — 장비를 더 갖추세요</small></button>` : `<button type="button" class="btn lg go" id="stageGo"><span>출격</span><small>${St.name} · ${Df[diff].name}</small></button>`}`;
     // the nameplate beside the 3D stage
     plate.hidden = false;
     const eq = curChar.equip || {}, slots = window.EQUIP ? EQUIP.SLOTS : [];
     plate.innerHTML = `<i class="pnpt" style="background-image:url(${portrait(h)});--c:${h.color}"></i><div class="pnh" style="--c:${h.color}"><small>${h.title}</small><h3>${esc(curChar.name)}</h3><span class="cls">${h.name}</span></div>
       <div class="pnlv"><small>작전마다 <b>Lv.1</b>부터 성장 · 무기도 초기화 · 장비만 유지</small></div>
-      <div class="pnpw"><small>전투력</small><b class="num">${power(curChar).toLocaleString()}</b></div>
+      <div class="pnpw"><small>아이템 레벨 합</small><b class="num">${gearIl(curChar)}</b><small class="pnsub">전투력 ${power(curChar).toLocaleString()}</small></div>
       <div class="pneq">${slots.map((s) => { const it = eq[s.id]; return `<span class="${it ? 'on' : ''}" title="${it ? esc(EQUIP.itemName(it)) : s.name}" style="--rc:${it ? (it.rw ? '#c8a050' : RCOL[it.rar] || '#888') : 'rgba(255,255,255,0.15)'}">${it ? `<i style="background-image:url(${EQUIP.iconOf(it)})"></i>` : `<em aria-hidden="true"></em>`}</span>`; }).join('')}</div><small class="pneqc">장착 ${slots.filter((s) => eq[s.id]).length} / ${slots.length}</small>
       <div class="pnact"><button type="button" class="btn d" id="rpgInv">인벤토리 <kbd>I</kbd></button><button type="button" class="pndel" id="rpgDel">대원 삭제</button></div>`;
   }
@@ -171,6 +173,7 @@
   function go() {
     const G = window.GAME && GAME.G;
     if (!G || G.phase !== 'title' || !curChar) return;
+    { const il = gearIl(curChar), rq = reqIl(sel, diff); if (il < rq) { sfx('fail', 0.5); UI.toast(`입장 아이템 레벨 부족 — 장착 장비 합 ${il} / ${rq}`, 'warn'); const b = $('#stageGo'); if (b) { b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); } return; } }
     const idx = D().HEROES.findIndex((h) => h.id === curChar.hero);
     const btn = $('#stageGo'); if (btn) btn.classList.add('fire');
     sfx('start', 0.9);
@@ -275,7 +278,7 @@
     }).observe(title, { attributes: true, attributeFilter: ['hidden'] });
     show('mode');
   }
-  window.STAGE_UI = { init, show, confirm: confirmBox,
+  window.STAGE_UI = { init, show, confirm: confirmBox, gearIl, reqIl,
     cur: () => (!$('#rpgOv').hidden && curChar ? curChar.id : null),
     refresh: () => { if (!$('#rpgOv').hidden) renderRpg(); } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();

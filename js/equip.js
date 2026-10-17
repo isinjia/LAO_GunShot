@@ -395,7 +395,7 @@
     const used = (list) => list.reduce((n, o) => n + o.w * o.h, 0);
     ov.querySelector('.ivwin').innerHTML = `<div class="ivh"><i class="ivpt" style="background-image:url(assets/ui/f_${c.hero}.webp);--c:${H.color || '#888'}"></i>
         <div class="ivn"><small>INVENTORY · ${H.name || ''}</small><h3>${esc(c.name)}</h3></div>
-        <div class="ivlv"><small>장비 전투력</small><b class="num">${gearPower(st).toLocaleString()}</b><span class="ivmat" title="모든 대원 공용 · 장비 분해 · 작전 보상으로 획득 — 소켓 추가 · 소켓 비우기 · 보석 합성에 사용"><i></i>재료 (공용) <b class="num">${c.mats.toLocaleString()}</b></span></div>
+        <div class="ivlv"><small>아이템 레벨 합</small><b class="num">${Object.values(c.equip).reduce((n, o) => n + (o && o.ilvl ? o.ilvl : 0), 0)}</b><small>전투력 ${gearPower(st).toLocaleString()}</small><span class="ivmat" title="모든 대원 공용 · 장비 분해 · 작전 보상으로 획득 — 소켓 추가 · 소켓 비우기 · 보석 합성에 사용"><i></i>재료 (공용) <b class="num">${c.mats.toLocaleString()}</b></span></div>
         <button type="button" class="ivx" id="invClose" aria-label="닫기">닫기 <kbd>I</kbd></button></div>
       <div class="ivbody">
         <div class="ivleft"><div class="ivdoll">${doll}</div><div class="ivstats"><small>장비 능력치 합계 · 작전 시작 시 적용</small><ul>${statLines(st) || '<li class="zero"><span>장착한 장비 없음</span><b>—</b></li>'}</ul></div></div>

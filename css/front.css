@@ -371,3 +371,8 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin: 0 1px; fo
 /* paper doll: 목걸이 · 헬멧 · 귀걸이 / 무기 코어 · 방어구 · 글러브 / 반지 · 신발 · 반지 */
 #invOv .ivdoll { grid-template-areas: "amulet helm earring" "weapon armor gloves" "ring1 boots ring2"; }
 #invOv .s_earring { grid-area: earring; }
+
+/* entry gate */
+#rpgOv #stageGo.blocked { filter: grayscale(1) brightness(0.7); cursor: not-allowed; } #rpgOv #stageGo.blocked small { opacity: 1; color: #ffd0c8; }
+#rpgOv #stageGo.shake { animation: frShake 0.3s; }
+#rpgPlate .pnpw .pnsub { margin-left: auto; margin-right: 10px; font-size: 11px; color: rgba(255, 255, 255, 0.5); }
