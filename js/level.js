@@ -356,7 +356,7 @@
         if (r.type === 'start' || r.type === 'shop') return;
         const n = r.type === 'boss' ? 4 : r.type === 'combat' ? 2 + Math.floor(rnd() * 2) : 1;
         for (let i = 0; i < n; i++) {
-          const w = 2.6 + rnd() * 2.2, h = w * (F.decalAspect || 0.8);
+          const w = (2.6 + rnd() * 2.2) * (F.decalSize || 1), h = w * (F.decalAspect || 0.8);
           const x = r.x0 + 1.5 + rnd() * Math.max(0.1, r.w - 3 - w), y = r.y0 + 1.5 + rnd() * Math.max(0.1, r.h - 3 - h);
           if (Math.hypot(x + w / 2 - r.cx, y + h / 2 - r.cy) < 2.2 && r.type !== 'combat') continue; // keep chests / exits / boss spawns clear
           dz.q(x, y, x + w, y + h, 0, 0, 1, 1);

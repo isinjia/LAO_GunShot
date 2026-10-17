@@ -47,6 +47,21 @@ def glowify(im, rgb, blur=6, k=1.6):
     return out
 
 
+def pool(detail, base_rgb, base_a, detail_rgb, k):
+    """a soft-edged coloured pool (radial alpha) with the original texture laid over it"""
+    W, H = detail.size
+    m = Image.new("L", (W, H), 0)
+    from PIL import ImageDraw
+    ImageDraw.Draw(m).ellipse((W * 0.06, H * 0.08, W * 0.94, H * 0.92), fill=255)
+    m = m.filter(ImageFilter.GaussianBlur(W * 0.07))
+    base = Image.new("RGBA", (W, H), base_rgb + (0,))
+    base.putalpha(m.point(lambda v: int(v * base_a)))
+    d = tint(detail.convert("RGBA"), detail_rgb, k)
+    da = ImageChops.multiply(d.split()[3], m)
+    d.putalpha(da)
+    return Image.alpha_composite(base, d)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     atl = Image.open(SF + "Atlas1_m.tif").convert("RGB")
@@ -77,7 +92,7 @@ def main():
 
     # floor decals (RGBA) from original FX ground textures
     ice = Image.open(AB + "AssetBundleResourceSub/FX/Texture/Rhea_ice_ground_Crack_text2.png").convert("RGBA")
-    save(tint(ice, (200, 235, 255), 1.15), "deco_ice", (512, 512))
+    save(pool(ice.resize((512, 512)), (150, 210, 255), 0.62, (225, 245, 255), 1.25), "deco_ice", (512, 512))
     crack = Image.open(AB + "AssetBundleResourceSub/FX/Texture/PD_ground_crack.png").convert("RGBA")
     save(glowify(crack, (255, 110, 40), blur=8, k=2.2), "deco_lava", (512, 512))
     save(glowify(crack, (90, 220, 255), blur=6, k=1.8), "deco_arc", (512, 512))
@@ -86,7 +101,11 @@ def main():
     for i in range(2):
         for j in range(2):
             w4.paste(water.resize((128, 128)), (i * 128, j * 128))
-    save(tint(w4, (90, 170, 255), 1.3), "deco_water", (256, 256))
+    w8 = Image.new("RGBA", (512, 512))
+    for i in range(4):
+        for j in range(4):
+            w8.paste(water.resize((128, 128)), (i * 128, j * 128))
+    save(pool(w8, (20, 70, 140), 0.78, (120, 200, 255), 1.6), "deco_water", (512, 512))
     save(tint(w4, (120, 255, 90), 1.3), "deco_toxic", (256, 256))
     pit = Image.open(AB + "AssetBundleResource/FX/character_prefab/Rhode_skill/Rhode_Ns1_skill/skill2/eff_rhode_skill2_ground_01.png").convert("RGBA")
     save(pit, "deco_pit", (512, 512))
