@@ -32,7 +32,7 @@
     dmg: { n: '공격력', f: (v) => `+${v}%` }, hp: { n: '체력', f: (v) => `+${v * 25}` }, armor: { n: '방어막', f: (v) => `+${v}` },
     crit: { n: '치명타 확률', f: (v) => `+${v}%` }, rof: { n: '연사 속도', f: (v) => `+${v}%` }, speed: { n: '이동 속도', f: (v) => `+${v}%` },
     skill: { n: '궁극기 충전', f: (v) => `+${v}%` }, reload: { n: '재장전 속도', f: (v) => `+${v}%` }, ammo: { n: '최대 탄약', f: (v) => `+${v}%` },
-    roll: { n: '회피 쿨타임', f: (v) => `-${v}%` }, gold: { n: '부품 획득', f: (v) => `+${v}%` }, vamp: { n: '흡혈 확률', f: (v) => `+${v}%` },
+    roll: { n: '회피 쿨타임', f: (v) => `-${v}%` }, block: { n: '피격 무효 확률', f: (v) => `${v}%` }, gold: { n: '부품 획득', f: (v) => `+${v}%` }, vamp: { n: '흡혈 확률', f: (v) => `+${v}%` },
     sk2: { n: '보조 스킬 쿨타임', f: (v) => `-${v}%` }, pierce: { n: '관통', f: (v) => `+${v}` },
   };
   // slots and their bases (원본 장비 이름): w x h cells, reqLv, sockets max, base stat (scaled by ilvl), icons
@@ -59,8 +59,8 @@
     { id: 'boots_booster', slot: 'boots', name: '보조 부스터', w: 2, h: 2, req: 1, sock: 2, base: { speed: 3 }, icon: 'Sub_SubBooster' },
     { id: 'boots_speed', slot: 'boots', name: '고속 OS', w: 2, h: 2, req: 15, sock: 2, base: { speed: 4, roll: 4 }, icon: 'System_Highspd' },
     { id: 'boots_maneuver', slot: 'boots', name: '기동 OS', w: 2, h: 2, req: 30, sock: 3, base: { speed: 5, roll: 6 }, icon: 'System_Maneuver' },
-    { id: 'belt_energy', slot: 'earring', name: '에너지 이어링', w: 1, h: 1, req: 1, sock: 1, base: { ammo: 8 }, icon: 'Sub_EnergyPack' },
-    { id: 'belt_kit', slot: 'earring', name: '분석 이어피스', w: 1, h: 1, req: 14, sock: 2, base: { ammo: 10, hp: 1 }, icon: 'Sub_ExamKit' },
+    { id: 'belt_energy', slot: 'earring', name: '에너지 이어링', w: 1, h: 1, req: 1, sock: 1, base: { block: 2 }, icon: 'Sub_EnergyPack' },
+    { id: 'belt_kit', slot: 'earring', name: '분석 이어피스', w: 1, h: 1, req: 14, sock: 2, base: { block: 2, hp: 1 }, icon: 'Sub_ExamKit' },
     { id: 'belt_stim', slot: 'earring', name: '각성 이어링', w: 1, h: 1, req: 28, sock: 2, base: { reload: 8, skill: 4 }, icon: 'Sub_Stimulant' },
     { id: 'ring_cri', slot: 'ring', name: '치명 칩', w: 1, h: 1, req: 1, sock: 1, base: { crit: 2 }, icon: 'Chip_Cri' },
     { id: 'ring_acc', slot: 'ring', name: '명중 칩', w: 1, h: 1, req: 8, sock: 1, base: { rof: 2 }, icon: 'Chip_Acc' },
@@ -75,7 +75,7 @@
     { n: '충전된', s: 'skill', r: [4, 8] }, { n: '관통하는', s: 'pierce', r: [1, 1], lv: 20 }, { n: '흡혈의', s: 'vamp', r: [1, 2], lv: 15 },
   ];
   const SUFFIX = [
-    { n: '신속의', s: 'speed', r: [2, 5] }, { n: '보급의', s: 'ammo', r: [8, 15] }, { n: '장전의', s: 'reload', r: [5, 10] }, { n: '회피의', s: 'roll', r: [4, 8] },
+    { n: '신속의', s: 'speed', r: [2, 4] }, { n: '견고한', s: 'block', r: [2, 4] }, { n: '장전의', s: 'reload', r: [5, 10] }, { n: '회피의', s: 'roll', r: [4, 8] },
     { n: '수집가의', s: 'gold', r: [8, 15] }, { n: '보호의', s: 'armor', r: [1, 1], lv: 12 }, { n: '전술의', s: 'sk2', r: [4, 8] },
   ];
   // uniques (fixed names / stats) and one set
@@ -142,7 +142,7 @@
     const b = pick(pool);
     // unique / set: 1.2 % from trash, more from elites / chests / bosses (minRar 0-3); otherwise the tier roll
     const roll = Math.random() + (minRar || 0) * 0.15;
-    if (Math.random() < 0.012 + (minRar || 0) * 0.03) {
+    if (Math.random() < 0.006 + (minRar || 0) * 0.015) {
       const u = UNIQUES.concat(SET_ITEMS).filter((x) => x.req <= ilvl + 4);
       if (u.length) { const q = pick(u), B = baseOf(q.base); return { id: uid(), base: B.id, name: q.name, rar: q.set ? 'set' : 'unique', set: q.set || null, ilvl, req: q.req, stats: { ...q.stats }, base_: scaleBase(B, ilvl), sockets: Math.min(B.sock, ri(0, 1)), socketed: [], w: B.w, h: B.h }; }
     }
@@ -258,6 +258,8 @@
   function apply(P, st) {
     const m = P.mods;
     applied = { st, before: { dmg: m.dmg, rof: m.rof, crit: m.crit, speed: m.speed, skill: m.skill, reload: m.reload, ammo: m.ammo, rollCd: m.rollCd, sk2cd: m.sk2cd, pierce: m.pierce, maxHp: P.maxHp, armor: P.armor } };
+    st = { ...st, speed: Math.min(15, st.speed || 0), roll: Math.min(25, st.roll || 0), block: Math.min(25, st.block || 0) }; applied.st = st; // gear caps
+    P.gearBlock = (st.block || 0) / 100;
     m.dmg *= 1 + (st.dmg || 0) / 100; m.rof *= 1 + (st.rof || 0) / 100; m.crit += (st.crit || 0) / 100; m.speed *= 1 + (st.speed || 0) / 100;
     m.skill *= 1 + (st.skill || 0) / 100; m.reload *= 1 + (st.reload || 0) / 100; m.ammo *= 1 + (st.ammo || 0) / 100; m.rollCd *= Math.max(0.4, 1 - (st.roll || 0) / 100);
     P.gearGold = (st.gold || 0) / 100; P.gearVamp = (st.vamp || 0) / 100; m.sk2cd = (m.sk2cd || 1) * Math.max(0.5, 1 - (st.sk2 || 0) / 100); m.pierce = (m.pierce || 0) + (st.pierce || 0);
@@ -291,15 +293,22 @@
     const P = GAME.G.P;
     if (P && P.gearVamp && P.hp < P.maxHp && Math.random() < P.gearVamp) { P.hp++; SFX.play('reinforce', 0.4); } // 흡혈: a kill can mend half a heart
     const lv = ilvlNow(), r = Math.random();
-    if (r < (e.elite ? 0.3 : 0.035)) drop(e.x, e.y, genItem(lv, e.elite ? 1 : 0));
-    else if (r < (e.elite ? 0.42 : 0.05)) drop(e.x, e.y, genGem(lv));
-    else if (r < (e.elite ? 0.5 : 0.058)) drop(e.x, e.y, genRune(lv));
+    if (e.golden) { // 보물 철충 jackpot
+      for (let i = 0; i < 4; i++) drop(e.x + Math.cos(i * 1.6) * 1.2, e.y + Math.sin(i * 1.6) * 1.2, genItem(lv + 2, 2));
+      drop(e.x, e.y + 1.4, genGem(lv + 4)); drop(e.x + 1, e.y - 1, genGem(lv + 4)); drop(e.x - 1, e.y - 1, genRune(lv + 6));
+      const db = load(), c = db.list.find((x) => x.id === runChar); if (c) { const A = loadAcct(); localStorage.setItem(VAULT_KEY, JSON.stringify({ v: 1, list: A.list, mats: A.mats + 40 })); }
+      UI.banner('clear', '보물 철충 처치!', '장비 4 · 보석 2 · 룬 1 · 재료 +40'); SFX.play('pickSS', 1);
+      return;
+    }
+    if (r < (e.elite ? 0.12 : 0.008)) drop(e.x, e.y, genItem(lv, e.elite ? 1 : 0));
+    else if (r < (e.elite ? 0.2 : 0.016)) drop(e.x, e.y, genGem(lv));
+    else if (r < (e.elite ? 0.25 : 0.02)) drop(e.x, e.y, genRune(lv));
   }
-  function onChest(o) { if (runChar && Math.random() < 0.5 + o.rank * 0.15) drop(o.x + 0.8, o.y, genItem(ilvlNow(), o.rank)); }
+  function onChest(o) { if (runChar && Math.random() < 0.2 + o.rank * 0.08) drop(o.x + 0.8, o.y, genItem(ilvlNow(), o.rank)); }
   function onBoss(x, y, mid) {
     if (!runChar) return;
     const lv = ilvlNow() + (mid ? 0 : 3);
-    for (let i = 0; i < (mid ? 2 : 3); i++) drop(x + (i - 1) * 1.6, y - 1.2, genItem(lv, mid ? 1 : 2));
+    for (let i = 0; i < (mid ? 1 : 2); i++) drop(x + (i - 1) * 1.6, y - 1.2, genItem(lv, mid ? 1 : 2));
     drop(x, y - 2.4, genRune(lv + 4)); if (Math.random() < 0.6) drop(x + 1.6, y - 2.4, genGem(lv));
   }
   // picked up: straight into the character's save (never lost, win or lose)
@@ -320,7 +329,7 @@
     const { db, c } = getChar(runChar); if (!c) return;
     norm(c);
     G.stats.charGear = G.runGear ? G.runGear.items : 0; // items picked up this run (already saved)
-    { const s = G.stats, dm = G.diff ? [1, 1.6, 2.4][['easy', 'normal', 'hard'].indexOf(G.diff.id)] : 1; const m = Math.round((s.kills * 0.5 + s.roomsCleared * 2 + s.bosses * 25 + (win ? 40 : 0)) * dm * (1 + (G.stageI || 0) * 0.3)); c.mats = Math.max(0, Math.floor(Number(c.mats) || 0)) + m; s.charMats = m; setTimeout(() => UI.toast(`재료 +${m} 획득`, 'gem'), 1500); }
+    { const s = G.stats, dm = G.diff ? [1, 1.25, 1.5][['easy', 'normal', 'hard'].indexOf(G.diff.id)] : 1; const m = Math.round((s.kills * 0.15 + s.roomsCleared * 1 + s.bosses * 8 + (win ? 15 : 0)) * dm * (1 + (G.stageI || 0) * 0.12)); c.mats = Math.max(0, Math.floor(Number(c.mats) || 0)) + m; s.charMats = m; setTimeout(() => UI.toast(`재료 +${m} 획득`, 'gem'), 1500); }
     if (G.stats.charGear) setTimeout(() => UI.toast(`${esc(c.name)} — 이번 작전 장비 ${G.stats.charGear}개 회수 (보관 완료)`, 'gem'), 900);
     saveAll(db);
     runChar = null; applied = null;

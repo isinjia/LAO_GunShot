@@ -357,7 +357,7 @@
   // whose voice: 램파리온 broken down to 램파트 speaks with Rampart's own lines
   function vid(P) { return P.form === 'rampart' ? 'rampart' : P.hero.id; }
   // stage-theme hazard pools (level.js fills G.lv.hz from the theme's decals): only the room the hero is in matters
-  const HZ = { ice: { slow: 0.62, name: '빙결 바닥', col: 0xbfe8ff }, water: { slow: 0.7, name: '침수 구역', col: 0x5aa8ff }, lava: { dmg: 1, every: 1.1, name: '용암 균열', col: 0xff6a20 }, toxic: { dmg: 1, every: 1.4, name: '오염 웅덩이', col: 0x9dff40 }, shock: { dmg: 2, period: 3.2, warn: 0.9, name: '방전 패드', col: 0x7fe3ff } };
+  const HZ = { ice: { slow: 0.62, name: '빙결 바닥', col: 0xbfe8ff }, water: { slow: 0.7, name: '침수 구역', col: 0x5aa8ff }, lava: { dmg: 1, every: 2.0, name: '용암 균열', col: 0xff6a20 }, toxic: { dmg: 1, every: 2.4, name: '오염 웅덩이', col: 0x9dff40 }, shock: { dmg: 1, period: 4.0, warn: 1.2, name: '방전 패드', col: 0x7fe3ff } };
   function updateThemeHazards(dt) {
     const P = G.P; if (!P) return; P.hzSlow = 1;
     const list = G.lv && G.lv.hz; if (!list || !list.length || P.dead) return;
@@ -367,10 +367,10 @@
       const inside = h.room === rid && ((P.x - h.x) / h.rx) ** 2 + ((P.y - h.y) / h.ry) ** 2 < 1;
       if (H.slow && inside) { P.hzSlow = Math.min(P.hzSlow, H.slow); if (Math.random() < dt * 6) FX.particle({ x: P.x + rnd(-0.3, 0.3), y: P.y + 0.1, vy: rnd(0.3, 0.8), life: 0.5, size: 0.18, size1: 0, color: H.col, tex: FX.tex.dot, alpha: 0.8 }); }
       if (H.every) {
-        h.cd = (h.cd || 0) - dt;
-        if (inside) {
+        h.cd = (h.cd || 0) - dt; h.inT = inside ? (h.inT || 0) + dt : 0; // a step in is free: the burn starts after 0.6 s on it
+        if (inside && h.inT > 0.6) {
           if (Math.random() < dt * 10) FX.particle({ x: P.x + rnd(-0.3, 0.3), y: P.y + 0.15, vy: rnd(0.6, 1.4), life: 0.45, size: 0.22, size1: 0, color: H.col, tex: FX.tex.glow, alpha: 0.85 });
-          if (h.cd <= 0 && P.iframe <= 0 && !P.roll) { h.cd = H.every; hurtPlayer(H.name, H.dmg); }
+          if (h.cd <= 0 && P.iframe <= 0 && !P.roll) { h.cd = H.every; if (P.hp > 1 || P.armor > 0) hurtPlayer(H.name, H.dmg); else UI.toast(`${H.name} — 벗어나세요!`, 'warn'); } // hazards wear you down but never land the killing blow
         }
       }
       if (H.period && h.room === rid) { // power pads: charge (sparks), then discharge — the iron bugs standing on them get it too
@@ -379,12 +379,40 @@
         if (ph > H.period - H.warn && Math.random() < dt * 14) FX.particle({ x: h.x + rnd(-h.rx, h.rx) * 0.8, y: h.y + rnd(-h.ry, h.ry) * 0.8, life: 0.25, size: 0.35, size1: 0.6, frames: FX.sheets.bolt, color: H.col, alpha: 0.85 });
         if (h.lastPh != null && ph < h.lastPh) {
           FX.ring(h.x, h.y + 0.1, 0.2, Math.max(h.rx, h.ry) * 1.3, H.col, 0.3); SFX.play('elec', 0.35);
-          if (inside && P.iframe <= 0 && !P.roll) hurtPlayer(H.name, H.dmg);
+          if (inside && P.iframe <= 0 && !P.roll && (P.hp > 1 || P.armor > 0)) hurtPlayer(H.name, H.dmg);
           for (const e of G.enemies) if (e.alive && !e.boss && ((e.x - h.x) / h.rx) ** 2 + ((e.y - h.y) / h.ry) ** 2 < 1) { hurtEnemy(e, 40, false, 0, 0, 'hitE'); e.stun = Math.max(e.stun || 0, 0.6); }
         }
         h.lastPh = ph;
       }
     }
+  }
+  // the difficulty's HP bonus eases off in later stages: their own tiers and the gear gate already raise the bar there
+  function diffHp() { const k = G.diff.hp - 1; return 1 + k * (1 - 0.13 * (G.stageI || 0)); }
+  // 보물 철충 (the stage mode's golden goblin): a gilded runner that never fights back, flees the hero and slips away after
+  // 14 s; brought down in time it bursts into a jackpot (equip.js onKill: rare+ gear, gems, runes, 재료)
+  function spawnGolden(r) {
+    const pool = FLOORS[G.fi].enemies.filter((k) => ENEMIES[k] && !ENEMIES[k].boom);
+    const p = freeSpot(r.cx + rnd(-3, 3), r.cy + rnd(-2, 2), r); if (!p) return;
+    const e = spawnEnemy(pool.includes('pupp') ? 'pupp' : pool[0], p[0], p[1]);
+    if (!e) return;
+    e.golden = true; e.goldT = 14; e.maxHp = e.hp = Math.max(e.maxHp * 6, 260 * (1 + G.ti * 0.6)); e.r *= 1.15;
+    e.room = r; G.stats.golden = (G.stats.golden || 0) + 1;
+    UI.banner('room', '보물 철충 출현!', '14초 안에 처치하면 대량의 장비'); SFX.play('rankUpSS', 0.8);
+    FX.ring(e.x, e.y + 0.5, 0.3, 3.5, 0xffd040, 0.5);
+  }
+  function updateGolden(e, dt) {
+    const P = G.P;
+    e.goldT -= dt; e.flash = Math.max(0, (e.flash || 0) - dt);
+    if (Math.random() < dt * 14) FX.particle({ x: e.x + rnd(-0.4, 0.4), y: e.y + rnd(0.2, e.h), vy: rnd(0.5, 1.5), life: 0.6, size: 0.2, size1: 0, color: 0xffd040, tex: FX.tex.glow, alpha: 0.9 });
+    if (e.goldT <= 0) { // slips away: gone, no reward
+      FX.particle({ x: e.x, y: e.y + e.h * 0.5, life: 0.5, size: 1, size1: 4, color: 0xffd040, tex: FX.tex.glow, alpha: 0.8 }); SFX.play('warp', 0.7);
+      UI.toast('보물 철충이 도망쳤습니다', 'warn'); G.stats.goldenLost = (G.stats.goldenLost || 0) + 1; e.hp = 0; killEnemy(e, true); return;
+    }
+    if (e.stun > 0) { e.stun -= dt; return; }
+    const dx = e.x - P.x, dy = e.y - P.y, d = Math.hypot(dx, dy) || 1, sp = 4.2 * (e.slowT > 0 ? 0.5 : 1);
+    const wob = Math.sin(e.t * 3) * 0.6; // a zig-zag dash away from the hero
+    LEVEL.move(e, (dx / d - dy / d * wob) * sp * dt, (dy / d + dx / d * wob) * sp * dt);
+    e.face = dx >= 0 ? 1 : -1;
   }
   // an ultimate is still running (its own clock, a lasting wall / spray / zone / bind / overdrive): no new charge meanwhile
   function ultActive(P) { return P.ultT > 0 || P.ultHold > 0 || P.wallT > 0 || P.sprayT > 0 || (P.zone && P.zone.t > 0) || (P.overdrive > 0 && !(P.focusT > 0)); }
@@ -1268,7 +1296,7 @@
   function spawnEnemy(defKey, x, y, opts = {}) {
     const def = ENEMIES[defKey] || ELITES[defKey] || BOSSES[defKey];
     const F = FLOORS[G.fi];
-    const hpMul = (G.diff ? G.diff.hp * (opts.boss && FLOORS[G.fi].mid ? 0.8 : 1) : 1) * (opts.boss ? FLOOR_BOSS_HP[G.ti] * clamp(def.hp / 1300, 0.8, G.ti <= 2 ? 1.0 : 1.25) / def.hp : F.hpMul * (1 + G.stats.roomsCleared * 0.005)) * (1 + (G.heat || 0) * 0.15);
+    const hpMul = (G.diff ? diffHp() * (opts.boss && FLOORS[G.fi].mid ? 0.8 : 1) : 1) * (opts.boss ? FLOOR_BOSS_HP[G.ti] * clamp(def.hp / 1300, 0.8, G.ti <= 2 ? 1.0 : 1.25) / def.hp : F.hpMul * (1 + G.stats.roomsCleared * 0.005)) * (1 + (G.heat || 0) * 0.15);
     const e = {
       key: defKey, def, x, y, r: def.r, h: def.h, hp: def.hp * hpMul, maxHp: def.hp * hpMul, alive: true, spawnT: opts.boss ? 0 : 0.9,
       fireT: rnd(0.8, 1.6) * (def.rate || 2), t: 0, vx: 0, vy: 0, kx: 0, ky: 0, flash: 0, face: -1, seq: [], state: 'idle', stun: 0,
@@ -1653,6 +1681,7 @@
       }
       if (e.dmgT > 0) { e.dmgT -= dt; if (e.dmgT <= 0 && e.dmgAcc) { UI.dmg(e.x, e.y + e.h * 0.8, e.dmgAcc, !!e.dmgCrit); e.dmgAcc = 0; e.dmgCrit = false; } }
       if (e.boss) { updateBoss(e, dt); continue; }
+      if (e.golden) { updateGolden(e, dt); continue; }
       e.flash = Math.max(0, e.flash - dt);
       if (e.dummy) { e.face = P.x < e.x ? -1 : 1; continue; } // training target: rooted, never fires
       if (e.stun > 0) { e.stun -= dt; }
@@ -1983,6 +2012,7 @@
     if (!P || P.dead || P.iframe > 0 || G.phase !== 'play') return;
     G.stats.src[src] = (G.stats.src[src] || 0) + 1;
     if (GOD) { G.stats.hits++; P.iframe = 0.5; return; }
+    if (P.gearBlock && Math.random() < P.gearBlock) { P.iframe = 0.35; FX.ring(P.x, P.y + 0.6, 0.2, 1.1, 0x9fe8ff, 0.25); SFX.play('shield', 0.5); G.stats.blocked = (G.stats.blocked || 0) + 1; return; } // gear: 피격 무효 확률
     if (G.tut) { P.iframe = 0.6; P.hurtFlash = 0.2; UI.toast('연습탄 명중 — 훈련 중에는 피해가 없습니다', ''); return; } // basic training never hurts
     if (P.emplaceGuard > 0 && (P.emplaceT > 0 || P.guardT > 0)) {
       // 거치 사격: the emplacement's plating takes the hit
@@ -3614,7 +3644,7 @@
     if (r.type === 'boss') { r.guard = true; UI.banner('room', '경비 구역 — 승강기 확보', ''); }
     if (r.challenge) return startChallenge(r);
     const area = r.w * r.h;
-    const waves = r.guard ? 3 : area > 240 ? 3 : area > 150 ? 2 : (Math.random() < 0.65 ? 1 : 2);
+    const waves = r.guard ? (G.stageI != null ? 2 : 3) : G.stageI != null ? (area > 200 ? 2 : 1) : area > 240 ? 3 : area > 150 ? 2 : (Math.random() < 0.65 ? 1 : 2); // stage mode: shorter rooms (a run is ~10 min)
     r.waves = [];
     for (let w = 0; w < waves; w++) {
       const n = Math.round(clamp(2.6 + G.ti * 0.3 + area / 95 + rnd(0, 1) + w * 0.3, 2, [6, 6, 6, 6, 7, 7][G.ti]));
@@ -3628,6 +3658,7 @@
     }
     r.waveI = 0;
     spawnWave(r);
+    if (G.stageI != null && !r.guard && Math.random() < 0.1) spawnGolden(r); // 보물 철충: a rare jackpot runner
     if (G.ti >= 1 && !r.challenge && Math.random() < 0.45) {
       // arena hazard: steam vents that charge (red ring) and burst every few seconds
       const n = 2 + Math.floor(Math.random() * 2);
@@ -4416,6 +4447,7 @@
         else if (e.elite) e.body.c.setTint(1.15, 0.85, 0.85);
         else if (!e.boss) { const t = e.def.tint; const lift = G.ti === 1 ? 1.18 : 1.08; /* a touch brighter than the floor (B2's dark brick most of all) so dark rigs never sink into it */ if (t) e.body.c.setTint(t[0] * lift, t[1] * lift, t[2] * lift); else e.body.c.setTint(lift, lift, lift); } // keeps a variant's own tint (red kamikaze drones)
         else { const t = e.def.tint || [1, 1, 1], ph = e.phase || 0, lb = e.def.pale ? 1 : 1.1; /* dark bosses lift off dark arena floors */ e.body.c.setTint(t[0] * lb, t[1] * lb * (1 - ph * 0.15), t[2] * lb * (1 - ph * 0.2)); }
+        if (e.golden) { const g = 1 + 0.25 * Math.sin(G.t * 12); e.body.c.setTint(1.9 * g, 1.5 * g, 0.45); }
         e.body.c.setOrder(ORD(e.y));
       }
       if (e.shadow) { e.shadow.x = e.x; e.shadow.y = e.y + 0.02; }
